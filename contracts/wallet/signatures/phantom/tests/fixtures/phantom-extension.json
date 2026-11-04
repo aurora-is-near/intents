@@ -1,0 +1,65 @@
+{
+  "provenance": {
+    "source": "User-provided output of the local display-check.html harness after signing in Phantom for Chrome",
+    "received_date": "2026-11-03",
+    "extension_version": null,
+    "trusted_prompt_display": "not established by copied page output",
+    "final_lf": "The protocol requires a final LF; visual copy/paste does not preserve this reliably. Verified against the captured signatures.",
+    "private_key_material": "not requested, provided, or required"
+  },
+  "vectors": [
+    {
+      "kind": "request",
+      "public_key": "4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2",
+      "msg": {
+        "chain_id": "phantom-display-check-only",
+        "signer_id": "display-check.near",
+        "nonce": 1,
+        "created_at": "2026-11-03T22:25:32.707Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "internal": [
+            {
+              "op": "add_extension",
+              "payload": {
+                "account_id": "recovery.near"
+              }
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "recipient.near",
+              "refund_to": "refund.near",
+              "actions": [
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1000000000000000000000000"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "proof": "ed25519:472ztCD6rpJSZ8hhvTxMzjMu5vK1Cf9AUNWUa6cuEqouijy48frrvc4cEGvFkQx5LePArVpKtonh5V9nNT8pcwQ",
+      "message": "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nAmounts and deposits are in yoctoNEAR; gas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\n{\n  \"chain_id\": \"phantom-display-check-only\",\n  \"created_at\": \"2026-11-03T22:25:32.707Z\",\n  \"nonce\": 1,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"external\": [\n      {\n        \"actions\": [\n          {\n            \"action\": \"transfer\",\n            \"amount_yoctonear\": \"1000000000000000000000000\"\n          }\n        ],\n        \"receiver_id\": \"recipient.near\",\n        \"refund_to\": \"refund.near\"\n      }\n    ],\n    \"internal\": [\n      {\n        \"op\": \"add_extension\",\n        \"payload\": {\n          \"account_id\": \"recovery.near\"\n        }\n      }\n    ]\n  },\n  \"signer_id\": \"display-check.near\",\n  \"solana_public_key\": \"4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2\",\n  \"timeout_secs\": 300\n}\n"
+    },
+    {
+      "kind": "offchain",
+      "public_key": "4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2",
+      "msg": {
+        "chain_id": "phantom-display-check-only",
+        "signer_id": "display-check.near",
+        "path": [
+          "app.near"
+        ],
+        "timestamp": "2026-11-03T22:28:23.454Z",
+        "payload": "{ \"domain\": \"Phantom local display check\", \"action\": \"display_test\", \"msg\": \"No transaction or login authority is requested by this test.\" }"
+      },
+      "proof": "ed25519:5VGyfbuz3gMYx4qBzyB6fSsz76eK9enjkgbRgzxwc3eTAWWP4pXnUpTngAAPfzxT9Xz68o3NB7brXzcazoGyaN9x",
+      "message": "NEAR Wallet Contract: offchain authorization (v1)\nThis signature authorizes the exact payload below, not a NEAR transaction.\nThe consuming application defines expiration and one-time-use requirements.\n\n{\n  \"chain_id\": \"phantom-display-check-only\",\n  \"path\": [\n    \"app.near\"\n  ],\n  \"payload\": \"{ \\\"domain\\\": \\\"Phantom local display check\\\", \\\"action\\\": \\\"display_test\\\", \\\"msg\\\": \\\"No transaction or login authority is requested by this test.\\\" }\",\n  \"signer_id\": \"display-check.near\",\n  \"solana_public_key\": \"4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2\",\n  \"timestamp\": \"2026-11-03T22:28:23.454Z\"\n}\n"
+    }
+  ]
+}

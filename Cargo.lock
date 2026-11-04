@@ -1895,6 +1895,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "defuse-wallet-phantom"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "bs58 0.5.1",
+ "defuse-crypto",
+ "defuse-nep641",
+ "defuse-wallet",
+ "defuse-wallet-phantom",
+ "defuse-wallet-sdk",
+ "near-kit",
+ "near-kit-sandbox",
+ "near-sdk",
+ "rand 0.10.2",
+ "serde_json",
+ "sha2 0.11.0",
+ "thiserror 2.0.19",
+ "tokio",
+]
+
+[[package]]
 name = "defuse-wallet-sdk"
 version = "0.1.0"
 dependencies = [

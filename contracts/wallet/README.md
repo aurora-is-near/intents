@@ -51,6 +51,11 @@ Each `request` contains:
 
 ### Signing Standards
 
+The [Phantom Solana variant](signatures/phantom/README.md) signs the full readable
+execution or NEP-641 message with `signMessage(bytes, "utf8")`, rather than an
+opaque digest. Its documentation describes the exact format, browser adapter,
+clear-signing limits, tests, and audit requirements.
+
 A single wallet-contract variant supports only a single signing standard, which
 is fixed at the time of a deployment. Each variant is deployed as a
 **separate** global contract.
