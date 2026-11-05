@@ -6955,15 +6955,3 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
-
-[[patch.unused]]
-name = "near-crypto"
-version = "0.37.3"
-
-[[patch.unused]]
-name = "near-sdk"
-version = "5.29.1"
-
-[[patch.unused]]
-name = "near-vm-runner"
-version = "0.37.3"

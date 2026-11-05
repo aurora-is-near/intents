@@ -233,8 +233,3 @@ debug = false
 strip = "symbols"
 panic = "abort"
 overflow-checks = true
-
-[patch.crates-io]
-near-sdk = { path = "vendor/near-sdk-5.29.1" }
-near-vm-runner = { path = "vendor/near-vm-runner-0.37.3" }
-near-crypto = { path = "vendor/near-crypto-0.37.3" }
