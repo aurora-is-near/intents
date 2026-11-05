@@ -1,0 +1,7 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -140,3 +140,3 @@
+ [dependencies.p256]
+-version = "0.13.2"
++version = "0.14.0"
+ features = [

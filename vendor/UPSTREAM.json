@@ -1,0 +1,23 @@
+[
+  {
+    "name": "near-vm-runner",
+    "version": "0.38.0",
+    "registry_archive_url": "https://static.crates.io/crates/near-vm-runner/near-vm-runner-0.38.0.crate",
+    "registry_archive_sha256": "4a6235064dd97ad2a37d05cc16bb88ec1cb6b2b0dca0da85cc44e67ae85bd31d",
+    "package_vcs_metadata": {
+      "git": {
+        "sha1": "bc4e9e8cfb03d9e82f027883055624e18576993e",
+        "dirty": true
+      },
+      "path_in_vcs": "runtime/near-vm-runner"
+    },
+    "changed_files": [
+      "Cargo.toml"
+    ],
+    "added_files": [],
+    "omitted_registry_files": [
+      "Cargo.lock"
+    ],
+    "rust_changes": "None; only p256 dependency requirement 0.13.2 -> 0.14.0"
+  }
+]

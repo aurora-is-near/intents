@@ -110,13 +110,15 @@ message, including timestamp and exact payload; the execution display and captur
 were separate requests, as confirmed by the user. These observations cover the
 tested text-message format, not arbitrary call semantics or other devices/schemes.
 
-The two native dependency findings are addressed by local NEAR dependency
-patches described in [vendor/README.md](../../../../vendor/README.md): fixed
-bigint/P-256 and AWS-LC/TLS versions, without the SDK 5.30 `AccountId` migration.
-Four obsolete TLS exceptions were removed; no advisory exception was added.
-The [dependency follow-up](audit/dependency-fix-20261105/REPORT.md) records final
-validation and source/artifact identities. Existing native Wasmtime exceptions
-and unmaintained-package warnings remain distinct from these resolved findings.
+After the upstream migration, this workspace uses NEAR SDK 5.30, nearcore 0.38
+and `AccountId` 3.x. The single local patch described in
+[vendor/README.md](../../../../vendor/README.md) updates near-vm-runner 0.38.0 to
+p256 0.14, removing crypto-bigint 0.5.5. SDK and near-crypto use their published
+versions; the resolved AWS-LC/TLS versions include the earlier fixes. The audit
+configuration has no advisory exceptions. Unmaintained-package warnings remain.
+The [earlier dependency follow-up](audit/dependency-fix-20261105/REPORT.md)
+identifies the previous SDK 5.29/nearcore 0.37 snapshot and its own validation;
+it does not identify the current merged source.
 
 ## Build and integration
 
