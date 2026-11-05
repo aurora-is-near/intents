@@ -1,4 +1,5 @@
 [workspace]
+exclude = ["vendor/*"]
 members = [
   "contracts/defuse",
   "contracts/defuse/core",
@@ -12,7 +13,7 @@ members = [
   "contracts/treasury-logger",
   "contracts/wallet",
   "contracts/wallet/signatures/ed25519",
-  "contracts/wallet/signatures/phantom",
+  "contracts/wallet/signatures/solana",
   "contracts/wallet/signatures/no-sign",
   "contracts/wallet/signatures/webauthn",
   "contracts/wallet/signatures/webauthn/ed25519",
@@ -84,7 +85,7 @@ defuse-poa-token.path = "contracts/poa/token"
 defuse-wallet.path = "contracts/wallet"
 defuse-wallet-ed25519.path = "contracts/wallet/signatures/ed25519"
 defuse-wallet-no-sign.path = "contracts/wallet/signatures/no-sign"
-defuse-wallet-phantom.path = "contracts/wallet/signatures/phantom"
+defuse-wallet-solana.path = "contracts/wallet/signatures/solana"
 defuse-wallet-webauthn.path = "contracts/wallet/signatures/webauthn"
 defuse-wallet-webauthn-ed25519.path = "contracts/wallet/signatures/webauthn/ed25519"
 defuse-wallet-webauthn-p256.path = "contracts/wallet/signatures/webauthn/p256"
@@ -232,3 +233,8 @@ debug = false
 strip = "symbols"
 panic = "abort"
 overflow-checks = true
+
+[patch.crates-io]
+near-sdk = { path = "vendor/near-sdk-5.29.1" }
+near-vm-runner = { path = "vendor/near-vm-runner-0.37.3" }
+near-crypto = { path = "vendor/near-crypto-0.37.3" }

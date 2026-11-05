@@ -1,0 +1,22 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -60,7 +60,7 @@
+ harness = false
+ 
+ [dependencies.aws-lc-rs]
+-version = "=1.16.2"
++version = "1.19"
+ features = ["unstable"]
+ 
+ [dependencies.blake2]
+--- a/src/signature.rs
++++ b/src/signature.rs
+@@ -1,7 +1,6 @@
+ use crate::hash_domain::HashDomainTag;
+ use crate::util::try_fixed_array;
+-use aws_lc_rs::signature::UnparsedPublicKey;
+-use aws_lc_rs::unstable::signature::{ML_DSA_65, ML_DSA_65_SIGNING, PqdsaKeyPair};
++use aws_lc_rs::signature::{ML_DSA_65, ML_DSA_65_SIGNING, PqdsaKeyPair, UnparsedPublicKey};
+ use borsh::{BorshDeserialize, BorshSerialize};
+ use ed25519_dalek::ed25519::signature::{Signer, Verifier};
+ use near_schema_checker_lib::ProtocolSchema;

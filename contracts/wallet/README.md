@@ -51,7 +51,7 @@ Each `request` contains:
 
 ### Signing Standards
 
-The [Phantom Solana variant](signatures/phantom/README.md) signs the full readable
+The [Phantom Solana variant](signatures/solana/README.md) signs the full readable
 execution or NEP-641 message with `signMessage(bytes, "utf8")`, rather than an
 opaque digest. Its documentation describes the exact format, browser adapter,
 clear-signing limits, tests, and audit requirements.
@@ -63,6 +63,11 @@ is fixed at the time of a deployment. Each variant is deployed as a
 A public key of the wallet contract instance is also fixed at the time of first
 initialization and **cannot** be changed later. However, signature can still be
 disabled by signer/extension (see [key rotation](#key-rotation)).
+
+The readable v1 signing format is implemented in this crate's
+`readable_message` module, behind the opt-in `readable-message` feature. The
+Phantom Solana adapter selects it explicitly. It is wallet-specific code,
+not a separate general-purpose workspace utility.
 
 ### Extensions
 
