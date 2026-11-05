@@ -1,0 +1,60 @@
+{
+  "wallet": "Slush",
+  "version_user_reported": "26.22.0 [release]",
+  "source": "Actual public Wallet Standard signatures for a fictional network; no transactions submitted",
+  "captures": [
+    {
+      "kind": "execution",
+      "msg": {
+        "chain_id": "sui-display-check-only",
+        "signer_id": "display-check.near",
+        "nonce": 1,
+        "created_at": "2026-11-04T20:50:38.656Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "internal": [
+            {
+              "op": "add_extension",
+              "payload": {
+                "account_id": "recovery.near"
+              }
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "recipient.near",
+              "refund_to": "refund.near",
+              "actions": [
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1000000000000000000000000"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "proof": "AEgM9dyrH9qmYfoSCbHcYpR1orbexm29qiqFv4lvqXx19sRto8lx3TjvmO0CcBQpv7zFB9BgtLpVM39ouqqGMw0o23GveTfIxna55Tm4vNbzZOzF+YxYW/fiFUci9D33kw==",
+      "publicKey": "sui:ACjbca95N8jGdrnlObi81vNk7MX5jFhb9+IVRyL0PfeT",
+      "signingMessage": "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nAmounts and deposits are in yoctoNEAR; gas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\n{\n  \"chain_id\": \"sui-display-check-only\",\n  \"created_at\": \"2026-11-04T20:50:38.656Z\",\n  \"nonce\": 1,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"external\": [\n      {\n        \"actions\": [\n          {\n            \"action\": \"transfer\",\n            \"amount_yoctonear\": \"1000000000000000000000000\"\n          }\n        ],\n        \"receiver_id\": \"recipient.near\",\n        \"refund_to\": \"refund.near\"\n      }\n    ],\n    \"internal\": [\n      {\n        \"op\": \"add_extension\",\n        \"payload\": {\n          \"account_id\": \"recovery.near\"\n        }\n      }\n    ]\n  },\n  \"signer_id\": \"display-check.near\",\n  \"sui_address\": \"0x1bbca0a2f52e15c308f20bf93dcd026b7a14c8539c2239b194481a1fe5961ba9\",\n  \"sui_public_key\": \"ACjbca95N8jGdrnlObi81vNk7MX5jFhb9+IVRyL0PfeT\",\n  \"timeout_secs\": 300\n}\n"
+    },
+    {
+      "kind": "offchain",
+      "msg": {
+        "chain_id": "sui-display-check-only",
+        "signer_id": "display-check.near",
+        "path": [
+          "app.near"
+        ],
+        "timestamp": "2026-11-04T20:56:11.674Z",
+        "payload": "{ \"domain\": \"Sui local display check\", \"action\": \"display_test\", \"msg\": \"No transaction or login authority is requested by this test.\" }"
+      },
+      "proof": "AGhPjza45QuHxgEvTm8ri4v+U8d8+7ca+IzzBJvh4yDlCksUyRagKem4Nw7kt6KF1OB6kxHsgcgU+e8OMCXRUQwo23GveTfIxna55Tm4vNbzZOzF+YxYW/fiFUci9D33kw==",
+      "publicKey": "sui:ACjbca95N8jGdrnlObi81vNk7MX5jFhb9+IVRyL0PfeT",
+      "signingMessage": "NEAR Wallet Contract: offchain authorization (v1)\nThis signature authorizes the exact payload below, not a NEAR transaction.\nThe consuming application defines expiration and one-time-use requirements.\n\n{\n  \"chain_id\": \"sui-display-check-only\",\n  \"path\": [\n    \"app.near\"\n  ],\n  \"payload\": \"{ \\\"domain\\\": \\\"Sui local display check\\\", \\\"action\\\": \\\"display_test\\\", \\\"msg\\\": \\\"No transaction or login authority is requested by this test.\\\" }\",\n  \"signer_id\": \"display-check.near\",\n  \"sui_address\": \"0x1bbca0a2f52e15c308f20bf93dcd026b7a14c8539c2239b194481a1fe5961ba9\",\n  \"sui_public_key\": \"ACjbca95N8jGdrnlObi81vNk7MX5jFhb9+IVRyL0PfeT\",\n  \"timestamp\": \"2026-11-04T20:56:11.674Z\"\n}\n"
+    }
+  ]
+}

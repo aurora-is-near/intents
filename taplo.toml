@@ -1,3 +1,6 @@
+# Preserve upstream vendored formatting; project files remain checked.
+exclude = ["vendor/**"]
+
 [formatting]
 reorder_keys = false   # safe default — don't sort anything
 reorder_arrays = false # same

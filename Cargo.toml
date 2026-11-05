@@ -1,4 +1,5 @@
 [workspace]
+exclude = ["vendor/*"]
 members = [
   "contracts/defuse",
   "contracts/defuse/core",
@@ -12,6 +13,10 @@ members = [
   "contracts/treasury-logger",
   "contracts/wallet",
   "contracts/wallet/signatures/ed25519",
+  "contracts/wallet/signatures/sui",
+  "contracts/wallet/signatures/sui/ed25519",
+  "contracts/wallet/signatures/sui/secp256k1",
+  "contracts/wallet/signatures/sui/p256",
   "contracts/wallet/signatures/no-sign",
   "contracts/wallet/signatures/webauthn",
   "contracts/wallet/signatures/webauthn/ed25519",
@@ -83,6 +88,10 @@ defuse-poa-token.path = "contracts/poa/token"
 defuse-wallet.path = "contracts/wallet"
 defuse-wallet-ed25519.path = "contracts/wallet/signatures/ed25519"
 defuse-wallet-no-sign.path = "contracts/wallet/signatures/no-sign"
+defuse-wallet-sui = { path = "contracts/wallet/signatures/sui", default-features = false }
+defuse-wallet-sui-ed25519.path = "contracts/wallet/signatures/sui/ed25519"
+defuse-wallet-sui-p256.path = "contracts/wallet/signatures/sui/p256"
+defuse-wallet-sui-secp256k1.path = "contracts/wallet/signatures/sui/secp256k1"
 defuse-wallet-webauthn.path = "contracts/wallet/signatures/webauthn"
 defuse-wallet-webauthn-ed25519.path = "contracts/wallet/signatures/webauthn/ed25519"
 defuse-wallet-webauthn-p256.path = "contracts/wallet/signatures/webauthn/p256"
@@ -154,6 +163,7 @@ array-util = "1"
 async-trait = "0.1.91"
 base64 = "0.22.1"
 bitflags = "2.13"
+blake2 = "0.10.6"
 blstrs = "0.7.1"
 bnum = "0.13"
 borsh = "1.8.0"
@@ -230,3 +240,8 @@ debug = false
 strip = "symbols"
 panic = "abort"
 overflow-checks = true
+
+[patch.crates-io]
+near-sdk = { path = "vendor/near-sdk-5.29.1" }
+near-vm-runner = { path = "vendor/near-vm-runner-0.37.3" }
+near-crypto = { path = "vendor/near-crypto-0.37.3" }

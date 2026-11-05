@@ -6,6 +6,8 @@ mod error;
 pub mod events;
 mod message;
 mod nonces;
+#[cfg(feature = "readable-message")]
+pub mod readable_message;
 mod request;
 mod schema;
 mod state;

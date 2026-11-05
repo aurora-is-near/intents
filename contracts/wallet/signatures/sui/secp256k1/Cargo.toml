@@ -1,0 +1,42 @@
+lints.workspace = true
+
+[package]
+name = "defuse-wallet-sui-secp256k1"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+readme = "../README.md"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+defuse-wallet = { workspace = true, features = ["near-contract"] }
+defuse-wallet-sui = { workspace = true, default-features = false, features = ["secp256k1"] }
+near-sdk.workspace = true
+
+[features]
+abi = ["defuse-wallet-sui/abi", "defuse-wallet/abi", "near-sdk/abi"]
+
+[dev-dependencies]
+defuse-wallet-sui-secp256k1 = { path = ".", features = ["abi"] }
+near-sdk = { workspace = true, features = ["unit-testing"] }
+
+[package.metadata.near.reproducible_build]
+image = "sourcescan/cargo-near:0.22.0-rust-1.97.1"
+image_digest = "sha256:7467038bdddc86484b73b416eeadce926ff59013e128e53dec5a19e1cb4b2234"
+passed_env = []
+container_build_command = [
+  "cargo",
+  "near",
+  "build",
+  "non-reproducible-wasm",
+  "--locked",
+  "--no-default-features",
+  "--abi-features=abi",
+]
+
+[package.metadata.cargo-machete]
+# Required by the wallet! macro's generated near attributes.
+ignored = ["near-sdk"]

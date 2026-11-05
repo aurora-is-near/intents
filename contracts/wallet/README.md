@@ -51,6 +51,11 @@ Each `request` contains:
 
 ### Signing Standards
 
+The [Sui variants](signatures/sui/README.md) reuse the readable message renderer
+and verify native Sui personal-message signatures. Separate Ed25519, secp256k1
+and P-256 (Sui secp256r1) contracts each accept one scheme and have their own
+global contract IDs; their common parent is a reusable library.
+
 A single wallet-contract variant supports only a single signing standard, which
 is fixed at the time of a deployment. Each variant is deployed as a
 **separate** global contract.
@@ -58,6 +63,12 @@ is fixed at the time of a deployment. Each variant is deployed as a
 A public key of the wallet contract instance is also fixed at the time of first
 initialization and **cannot** be changed later. However, signature can still be
 disabled by signer/extension (see [key rotation](#key-rotation)).
+
+The readable v1 signing format is implemented in this crate's
+`readable_message` module, behind the opt-in `readable-message` feature. The
+Sui adapters select it explicitly. It is wallet-specific code,
+not a separate general-purpose workspace utility. Sui protocol encoding, identity
+derivation and BLAKE2b-256 live inside the adapter's `src/protocol/` module.
 
 ### Extensions
 
