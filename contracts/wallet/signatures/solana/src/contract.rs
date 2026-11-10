@@ -1,12 +1,12 @@
 use defuse_wallet::wallet;
 
-use crate::WalletPhantom;
+use crate::WalletSolana;
 
 wallet! {
     #[wallet(
-        schema = WalletPhantom,
+        schema = WalletSolana,
         metadata(
-            standard(standard = "wallet-phantom", version = "1.0.0")
+            standard(standard = "wallet-solana", version = "1.0.0")
         )
     )]
     struct Contract(_);

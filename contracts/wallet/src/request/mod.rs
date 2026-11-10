@@ -88,9 +88,23 @@ impl Request {
             PER_INTERNAL_OP.saturating_mul(self.internal.len().try_into().unwrap_or(u64::MAX)),
         );
 
+        // Promises to a token with required metadata also check it first.
+        let checked = |p: &NearPromise| {
+            self.internal.iter().any(|op| {
+                matches!(op, WalletOp::RequireFtMetadata { token_id, .. } if *token_id == p.receiver_id)
+            })
+        };
         self.external
             .iter()
-            .map(NearPromise::estimate_gas)
+            .map(|p| {
+                let gas = p.estimate_gas();
+                if checked(p) {
+                    gas.saturating_add(FT_METADATA_GAS)
+                        .saturating_add(FT_METADATA_CALLBACK_GAS)
+                } else {
+                    gas
+                }
+            })
             .fold(gas, Gas::saturating_add)
     }
 }

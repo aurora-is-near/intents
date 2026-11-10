@@ -2,13 +2,13 @@ use std::time::Duration;
 
 use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
 use defuse_wallet_solana::{
-    WalletPhantom, crypto::ed25519::Ed25519PublicKey, offchain_signing_message,
+    WalletSolana, crypto::ed25519::Ed25519PublicKey, offchain_signing_message,
     request_signing_message,
 };
 use serde_json::{Value, json};
 
 fn vectors() -> Vec<Value> {
-    serde_json::from_str::<Value>(include_str!("fixtures/phantom.json")).unwrap()["vectors"]
+    serde_json::from_str::<Value>(include_str!("fixtures/solana.json")).unwrap()["vectors"]
         .as_array()
         .unwrap()
         .clone()
@@ -30,14 +30,14 @@ fn independent_openssl_vectors() {
                 request_signing_message(&public_key, &msg).unwrap(),
                 v["message"]
             );
-            assert!(WalletPhantom::verify_request_msg(&public_key, &msg, proof));
+            assert!(WalletSolana::verify_request_msg(&public_key, &msg, proof));
         } else {
             let msg: OffchainMessage = serde_json::from_value(v["msg"].clone()).unwrap();
             assert_eq!(
                 offchain_signing_message(&public_key, &msg).unwrap(),
                 v["message"]
             );
-            assert!(WalletPhantom::verify_offchain_msg(&public_key, &msg, proof));
+            assert!(WalletSolana::verify_offchain_msg(&public_key, &msg, proof));
         }
     }
 }
@@ -60,6 +60,9 @@ fn execution_fields_are_bound() {
             json!("other.near"),
         ),
         ("/request/internal/1/op", json!("add_extension")),
+        ("/request/internal/2/payload/token_id", json!("other.near")),
+        ("/request/internal/2/payload/decimals", json!(17)),
+        ("/request/internal/2/payload/symbol", json!("TKM")),
         ("/request/external/0/receiver_id", json!("other.near")),
         (
             "/request/external/0/actions/0/payload/function_name",
@@ -78,7 +81,7 @@ fn execution_fields_are_bound() {
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
         assert!(
-            !WalletPhantom::verify_request_msg(&key(v), &msg, v["proof"].as_str().unwrap()),
+            !WalletSolana::verify_request_msg(&key(v), &msg, v["proof"].as_str().unwrap()),
             "accepted {pointer}"
         );
     }
@@ -91,7 +94,7 @@ fn execution_fields_are_bound() {
             .unwrap()
             .reverse();
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
-        assert!(!WalletPhantom::verify_request_msg(
+        assert!(!WalletSolana::verify_request_msg(
             &key(v),
             &msg,
             v["proof"].as_str().unwrap()
@@ -130,7 +133,7 @@ fn transfer_refund_and_state_init_are_bound() {
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
         assert!(
-            !WalletPhantom::verify_request_msg(&key(v), &msg, v["proof"].as_str().unwrap()),
+            !WalletSolana::verify_request_msg(&key(v), &msg, v["proof"].as_str().unwrap()),
             "accepted {pointer}"
         );
     }
@@ -157,7 +160,7 @@ fn offchain_fields_are_bound_without_normalizing_payload() {
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: OffchainMessage = serde_json::from_value(changed).unwrap();
         assert!(
-            !WalletPhantom::verify_offchain_msg(&key(v), &msg, v["proof"].as_str().unwrap()),
+            !WalletSolana::verify_offchain_msg(&key(v), &msg, v["proof"].as_str().unwrap()),
             "accepted {pointer}"
         );
     }
@@ -175,15 +178,15 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
         "not a signature",
         all[4]["proof"].as_str().unwrap(),
     ] {
-        assert!(!WalletPhantom::verify_request_msg(&key(v), &msg, proof));
+        assert!(!WalletSolana::verify_request_msg(&key(v), &msg, proof));
     }
-    assert!(!WalletPhantom::verify_request_msg(
+    assert!(!WalletSolana::verify_request_msg(
         &Ed25519PublicKey([0; 32]),
         &msg,
         v["proof"].as_str().unwrap()
     ));
     let auth: OffchainMessage = serde_json::from_value(all[4]["msg"].clone()).unwrap();
-    assert!(!WalletPhantom::verify_offchain_msg(
+    assert!(!WalletSolana::verify_offchain_msg(
         &key(v),
         &auth,
         v["proof"].as_str().unwrap()
@@ -207,4 +210,23 @@ fn limits_and_ambiguous_timeout_are_rejected() {
     assert!(rendered.is_ascii());
     assert!(rendered.contains("\\u202e"));
     assert!(rendered.contains("\\ud83c\\udf0d"));
+}
+
+#[test]
+fn state_init_fixture_uses_derived_receiver() {
+    let table: serde_json::Value =
+        serde_json::from_str(include_str!("fixtures/solana.json")).unwrap();
+    for v in table["vectors"].as_array().unwrap() {
+        if v["kind"] != "request" {
+            continue;
+        }
+        let msg: defuse_wallet::RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+        for promise in msg.request.external {
+            for action in promise.actions {
+                if let defuse_wallet::actions::NearAction::DeterministicStateInit(init) = action {
+                    assert_eq!(promise.receiver_id, init.state_init.derive_account_id());
+                }
+            }
+        }
+    }
 }

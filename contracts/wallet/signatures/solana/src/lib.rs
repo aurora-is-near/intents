@@ -19,12 +19,13 @@ use defuse_crypto::{
 };
 use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
 
-/// Phantom Solana `signMessage(bytes, "utf8")` over the full readable message.
+/// Solana wallet `signMessage(bytes, "utf8")` (as exposed by Phantom) over the full
+/// readable message.
 ///
 /// This is deliberately incompatible with the digest-signing Ed25519 variant.
-pub struct WalletPhantom;
+pub struct WalletSolana;
 
-impl WalletPhantom {
+impl WalletSolana {
     fn verify(
         public_key: &Ed25519PublicKey,
         message: impl FnOnce() -> Result<String, MessageError>,
@@ -43,7 +44,7 @@ impl WalletPhantom {
     }
 }
 
-impl SignatureSchema for WalletPhantom {
+impl SignatureSchema for WalletSolana {
     type PublicKey = Ed25519PublicKey;
 
     fn verify_request_msg(public_key: &Self::PublicKey, msg: &RequestMessage, proof: &str) -> bool {

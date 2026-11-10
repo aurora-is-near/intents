@@ -1,0 +1,243 @@
+{
+  "generator": "Node.js crypto / OpenSSL Ed25519; RFC8032 public test seed",
+  "vectors": [
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {}
+      },
+      "public_key": "FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+      "message": "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nGas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\n{\n  \"chain_id\": \"mainnet\",\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"nonce\": 42,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"external\": [],\n    \"internal\": []\n  },\n  \"signer_id\": \"wallet.near\",\n  \"solana_public_key\": \"FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\n  \"timeout_secs\": 300\n}\n",
+      "proof": "ed25519:1zGjpEGjy1B3nG8v4DsLcCN9APi3UvCHkwJfCRdiXDoBbYKFGLH2Hfxhb57sKcWDYDsz7SH7PQpVpUBdc1ChNiZ"
+    },
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "internal": [
+            {
+              "op": "add_extension",
+              "payload": {
+                "account_id": "recovery.near"
+              }
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "bob.near",
+              "refund_to": "refund.near",
+              "actions": [
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1000000000000000000000000"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "public_key": "FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+      "message": "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nGas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\n{\n  \"chain_id\": \"mainnet\",\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"nonce\": 42,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"external\": [\n      {\n        \"actions\": [\n          {\n            \"action\": \"transfer\",\n            \"amount\": \"1 NEAR\"\n          }\n        ],\n        \"receiver_id\": \"bob.near\",\n        \"refund_to\": \"refund.near\"\n      }\n    ],\n    \"internal\": [\n      {\n        \"op\": \"add_extension\",\n        \"payload\": {\n          \"account_id\": \"recovery.near\"\n        }\n      }\n    ]\n  },\n  \"signer_id\": \"wallet.near\",\n  \"solana_public_key\": \"FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\n  \"timeout_secs\": 300\n}\n",
+      "proof": "ed25519:3zvFLPzKbvRGVQQmvDGgnk1BAJx9rmzCW9GvVmkWTAtXwdkQJGmfkm9nUptVjj3s4F3uBY9KJsHUQLzbCkBHKAsS"
+    },
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": true,
+        "request": {
+          "internal": [
+            {
+              "op": "set_signature_mode",
+              "payload": {
+                "enable": false
+              }
+            },
+            {
+              "op": "remove_extension",
+              "payload": {
+                "account_id": "old.near"
+              }
+            },
+            {
+              "op": "require_ft_metadata",
+              "payload": {
+                "token_id": "token.near",
+                "decimals": 18,
+                "symbol": "TKN"
+              }
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "token.near",
+              "actions": [
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "ft_transfer",
+                    "args": "eyJyZWNlaXZlcl9pZCI6ImJvYi5uZWFyIiwiYW1vdW50IjoiOTAwNzE5OTI1NDc0MDk5MyIsIm1lbW8iOiLQn9GA0LjQstC10YIg8J+MjSJ9",
+                    "deposit": "1",
+                    "gas": "50000000000000",
+                    "gas_weight": "18446744073709551614"
+                  }
+                },
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "near_deposit",
+                    "args": "e30="
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "public_key": "FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+      "message": "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nGas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\n{\n  \"chain_id\": \"mainnet\",\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"nonce\": 42,\n  \"pay_for_gas\": true,\n  \"request\": {\n    \"external\": [\n      {\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"args\": {\n              \"receiver_id\": \"bob.near\",\n              \"amount\": \"0.009007199254740993 TKN\",\n              \"memo\": \"\\u041f\\u0440\\u0438\\u0432\\u0435\\u0442 \\ud83c\\udf0d\"\n            },\n            \"deposit\": \"0.000000000000000000000001 NEAR\",\n            \"function_name\": \"ft_transfer\",\n            \"gas\": \"50000000000000\",\n            \"gas_weight\": \"18446744073709551614\"\n          },\n          {\n            \"action\": \"function_call\",\n            \"args\": {},\n            \"deposit\": \"0 NEAR\",\n            \"function_name\": \"near_deposit\",\n            \"gas\": \"0\",\n            \"gas_weight\": \"1\"\n          }\n        ],\n        \"receiver_id\": \"token.near\",\n        \"refund_to\": null\n      }\n    ],\n    \"internal\": [\n      {\n        \"op\": \"set_signature_mode\",\n        \"payload\": {\n          \"enable\": false\n        }\n      },\n      {\n        \"op\": \"remove_extension\",\n        \"payload\": {\n          \"account_id\": \"old.near\"\n        }\n      },\n      {\n        \"op\": \"require_ft_metadata\",\n        \"payload\": {\n          \"decimals\": 18,\n          \"symbol\": \"TKN\",\n          \"token_id\": \"token.near\"\n        }\n      }\n    ]\n  },\n  \"signer_id\": \"wallet.near\",\n  \"solana_public_key\": \"FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\n  \"timeout_secs\": 300\n}\n",
+      "proof": "ed25519:35GdfUCKgUpMg2TokMUyR4xFCeEEoFLnNxKVPQiRwgX21kYPW6GuNib424T4dkpCm9gZidYetBRyg4VHnKQJciLF"
+    },
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "external": [
+            {
+              "receiver_id": "0s762910a479b0c04f9725b03cd7931dc5064ab0ab",
+              "actions": [
+                {
+                  "action": "deterministic_state_init",
+                  "payload": {
+                    "state_init": {
+                      "V1": {
+                        "code": {
+                          "account_id": "alice.near"
+                        },
+                        "data": {
+                          "1000": "",
+                          "1234": "",
+                          "AAEC": "AwQF"
+                        }
+                      }
+                    },
+                    "deposit": "9"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "public_key": "FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+      "message": "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nGas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\n{\n  \"chain_id\": \"mainnet\",\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"nonce\": 42,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"external\": [\n      {\n        \"actions\": [\n          {\n            \"action\": \"deterministic_state_init\",\n            \"deposit\": \"0.000000000000000000000009 NEAR\",\n            \"state_init\": {\n              \"V1\": {\n                \"code\": {\n                  \"account_id\": \"alice.near\"\n                },\n                \"data\": {\n                  \"1000\": \"\",\n                  \"1234\": \"\",\n                  \"AAEC\": \"AwQF\"\n                }\n              }\n            }\n          }\n        ],\n        \"receiver_id\": \"0s762910a479b0c04f9725b03cd7931dc5064ab0ab\",\n        \"refund_to\": null\n      }\n    ],\n    \"internal\": []\n  },\n  \"signer_id\": \"wallet.near\",\n  \"solana_public_key\": \"FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\n  \"timeout_secs\": 300\n}\n",
+      "proof": "ed25519:4CXRgFpU7etUEcLJXKAxz5RUfiPi1m6zBAYzma2MyzjHeyt8u31fDcNupFPKhxUp6yeRjbsFUvU5krxRJfGX9gP9"
+    },
+    {
+      "kind": "offchain",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "timestamp": "2026-11-03T12:34:56.123456789Z",
+        "payload": ""
+      },
+      "public_key": "FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+      "message": "NEAR Wallet Contract: offchain authorization (v1)\nThis signature authorizes the exact payload below, not a NEAR transaction.\nThe consuming application defines expiration and one-time-use requirements.\n\n{\n  \"chain_id\": \"mainnet\",\n  \"path\": [],\n  \"payload\": \"\",\n  \"signer_id\": \"wallet.near\",\n  \"solana_public_key\": \"FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\n  \"timestamp\": \"2026-11-03T12:34:56.123456789Z\"\n}\n",
+      "proof": "ed25519:4CTFbkzBUz28fLvcWB5nZ534zHzE6xKfRYUARWqxXdPUGEgcoPpfzizBWdyMb8xBxtY9iC2au8xJuz38keARSevD"
+    },
+    {
+      "kind": "offchain",
+      "msg": {
+        "chain_id": "testnet",
+        "signer_id": "wallet.near",
+        "path": [
+          "parent.near",
+          "app.near"
+        ],
+        "timestamp": "2026-11-03T12:34:56.120000000Z",
+        "payload": "{ \"amount\": 9007199254740993, \"memo\": \"Привет 🌍\", \"duplicate\":1,\"duplicate\":2 }"
+      },
+      "public_key": "FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+      "message": "NEAR Wallet Contract: offchain authorization (v1)\nThis signature authorizes the exact payload below, not a NEAR transaction.\nThe consuming application defines expiration and one-time-use requirements.\n\n{\n  \"chain_id\": \"testnet\",\n  \"path\": [\n    \"parent.near\",\n    \"app.near\"\n  ],\n  \"payload\": \"{ \\\"amount\\\": 9007199254740993, \\\"memo\\\": \\\"\\u041f\\u0440\\u0438\\u0432\\u0435\\u0442 \\ud83c\\udf0d\\\", \\\"duplicate\\\":1,\\\"duplicate\\\":2 }\",\n  \"signer_id\": \"wallet.near\",\n  \"solana_public_key\": \"FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\n  \"timestamp\": \"2026-11-03T12:34:56.12Z\"\n}\n",
+      "proof": "ed25519:5PvXHLpowTBNMYkEzQmdPCJWq1z4UXNyJzsqYGzjnaYyw99EjufKMk8BH9LoqwACWTh1FaPx86otng2kT6uU6giC"
+    },
+    {
+      "kind": "offchain",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "timestamp": "2026-11-03T12:34:56.123456789Z",
+        "payload": "‮🌍"
+      },
+      "public_key": "FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+      "message": "NEAR Wallet Contract: offchain authorization (v1)\nThis signature authorizes the exact payload below, not a NEAR transaction.\nThe consuming application defines expiration and one-time-use requirements.\n\n{\n  \"chain_id\": \"mainnet\",\n  \"path\": [],\n  \"payload\": \"\\u202e\\ud83c\\udf0d\\u007f\",\n  \"signer_id\": \"wallet.near\",\n  \"solana_public_key\": \"FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\n  \"timestamp\": \"2026-11-03T12:34:56.123456789Z\"\n}\n",
+      "proof": "ed25519:rLVZxRp3quMNrD9AbbvFWrKWz6Gj4pb5GXsZh4zSVmDKmsAei3UCEms5U4D5nPs5SjTwry5MBUxgqnkCtcbntRb"
+    },
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "internal": [
+            {
+              "op": "require_ft_metadata",
+              "payload": {
+                "token_id": "token.near",
+                "decimals": 6,
+                "symbol": "USDC"
+              }
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "token.near",
+              "actions": [
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "ft_transfer_call",
+                    "args": "eyJyZWNlaXZlcl9pZCI6ImludGVudHMubmVhciIsImFtb3VudCI6IjE1MDAwMDAiLCJtc2ciOiJ7XCJyZWNlaXZlcl9pZFwiOlwiYm9iLm5lYXJcIn0ifQ==",
+                    "deposit": "1",
+                    "gas": "50000000000000"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "public_key": "FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z",
+      "message": "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nGas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\n{\n  \"chain_id\": \"mainnet\",\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"nonce\": 42,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"external\": [\n      {\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"args\": {\n              \"receiver_id\": \"intents.near\",\n              \"amount\": \"1.5 USDC\",\n              \"msg\": \"{\\\"receiver_id\\\":\\\"bob.near\\\"}\"\n            },\n            \"deposit\": \"0.000000000000000000000001 NEAR\",\n            \"function_name\": \"ft_transfer_call\",\n            \"gas\": \"50000000000000\",\n            \"gas_weight\": \"1\"\n          }\n        ],\n        \"receiver_id\": \"token.near\",\n        \"refund_to\": null\n      }\n    ],\n    \"internal\": [\n      {\n        \"op\": \"require_ft_metadata\",\n        \"payload\": {\n          \"decimals\": 6,\n          \"symbol\": \"USDC\",\n          \"token_id\": \"token.near\"\n        }\n      }\n    ]\n  },\n  \"signer_id\": \"wallet.near\",\n  \"solana_public_key\": \"FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z\",\n  \"timeout_secs\": 300\n}\n",
+      "proof": "ed25519:FR5oZZ3yVuCGK7TeeccHEEKzw51YHDC6DjCB7Z7sZmUSa5xxBFZsL4TZ2D1wwCG3NMBGHMxV4qxJrLTfcrpZtVu"
+    }
+  ]
+}

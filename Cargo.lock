@@ -1853,7 +1853,6 @@ version = "0.1.0"
 dependencies = [
  "arbitrary",
  "arbitrary_with",
- "base64 0.22.1",
  "borsh",
  "bs58 0.5.1",
  "cfg_eval",

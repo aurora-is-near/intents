@@ -5,11 +5,11 @@ use defuse_crypto::{
 use defuse_wallet::{RequestMessage, offchain::OffchainMessage};
 use defuse_wallet_sdk::{Proof, WalletSigner};
 
-use crate::{MessageError, WalletPhantom, offchain_signing_message, request_signing_message};
+use crate::{MessageError, WalletSolana, offchain_signing_message, request_signing_message};
 
 /// Adapter for an Ed25519 signer that signs full message bytes without prehashing.
 #[derive(Debug, Clone, Copy)]
-pub struct WalletPhantomSigner<S>(pub S);
+pub struct WalletSolanaSigner<S>(pub S);
 
 /// Rendering or underlying signer failure.
 #[derive(Debug, thiserror::Error)]
@@ -20,7 +20,7 @@ pub enum SignError<E> {
     Signer(E),
 }
 
-impl<S: Signer<Ed25519>> WalletPhantomSigner<S> {
+impl<S: Signer<Ed25519>> WalletSolanaSigner<S> {
     async fn sign_message(&self, message: String) -> Result<Proof, SignError<S::Error>> {
         let signature = self
             .0
@@ -31,7 +31,7 @@ impl<S: Signer<Ed25519>> WalletPhantomSigner<S> {
     }
 }
 
-impl<S: Signer<Ed25519>> WalletSigner<WalletPhantom> for WalletPhantomSigner<S> {
+impl<S: Signer<Ed25519>> WalletSigner<WalletSolana> for WalletSolanaSigner<S> {
     type Error = SignError<S::Error>;
 
     fn public_key(&self) -> Ed25519PublicKey {

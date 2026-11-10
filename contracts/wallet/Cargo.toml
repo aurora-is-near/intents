@@ -17,7 +17,6 @@ thiserror.workspace = true
 
 arbitrary = { workspace = true, features = ["derive"], optional = true }
 arbitrary_with = { workspace = true, optional = true }
-base64 = { workspace = true, optional = true }
 borsh = { workspace = true, features = ["derive"], optional = true }
 cfg_eval = { workspace = true, optional = true }
 defuse-borsh-utils = { workspace = true, optional = true }
@@ -73,7 +72,8 @@ json = [
 ]
 near-kit = ["defuse-near-promise/near-kit", "defuse-nep641/near-kit"]
 # StateInit construction in the promise model requires Borsh support.
-readable-message = ["borsh", "dep:base64", "json", "std"]
+# Function arguments are shown in their original key order.
+readable-message = ["borsh", "json", "serde_json/preserve_order", "std"]
 schemars-v0_8 = [
   "defuse-near-promise/schemars-v0_8",
   "defuse-nep641/schemars-v0_8",
