@@ -15,24 +15,25 @@ fn real_slush_personal_message_signatures_match_the_rust_schema() {
         let key: SuiPublicKey = capture["publicKey"].as_str().unwrap().parse().unwrap();
         assert_eq!(key.flag(), 0);
         let proof = capture["proof"].as_str().unwrap();
-        let (rendered, valid) = match capture["kind"].as_str().unwrap() {
+        let signed = capture["signingMessage"].as_str().unwrap();
+        // Slush signed exactly the captured bytes as a Sui personal message.
+        assert!(key.verify_personal_message(signed.as_bytes(), proof));
+        match capture["kind"].as_str().unwrap() {
             "execution" => {
+                // Captured before amounts were shown with decimals and symbol:
+                // the contract now renders a different message and rejects
+                // this proof. A new capture is needed for execution display.
                 let msg: RequestMessage = serde_json::from_value(capture["msg"].clone()).unwrap();
-                (
-                    request_signing_message(&key, &msg).unwrap(),
-                    WalletSui::<Ed25519>::verify_request_msg(&key, &msg, proof),
-                )
+                assert!(signed.contains("\"amount_yoctonear\""));
+                assert_ne!(request_signing_message(&key, &msg).unwrap(), signed);
+                assert!(!WalletSui::<Ed25519>::verify_request_msg(&key, &msg, proof));
             }
             "offchain" => {
                 let msg: OffchainMessage = serde_json::from_value(capture["msg"].clone()).unwrap();
-                (
-                    offchain_signing_message(&key, &msg).unwrap(),
-                    WalletSui::<Ed25519>::verify_offchain_msg(&key, &msg, proof),
-                )
+                assert_eq!(offchain_signing_message(&key, &msg).unwrap(), signed);
+                assert!(WalletSui::<Ed25519>::verify_offchain_msg(&key, &msg, proof));
             }
             kind => panic!("unknown capture kind: {kind}"),
-        };
-        assert_eq!(rendered, capture["signingMessage"].as_str().unwrap());
-        assert!(valid);
+        }
     }
 }

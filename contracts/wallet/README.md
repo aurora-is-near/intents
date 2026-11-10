@@ -46,7 +46,8 @@ A wallet contract has two main entrypoints for executing requests:
 Each `request` contains:
 
 * `internal`: *(optional)* list of wallet operations: enable/disable signature,
-  add/remove extension
+  add/remove extension, require token metadata (see
+  [token metadata checks](#token-metadata-checks))
 * `external`: *(optional)* promises (i.e. cross-contract calls) to execute.
 
 ### Signing Standards
@@ -64,11 +65,10 @@ A public key of the wallet contract instance is also fixed at the time of first
 initialization and **cannot** be changed later. However, signature can still be
 disabled by signer/extension (see [key rotation](#key-rotation)).
 
-The readable v1 signing format is implemented in this crate's
-`readable_message` module, behind the opt-in `readable-message` feature. The
-Sui adapters select it explicitly. It is wallet-specific code,
-not a separate general-purpose workspace utility. Sui protocol encoding, identity
-derivation and BLAKE2b-256 live inside the adapter's `src/protocol/` module.
+The readable v1 signing format used by the Sui variants is implemented in this
+crate's `readable_message` module, behind the opt-in `readable-message` feature,
+so other variants do not include it. Each variant that uses it supplies its own
+identity fields, such as the Sui public key and address.
 
 ### Extensions
 
@@ -166,11 +166,54 @@ Supported actions within promises are:
 | `Transfer` | Send NEAR tokens |
 | `StateInit` | Deploy a new contract at a [deterministic AccountId](https://github.com/near/NEPs/blob/master/neps/nep-0616.md) |
 
+#### `StateInit` storage deposit and funding
+
+`StateInit.deposit` is a refundable storage budget, not a transfer of the full
+amount to the new account. At that action, the runtime retains only the balance
+missing for the account's current storage requirement and refunds the rest to
+`refund_to` (or the wallet if unset). For a zero-balance account it can refund the
+entire deposit. See the [NEAR runtime's deposit settlement](https://github.com/near/nearcore/blob/2.14.0/runtime/runtime/src/deterministic_account_id.rs).
+
+Storage written by a later function call is not covered by an already-refunded
+`StateInit` deposit. Fund that storage separately, for example with an explicit
+`Transfer` between `StateInit` and the initializing call in the same promise.
+The readable message binds both actions and the refund target; the wallet does
+not convert a storage deposit into a transfer.
+
 For security reasons, self-calls are **not** supported.
 
 Other actions (e.g. `DeployContract`, `AddKey`, etc.) are intentionally **not**
 supported: wallet contracts are not self-upgradable and do not allow creating
 subaccounts.
+
+### Token metadata checks
+
+The `require_ft_metadata` operation names a token and its expected NEP-148
+`decimals` and `symbol`. Promises of the same request to that token are created
+only after the token's `ft_metadata()` returns exactly these values: the wallet
+calls `ft_metadata()` and creates the promise in its private
+`w_on_ft_metadata()` callback. If the values differ, the call fails or the
+result exceeds 32 KiB, the promise is not created and the request's nonce stays
+used. A request may require metadata of each token at most once.
+
+Each checked promise costs two more receipts. The wallet reserves 5 Tgas for
+`ft_metadata()` and 10 Tgas for the callback in addition to the promise's own
+gas; `Request::estimate_gas()` includes both. Unused gas is shared as without the
+check: `ft_metadata()` gets none, and the callback gets the total `gas_weight` of
+the promise's function calls.
+
+For each checked promise, the sum of its call weights must fit `u64`. An overflow
+rejects the request instead of changing the gas shares. The failed receipt
+persists no wallet operations, nonce commitment or outgoing promises. Unchecked
+promises retain the runtime's native weight semantics.
+This bound is enforced during execution, not when constructing a signing message.
+
+The check runs before the whole promise. A promise that itself creates the token
+(`StateInit` and initialization) therefore fails the check, and nothing is
+created. Create and initialize the token in an earlier request, then transfer.
+
+The readable signing format uses these values to show NEP-141 transfer amounts
+with decimals and symbol.
 
 ## Example flows
 

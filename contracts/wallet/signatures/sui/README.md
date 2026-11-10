@@ -1,177 +1,179 @@
 # Sui wallet contract
 
-## Adapter specification (v1)
+Wallet contract variants authorized by native Sui personal-message signatures.
+There are three separate wallet/global-contract variants: `ed25519/`,
+`secp256k1/` and `p256/` (Sui `Secp256r1`). Each instantiates
+`WalletSui<Algorithm>` with one fixed scheme; the parent `defuse-wallet-sui`
+crate is a library and does not build a contract. The signatures authorize NEAR
+wallet operations, not Sui transactions.
 
-This family contains three separate NEAR wallet/global-contract variants using
-Sui personal-message signatures: `ed25519/`, `secp256k1/`, and `p256/` (Sui
-`Secp256r1`). The parent `defuse-wallet-sui` crate is a library and does not build
-a universal contract. Each leaf instantiates `WalletSui<Algorithm>` with one
-fixed scheme; the protocol and crypto backends are selected by Cargo features.
-It authorizes NEAR wallet operations, not Sui transactions, and reuses the wallet
-core and its readable-message renderer. Each global contract ID participates in
-NEP-616 address derivation: selecting a different ID changes derived addresses
-even with the same key and initial state.
-Changing from the old universal artifact to a new leaf global contract changes
-derived NEAR addresses because the global contract ID changes. The old unified
-source is retained as historical audit material, and old local artifacts are not
-new build targets. No global contract publication, migration or live deployment
-is performed here.
+Each variant has its own global contract ID, which participates in NEP-616
+address derivation together with the signing key and the initial wallet state.
 
-The shared readable-message formatter belongs to `contracts/wallet/src/readable_message.rs`
-and is enabled by the wallet's `readable-message` feature. This Sui library owns
-its native protocol implementation in `src/protocol/mod.rs` and its private
-BLAKE2b-256 helper in `src/protocol/hash.rs`. The former standalone
-`defuse-sui` and `defuse-wallet-message` workspace crates are removed. Existing
-adapter re-exports, including `sui`, are retained; signed bytes and stored-state
-encoding are unchanged. The general digest crate has no wallet-specific additions.
+## Signing format (v1)
 
-The [wallet-local architecture review](audit/wallet-local-20261105/REPORT.md) records
-the relocation, feature boundaries and updated source/artifact identities.
+### Identity
 
-The initial interoperability reference is `@mysten/sui` **2.39.0** and
-`@mysten/wallet-standard` **0.21.37**. The browser API is Wallet Standard
-`sui:signPersonalMessage({ message, account })`, which receives the complete
-readable message bytes. A wallet's internal protocol hashing does not justify
-giving it only a digest. Phantom's legacy Sui support is officially deprecated;
-it is not assumed available merely because Phantom Solana works.
+- Only direct key-derived Sui identities are supported: flag 0 (Ed25519),
+  1 (secp256k1) and 2 (secp256r1). Multisig, zkLogin, passkey, address aliases
+  and other account-authority mechanisms are rejected.
+- The public key is 32 bytes for Ed25519 and a 33-byte compressed SEC1 point for
+  ECDSA. Its string form is `sui:<base64(flag || public_key)>`, and its Borsh
+  form in the wallet state is `flag || public_key`.
+- The Sui address is `0x` followed by the lowercase hex BLAKE2b-256 of
+  `flag || public_key`.
+- Each contract variant accepts only keys and proofs of its own scheme.
 
-### Identity, bytes and proof
+### Signed message
 
-- Support direct key-derived Sui identities with flags 0 (Ed25519), 1
-  (secp256k1), and 2 (secp256r1). Multisig, zkLogin, passkey, ML-DSA, address
-  aliases and other account-authority mechanisms are not implemented and must
-  not be accepted as an arbitrary Sui account's authority.
-- The identity string is `sui:<base64(flag || public_key)>`. Keys have 32 bytes
-  for Ed25519 and 33-byte compressed SEC1 encoding for ECDSA. The Sui address is
-  `0x` plus the lowercase hex BLAKE2b-256 of `flag || public_key`. The key's
-  Borsh discriminants remain those three flags after the refactor; they participate in NEP-616 address
-  derivation, alongside the separate global contract ID and initial wallet state.
-  Rust key variants now contain raw fixed arrays rather than crypto wrapper types;
-  the complete state bytes remain identical for a fixed global contract ID, key
-  and initial settings. Compatibility tests retain the previous representation
-  as an oracle. Each contract rejects a key or proof for a different scheme even
-  when all backends are compiled together.
-- The readable representation includes `sui_address` and `sui_public_key`
-  (base64 of flag plus key), instead of Solana's `solana_public_key`. Otherwise
-  it follows the shared v1 format: purpose-specific headers, all request/NEP-641
-  fields, sorted object keys, ordered arrays, two-space JSON, escaped DEL and
-  non-ASCII UTF-16 units, trailing LF and a 16 KiB limit. Payload and call
-  argument bytes are not parsed or normalized. Defaults are explicit.
-- Native personal-message signing uses BCS `vector<u8>` (canonical ULEB128 u32
-  length followed by bytes), prefixed with intent `[3, 0, 0]`, then BLAKE2b-256.
-  Ed25519 signs that digest as a message. ECDSA signs its SHA-256 digest, matching
-  the native SDK's ECDSA message hashing; signatures must be low-S.
-- Proofs are canonical padded base64 of `flag || signature[64] || public_key`.
-  Check exact lengths, supported flag, stored-key equality, valid keys/points,
-  signatures and malleability. Never retry a rejected proof under another scheme.
-  Reject weak Ed25519 keys using the existing crypto policy. This intentionally
-  does not claim acceptance of all exceptional ZIP-215 key encodings.
-- Separate execution/offchain headers and the native intent domain prevent
-  cross-purpose, transaction-intent and raw Solana proof reuse. Core checks still
-  enforce the NEAR network/account, execution nonces and validity interval.
-  NEP-641 one-time use and expiry remain the consuming protocol's responsibility.
+The contract reconstructs the message from the parsed request and the stored
+key; no client-provided text, digest or address is trusted. The message is
+the purpose header (`REQUEST_PREFIX` for `w_execute_signed()`, `OFFCHAIN_PREFIX`
+for NEP-641 authorizations) followed by a JSON document and a trailing LF:
 
-### Trust boundaries and clear signing
+- The JSON contains every field of `RequestMessage` or `OffchainMessage`, plus
+  `sui_public_key` (base64 of `flag || public_key`) and `sui_address`.
+- Defaults are explicit: `pay_for_gas` is `false`, an absent `refund_to` is
+  `null`, absent deposits and gas are `"0"`, and the default `gas_weight` is
+  `"1"`.
+- Each request action is rendered as `transfer` (`amount`), `function_call`
+  (`function_name`, `args`, `deposit`, `gas`, `gas_weight`) or
+  `deterministic_state_init` (`state_init`, `deposit`). Any other action is
+  rejected.
+- NEAR amounts and deposits are shown with 24 decimals and the `NEAR` symbol,
+  for example `1.5 NEAR` or `0.000000000000000000000001 NEAR`: the decimal point
+  is inserted into the yoctoNEAR value and trailing fractional zeros are
+  removed.
+- `args` shows the call arguments once, as JSON in their original key order.
+  The arguments must be exactly the compact serialization of that JSON, the
+  same in `serde_json::to_vec` and `JSON.stringify`: no insignificant
+  whitespace, duplicate keys, optional escapes or alternative number forms.
+  Numbers must be integers within ±(2^53 - 1); pass larger or fractional
+  values as strings, as NEAR standards do. Strings must not contain unpaired
+  surrogates, and integer keys (`"0"` to `"4294967294"`) must come first in
+  ascending order, as in JavaScript objects. Other arguments, including empty,
+  binary and BOM-prefixed ones, are rejected; call a method without parameters
+  with `{}`. The message therefore determines the exact argument bytes.
+- NEP-141 transfers (`ft_transfer`, `ft_transfer_call`) require one
+  `require_ft_metadata` operation for the receiver token in the same request;
+  otherwise the request is rejected. The contract rejects a checked promise if
+  the sum of its call weights exceeds `u64::MAX`. Their `args.amount` must be a
+  decimal `u128` string without leading zeros and is shown with the operation's
+  `decimals` and `symbol` in the same way, for example `1.5 USDC`. The wallet
+  creates promises to that token only after its `ft_metadata()` returns exactly
+  these values (see [token metadata checks](../../README.md#token-metadata-checks)).
+- `StateInit.deposit` is a refundable budget for storage at that action, not
+  funding for later calls; see [`StateInit` storage deposit and funding](../../README.md#stateinit-storage-deposit-and-funding).
+- `nonce`, `timeout_secs` and `decimals` are JSON numbers; gas and
+  `gas_weight` are decimal strings.
+- Timestamps use RFC 3339 in UTC with a `Z` suffix. Fractional seconds keep up
+  to nine digits with trailing zeros removed, and are omitted when zero, for
+  example `2026-11-03T12:34:56.12Z`. They must fit unsigned 64-bit Unix
+  nanoseconds; `timeout_secs` must fit `u32`.
+- Object keys are sorted at every level except inside `args`, and arrays keep
+  their order. The document is indented with two spaces, with `": "` after
+  keys.
+- Every UTF-16 code unit from U+007F upward is escaped as lowercase `\uXXXX`,
+  so the message is ASCII. This includes bidi controls and line separators.
+- The NEP-641 payload is never parsed or normalized. Call arguments are
+  parsed only for display and are never normalized.
 
-The dApp, relayer, RPC and third-party contracts are untrusted. The contract
-reconstructs the display message from the execution request and stored key; no
-client description or address is trusted. Enabled extensions retain full control.
-Immutable global code hashes and updatable global account IDs have different
-update-authority trust assumptions. Asynchronous promises can partially succeed.
+The complete message must not exceed 16 KiB (16384 bytes). A request with one
+function call needs about 1.1 KB for fixed fields. An ASCII argument byte takes
+one message byte, each displayed member adds a line break and two spaces per
+nesting level, and each non-ASCII UTF-16 unit takes six bytes. One request
+fits about 15 KB of flat ASCII JSON arguments.
 
-Native transfers and extension changes have explicit fields. Function arguments
-and deployment state may be opaque, even when shown as UTF-8/base64. A readable
-JSON envelope cannot establish their full semantic meaning. Large messages require
-scrolling. Actual wallet/version and visible fields must be recorded before any
-real-wallet clear-signing claim. The current manual integration targets Slush
-through Wallet Standard; trusted-display evidence must be recorded before
-claiming it verified. A zkLogin/passkey/alias account must not be treated as a
-direct Ed25519 account merely because an ephemeral key is returned by its API.
-Existing Phantom Solana 26.37.0 display evidence applies only to its tested
-messages; it is not evidence for Sui, mobile or hardware-wallet displays.
+### Native signature and proof
 
-### Validation and delivery
+- The digest is BLAKE2b-256 of intent `[3, 0, 0]` (`PersonalMessage`, V0, Sui)
+  followed by BCS `vector<u8>` of the message: a canonical ULEB128 length and
+  the message bytes.
+- Ed25519 signs the digest. secp256k1 and secp256r1 sign SHA-256 of the digest
+  with ECDSA; signatures must be low-S.
+- The proof is canonical padded base64 of `flag || signature || public_key`
+  with a 64-byte signature, which is always 132 characters.
+- Verification rejects other lengths, non-canonical base64, other flags, a
+  public key different from the stored one, invalid points, weak Ed25519 keys,
+  high-S ECDSA signatures and invalid signatures. A rejected proof is never
+  retried under another scheme.
+- Ed25519 verification uses the NEAR host function rather than ZIP-215 rules,
+  so exceptional encodings that Sui accepts may be rejected.
 
-Use official SDK vectors for all three schemes and both purposes, field/order
-mutations, malformed keys/proofs, wrong domains/intents, exact-byte payloads,
-resource boundaries, deterministic account derivation, and real WASM sandbox
-execution/offchain/nonce rollback/rotation checks. The shared renderer must match
-all frozen Sui vectors. Final audit must re-read the resulting code
-from scratch and identify exact source/artifact checksums. No live deployment or
-real funds are authorized by this implementation.
+### Domain separation
 
-Local review is recorded in [the refactor audit](audit/refactor-20261104/REPORT.md)
-and [the Slush integration follow-up](audit/slush-key-encoding-20261104/REPORT.md).
-Actual execution and offchain signatures from Slush `26.22.0 [release]`
-(user-reported version), using a direct Ed25519 account, passed Rust and OpenSSL
-verification. User-supplied text from the trusted signing window contains the
-tested message fields. The offchain display values match the captured signature's
-message, including timestamp and exact payload; the execution display and capture
-were separate requests, as confirmed by the user. These observations cover the
-tested text-message format, not arbitrary call semantics or other devices/schemes.
+The two purpose headers separate execution requests from NEP-641
+authorizations, and intent scope `PersonalMessage` separates both from Sui
+transactions. The wallet core enforces the network, the wallet account, the
+nonce and the validity interval of execution requests. NEP-641 one-time use and
+expiration remain the consuming protocol's responsibility.
 
-After the upstream migration, this workspace uses NEAR SDK 5.30, nearcore 0.38
-and `AccountId` 3.x. The single local patch described in
-[vendor/README.md](../../../../vendor/README.md) updates near-vm-runner 0.38.0 to
-p256 0.14, removing crypto-bigint 0.5.5. SDK and near-crypto use their published
-versions; the resolved AWS-LC/TLS versions include the earlier fixes. The audit
-configuration has no advisory exceptions. Unmaintained-package warnings remain.
-The [earlier dependency follow-up](audit/dependency-fix-20261105/REPORT.md)
-identifies the previous SDK 5.29/nearcore 0.37 snapshot and its own validation;
-it does not identify the current merged source.
+## Display and clear-signing status
 
-## Build and integration
+Wallets receive the complete message bytes through Wallet Standard
+`sui:signPersonalMessage`. Direct fields, including native transfers, deposits,
+receivers, refund targets, extension changes, network, wallet account and
+validity, appear as named JSON fields. NEAR amounts have decimals and the
+`NEAR` symbol, NEP-141 transfer amounts have the decimals and symbol checked
+against the token's metadata, and gas is in gas units.
+
+Other function-call arguments are shown as JSON fields with their raw values.
+The format does not decode them further:
+
+- JSON nested inside a string value, such as `msg` of `ft_transfer_call`,
+  remains an escaped string.
+- Amounts in arguments of other methods, for example NEP-245 `mt_transfer`, are
+  in base units without decimals and symbol.
+- Non-ASCII text is shown as `\uXXXX` escapes.
+- `deterministic_state_init` data is shown as base64 keys and values.
+
+These parts are not clear-signed. A displayed call also says nothing about the
+called contract's behavior. The token symbol comes from the token contract's
+own metadata, so it identifies the token only together with the receiver
+account.
+
+Signatures of the tested execution and offchain messages were captured from
+Slush 26.22.0 (version reported by the tester) with a direct Ed25519 account;
+they are stored in `tests/fixtures/slush.json`. Both signatures verify over the
+captured bytes. The offchain message is unchanged and accepted. The execution
+message predates amounts with decimals and symbol, so the contract renders
+that request differently and rejects the capture; a new execution capture,
+including a token transfer, is needed. Display support in other wallets, on
+mobile and on hardware wallets is unverified.
+
+## Trust boundaries
+
+The dApp, relayer, RPC and third-party contracts are untrusted. Enabled
+extensions retain full control of the wallet. Global contracts referenced by
+an immutable code hash and by an updatable account ID have different update
+authorities. Asynchronous promises can partially succeed.
+
+## Test vectors
+
+`tests/fixtures/sui.json` was generated with the official `@mysten/sui` 2.39.0
+SDK (`signPersonalMessage`) from a deliberately public deterministic test seed
+(`0x01..0x20`, also stored in the fixture). It covers all three schemes and
+both purposes, including call arguments with unsorted keys and a nested JSON
+string and NEP-141 transfers with required token metadata, and includes high-S and Sui-transaction-intent proofs for negative
+tests. The Rust signers reproduce the SDK proofs byte for byte.
+
+## Build and test
 
 ```sh
 make defuse-wallet-sui-ed25519 defuse-wallet-sui-secp256k1 defuse-wallet-sui-p256
 cargo test -p defuse-wallet-sui --all-features --locked
 ```
 
-Sandbox tests use the standard Docker-backed harness. Alternatively, start an
-isolated official NEAR 2.13.4 sandbox and set `SUI_SANDBOX_RPC_URL` to its loopback
-HTTP URL with a nonzero
-port. The override uses only the official sandbox's public test key and rejects
-remote hosts, credentials, paths and query strings. No real wallet seed is needed.
+Sandbox tests use the standard Docker-backed NEAR sandbox and the contract
+artifacts in `res/`.
 
-`WalletSuiSigner::<Ed25519, _>::new(signer)` adapts a shared crypto signer to both
-SDK signing paths; use `Secp256k1` or `P256` for the other two native schemes.
-`SuiPublicKey` retains the scheme in state; each `WalletSui<C>` also checks
-`C::FLAG`, so another enabled backend cannot authorize its requests.
+`WalletSuiSigner::<Ed25519, _>::new(signer)` adapts a shared crypto signer to
+both SDK signing paths; use `Secp256k1` or `P256` for the other schemes.
 
-The optional local `client/` helper uses Node >=22, pinned npm dependencies and
-Wallet Standard. Its manual page selects Slush explicitly. It uses the shared
-wallet renderer in `contracts/wallet/client/readable-message.mjs` and verifies the returned
-signature and exact message locally. It rejects unsupported account
-identities and never silently selects another wallet or signing method.
-Wallet account metadata may contain raw key bytes or native Sui flag-prefixed
-bytes; both forms must derive the advertised direct account address before signing.
-
-```sh
-cd contracts/wallet/signatures/sui/client
-npm ci --ignore-scripts
-npm test
-npm run build
-python3 -m http.server 8766 --bind 127.0.0.1 --directory dist
-```
-
-Open `http://localhost:8766/display-check.html`, explicitly select/connect Slush,
-then request each test signature. The messages use the fictional network
-`sui-display-check-only` and are never relayed. Review the entire message in the
-wallet, including recipient, amount/units, refund target, recovery extension,
-network/account, validity, and the offchain path/payload. Record wallet version
-and complete display evidence separately from the page's verification result.
-
-`npm run fixtures` regenerates the official SDK vectors from the local
-`client/fixture-messages.json` cases using a deliberately public deterministic
-test secret. It does not require the Solana adapter or its fixtures. The test
-secret must never be replaced with a real key.
-Local client/audit helpers are separate from the production Rust contract and
-have not been staged or published.
-
-### Primary references
+## References
 
 - [Sui intent signing](https://www.docs.sui.io/develop/transactions/transaction-auth/intent-signing)
 - [Sui authentication and signature requirements](https://www.docs.sui.io/develop/transactions/transaction-auth/auth-overview)
 - [Official SDK cryptography](https://sdk.mystenlabs.com/sui/cryptography)
 - [Wallet Standard personal messages](https://github.com/MystenLabs/ts-sdks/blob/main/packages/wallet-standard/src/features/suiSignPersonalMessage.ts)
-- [Phantom Sui deprecation](https://docs.phantom.com/sui/signing-a-message)
+

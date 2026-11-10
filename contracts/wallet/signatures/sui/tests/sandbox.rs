@@ -4,8 +4,8 @@ use std::{env, fs, path::Path, time::Duration};
 
 use defuse_nep641::resolver::RpcResolver;
 use defuse_wallet::{
-    Gas, NearPromise, NearToken, Request, RequestMessage, Timestamp, WalletOp,
-    actions::FunctionCall,
+    AccountId, Gas, NearPromise, NearToken, Request, RequestMessage, StateInit, StateInitV1,
+    Timestamp, WalletOp, actions::FunctionCall,
 };
 use defuse_wallet_sdk::{Wallet, WalletBuilder, WalletSigner, client::WalletContract};
 use defuse_wallet_sui::{
@@ -15,78 +15,37 @@ use defuse_wallet_sui::{
         p256::{P256, p256},
         secp256k1::{Secp256k1, k256},
     },
+    request_signing_message,
     sui::SuiScheme,
 };
-use near_kit::{Near, protocol::PublishMode, signer::InMemorySigner, transaction::Final};
+use near_kit::{Near, protocol::PublishMode, rpc::FinalExecutionOutcome, transaction::Final};
 use near_kit_sandbox::SandboxConfig;
 // Link the native NEAR host mocks used by near-kit's deterministic-address hash.
 use near_sdk as _;
 use sha2::{Digest, Sha256};
 
 async fn near() -> Near {
-    if let Ok(url) = env::var("SUI_SANDBOX_RPC_URL") {
-        // This override is strictly for an isolated native sandbox, never a public network.
-        assert!(is_loopback_sandbox_url(&url));
-        let signer = InMemorySigner::new("sandbox", "ed25519:3tgdk2wPraJzT4nsTuf86UX41xgPNk3MHnq8epARMdBNs29AFEztAuaQ7iHddDfXG9F2RzV1XNQYgJyAyoW51UBB").unwrap();
-        let provisional = Near::custom(&url, "sandbox").build();
-        let chain = provisional.rpc().status().await.unwrap().chain_id;
-        Near::custom(url, chain).signer(signer).build()
-    } else {
-        SandboxConfig::shared()
-            .await
-            .expect("NEAR sandbox requires Docker or SUI_SANDBOX_RPC_URL")
-            .client()
-    }
-}
-
-fn is_loopback_sandbox_url(url: &str) -> bool {
-    let Some(endpoint) = url
-        .strip_prefix("http://127.0.0.1:")
-        .or_else(|| url.strip_prefix("http://localhost:"))
-    else {
-        return false;
-    };
-    let port = endpoint.strip_suffix('/').unwrap_or(endpoint);
-    !port.is_empty()
-        && port.bytes().all(|byte| byte.is_ascii_digit())
-        && port.parse::<u16>().is_ok_and(|port| port != 0)
-}
-
-#[test]
-fn sandbox_url_guard_rejects_remote_hosts_and_credentials() {
-    for url in ["http://127.0.0.1:49206", "http://localhost:49206/"] {
-        assert!(is_loopback_sandbox_url(url));
-    }
-    for url in [
-        "http://127.0.0.1:80@attacker.example/",
-        "http://localhost:80@attacker.example/",
-        "http://127.0.0.1.attacker.example:80/",
-        "http://localhost:0",
-        "http://localhost:65536",
-        "http://localhost:+80",
-        "https://localhost:80",
-        "http://localhost:80/path",
-        "http://localhost:80?redirect=attacker.example",
-    ] {
-        assert!(!is_loopback_sandbox_url(url), "accepted {url}");
-    }
+    SandboxConfig::shared()
+        .await
+        .expect("failed to start sandbox")
+        .client()
 }
 
 async fn execute<C: SuiScheme>(
     near: &Near,
     wallet: &Wallet<WalletSui<C>>,
     request: impl Into<Request>,
-) {
-    wallet
+) -> FinalExecutionOutcome {
+    let outcome = wallet
         .sign_and_send(request)
         .await
         .unwrap()
         .status(near)
         .wait_until::<Final>()
         .await
-        .unwrap()
-        .result()
         .unwrap();
+    outcome.result().unwrap();
+    outcome
 }
 
 #[tokio::test]
@@ -193,6 +152,9 @@ where
         before.saturating_add(NearToken::from_near(1))
     );
 
+    if C::FLAG == 0 {
+        check_ft_metadata(near, &wallet, &recipient).await;
+    }
     check_resources_and_context(near, &wallet, &recipient, scheme, &signer).await;
     check_nonce_rollback_and_replay(near, &wallet).await;
 
@@ -209,6 +171,240 @@ where
     );
 
     check_lockout_and_rotation(near, wallet, recipient, payload, resolver).await;
+}
+
+/// A NEP-141 transfer is shown with the required decimals and symbol and runs
+/// only if the token's `ft_metadata()` has exactly these values.
+async fn check_ft_metadata<C: SuiScheme>(
+    near: &Near,
+    wallet: &Wallet<WalletSui<C>>,
+    recipient: &Wallet<WalletSui<C>>,
+) {
+    // near-sdk example token: decimals 24, symbol "EXAMPLE".
+    let wasm = fs::read(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../releases/fungible-token.wasm"),
+    )
+    .unwrap();
+    let token: AccountId = format!("ft{}.{}", rand::random::<u32>(), near.account_id())
+        .parse()
+        .unwrap();
+    near.transaction(&token)
+        .create_account()
+        .transfer(NearToken::from_near(5))
+        .deploy(wasm.clone())
+        .call("new_default_meta")
+        .args(serde_json::json!({
+            "owner_id": wallet.account_id(),
+            "total_supply": NearToken::from_near(10).as_yoctonear().to_string(),
+        }))
+        .gas(Gas::from_tgas(30))
+        .finish()
+        .call("storage_deposit")
+        .args(serde_json::json!({ "account_id": recipient.account_id() }))
+        .deposit(NearToken::from_millinear(10))
+        .gas(Gas::from_tgas(30))
+        .send()
+        .wait_until::<Final>()
+        .await
+        .unwrap()
+        .result()
+        .unwrap();
+    let transfer =
+        |decimals, symbol| checked_ft_transfer(&token, recipient.account_id(), decimals, symbol);
+
+    // Without the requirement, the amount cannot be shown and nothing is signed.
+    let unchecked = NearPromise::new(token.clone()).function_call(
+        FunctionCall::name("ft_transfer")
+            .args(r#"{"receiver_id":"bob.near","amount":"1"}"#)
+            .attach_deposit(NearToken::from_yoctonear(1)),
+    );
+    assert!(wallet.sign(unchecked).await.is_err());
+
+    let (msg, _) = wallet.sign(transfer(24, "EXAMPLE")).await.unwrap();
+    let message = request_signing_message(&wallet.public_key(), &msg).unwrap();
+    assert!(message.contains(r#""amount": "1.5 EXAMPLE""#), "{message}");
+    assert!(message.contains(r#""symbol": "EXAMPLE""#), "{message}");
+
+    // A mismatch fails only the callback: the transfer is never created.
+    for (decimals, symbol) in [(24, "EXAMPLE2"), (6, "EXAMPLE")] {
+        let outcome = execute(near, wallet, transfer(decimals, symbol)).await;
+        assert!(metadata_mismatch(&outcome), "{outcome:?}");
+        assert_eq!(ft_balance(near, &token, recipient.account_id()).await, "0");
+    }
+
+    let outcome = execute(near, wallet, transfer(24, "EXAMPLE")).await;
+    assert_eq!(
+        ft_balance(near, &token, recipient.account_id()).await,
+        NearToken::from_millinear(1500).as_yoctonear().to_string()
+    );
+    for receipt in &outcome.receipts_outcome {
+        eprintln!(
+            "ft_metadata check: {} burnt {}",
+            receipt.outcome.executor_id, receipt.outcome.gas_burnt,
+        );
+    }
+
+    check_ft_bootstrap(near, wallet, recipient, wasm).await;
+}
+
+/// A token that the checked promise itself creates with `StateInit` has no
+/// metadata yet: nothing is created. It must be created in an earlier request.
+async fn check_ft_bootstrap<C: SuiScheme>(
+    near: &Near,
+    wallet: &Wallet<WalletSui<C>>,
+    recipient: &Wallet<WalletSui<C>>,
+    wasm: Vec<u8>,
+) {
+    let ft_hash: [u8; 32] = Sha256::digest(&wasm).into();
+    near.publish(wasm, PublishMode::Immutable)
+        .await
+        .unwrap()
+        .result()
+        .unwrap();
+    let mut init = StateInitV1::code(ft_hash);
+    // Unique account for each run, also on a reused sandbox.
+    init.data
+        .insert(b"test_run".to_vec(), rand::random::<[u8; 8]>().to_vec());
+    let init = StateInit::from(init);
+    let token = init.derive_account_id();
+    let create = NearPromise::new(token.clone())
+        .deterministic_state_init(init.clone(), NearToken::ZERO)
+        // Storage for the token state written by `new_default_meta`.
+        .transfer(NearToken::from_millinear(100))
+        .function_call(
+            FunctionCall::name("new_default_meta")
+                .args(
+                    serde_json::json!({
+                        "owner_id": wallet.account_id(),
+                        "total_supply": NearToken::from_near(10).as_yoctonear().to_string(),
+                    })
+                    .to_string(),
+                )
+                .gas(Gas::from_tgas(30)),
+        )
+        .function_call(
+            FunctionCall::name("storage_deposit")
+                .args(serde_json::json!({ "account_id": recipient.account_id() }).to_string())
+                .attach_deposit(NearToken::from_millinear(10))
+                .gas(Gas::from_tgas(30)),
+        );
+    let bootstrap = Request::new()
+        .internal([WalletOp::require_ft_metadata(token.clone(), 24, "EXAMPLE")])
+        .external([create
+            .clone()
+            .function_call(ft_transfer(recipient.account_id()))]);
+    let outcome = execute(near, wallet, bootstrap).await;
+    assert!(metadata_mismatch(&outcome), "{outcome:?}");
+    assert!(near.account(&token).await.is_err());
+
+    check_state_init_deposit(near, wallet, &init, recipient.account_id()).await;
+
+    execute(near, wallet, create).await;
+    let transfer = checked_ft_transfer(&token, recipient.account_id(), 24, "EXAMPLE");
+    execute(near, wallet, transfer).await;
+    assert_eq!(
+        ft_balance(near, &token, recipient.account_id()).await,
+        NearToken::from_millinear(1500).as_yoctonear().to_string()
+    );
+}
+
+/// A `StateInit` deposit settles only current storage; excess is refunded even
+/// when a later initializing call needs more storage in the same promise.
+async fn check_state_init_deposit<C: SuiScheme>(
+    near: &Near,
+    wallet: &Wallet<WalletSui<C>>,
+    init: &StateInit,
+    refund_to: &AccountId,
+) {
+    let token = init.derive_account_id();
+    let deposit = NearToken::from_near(1);
+    let before = near.balance(refund_to).await.unwrap().total;
+    let attempt = NearPromise::new(token.clone())
+        .refund_to(refund_to.clone())
+        .deterministic_state_init(init.clone(), deposit)
+        .function_call(
+            FunctionCall::name("new_default_meta")
+                .args(
+                    serde_json::json!({
+                        "owner_id": wallet.account_id(),
+                        "total_supply": "1000000",
+                    })
+                    .to_string(),
+                )
+                .gas(Gas::from_tgas(30)),
+        );
+    let outcome = execute(near, wallet, attempt).await;
+    assert!(
+        outcome
+            .receipts_outcome
+            .iter()
+            .any(|r| { format!("{:?}", r.outcome.status).contains("LackBalanceForState") }),
+        "{outcome:?}"
+    );
+    assert!(near.account(&token).await.is_err());
+    assert_eq!(
+        near.balance(refund_to).await.unwrap().total,
+        before.saturating_add(deposit)
+    );
+
+    // The same deposit is entirely refunded on successful initialization of a
+    // small ZBA. It never becomes a general-purpose balance at the receiver.
+    execute(
+        near,
+        wallet,
+        NearPromise::new(token.clone())
+            .refund_to(refund_to.clone())
+            .deterministic_state_init(init.clone(), deposit),
+    )
+    .await;
+    assert_eq!(near.balance(&token).await.unwrap().total, NearToken::ZERO);
+    assert_eq!(
+        near.balance(refund_to).await.unwrap().total,
+        before.saturating_add(deposit).saturating_add(deposit)
+    );
+}
+
+/// `ft_transfer` of 1.5 tokens with 24 decimals to `receiver_id`.
+fn ft_transfer(receiver_id: &AccountId) -> FunctionCall {
+    FunctionCall::name("ft_transfer")
+        .args(
+            serde_json::json!({
+                "receiver_id": receiver_id,
+                "amount": NearToken::from_millinear(1500).as_yoctonear().to_string(),
+            })
+            .to_string(),
+        )
+        .attach_deposit(NearToken::from_yoctonear(1))
+        .gas(Gas::from_tgas(10))
+}
+
+/// [`ft_transfer`] that requires these token `decimals` and `symbol`.
+fn checked_ft_transfer(
+    token: &AccountId,
+    receiver_id: &AccountId,
+    decimals: u8,
+    symbol: &str,
+) -> Request {
+    Request::new()
+        .internal([WalletOp::require_ft_metadata(
+            token.clone(),
+            decimals,
+            symbol,
+        )])
+        .external([NearPromise::new(token.clone()).function_call(ft_transfer(receiver_id))])
+}
+
+async fn ft_balance(near: &Near, token: &AccountId, account_id: &AccountId) -> String {
+    near.view::<String>(token, "ft_balance_of")
+        .args(serde_json::json!({ "account_id": account_id }))
+        .await
+        .unwrap()
+}
+
+fn metadata_mismatch(outcome: &FinalExecutionOutcome) -> bool {
+    outcome.receipts_outcome.iter().any(|r| {
+        format!("{:?}", r.outcome.status).contains("fungible token metadata does not match")
+    })
 }
 
 async fn check_wrong_global_scheme<C, S>(near: &Near, code_hash: [u8; 32], signer: S)
@@ -407,8 +603,8 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
     }
     let (msg, oversized) = (with_payload(low), with_payload(high));
     let length = request_signing_message(&key, &msg).unwrap().len();
-    // One argument byte can add five display bytes (UTF-8 plus a base64 group).
-    assert!(length <= MAX_SIGNING_MESSAGE_BYTES && MAX_SIGNING_MESSAGE_BYTES - length < 5);
+    // Each ASCII padding byte adds exactly one display byte.
+    assert_eq!(length, MAX_SIGNING_MESSAGE_BYTES);
     assert!(request_signing_message(&key, &oversized).is_err());
     let before = near
         .account(wallet.account_id())

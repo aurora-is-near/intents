@@ -1,7 +1,0 @@
-{
-  "git": {
-    "sha1": "bc4e9e8cfb03d9e82f027883055624e18576993e",
-    "dirty": true
-  },
-  "path_in_vcs": "runtime/near-vm-runner"
-}

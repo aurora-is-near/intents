@@ -57,6 +57,9 @@ fn execution_fields_are_bound() {
                 json!("other.near"),
             ),
             ("/request/internal/1/op", json!("add_extension")),
+            ("/request/internal/2/payload/token_id", json!("other.near")),
+            ("/request/internal/2/payload/decimals", json!(17)),
+            ("/request/internal/2/payload/symbol", json!("TKM")),
             ("/request/external/0/receiver_id", json!("other.near")),
             (
                 "/request/external/0/actions/0/payload/function_name",
@@ -208,5 +211,23 @@ fn limits_and_ambiguous_timeout_are_rejected() {
         assert!(rendered.is_ascii());
         assert!(rendered.contains("\\u202e"));
         assert!(rendered.contains("\\ud83c\\udf0d"));
+    }
+}
+
+#[test]
+fn state_init_fixture_uses_derived_receiver() {
+    let table: serde_json::Value = serde_json::from_str(include_str!("fixtures/sui.json")).unwrap();
+    for v in table["vectors"].as_array().unwrap() {
+        if v["kind"] != "request" {
+            continue;
+        }
+        let msg: defuse_wallet::RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+        for promise in msg.request.external {
+            for action in promise.actions {
+                if let defuse_wallet::actions::NearAction::DeterministicStateInit(init) = action {
+                    assert_eq!(promise.receiver_id, init.state_init.derive_account_id());
+                }
+            }
+        }
     }
 }
