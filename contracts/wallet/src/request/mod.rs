@@ -14,7 +14,8 @@ pub use defuse_near_promise::*;
 #[cfg_attr(
     feature = "serde",
     derive(::serde::Serialize, ::serde::Deserialize),
-    cfg_attr(feature = "schemars-v0_8", derive(::schemars::JsonSchema))
+    cfg_attr(feature = "schemars-v0_8", derive(::schemars::JsonSchema)),
+    serde(deny_unknown_fields)
 )]
 #[cfg_attr(
     feature = "borsh",
@@ -38,6 +39,10 @@ pub struct Request {
     #[cfg_attr(
         feature = "serde",
         serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
+    #[cfg_attr(
+        feature = "serde",
+        serde(deserialize_with = "crate::serde_adapters::promises")
     )]
     pub external: Vec<NearPromise>,
 }
@@ -88,9 +93,23 @@ impl Request {
             PER_INTERNAL_OP.saturating_mul(self.internal.len().try_into().unwrap_or(u64::MAX)),
         );
 
+        // Promises to a token with required metadata also check it first.
+        let checked = |p: &NearPromise| {
+            self.internal.iter().any(|op| {
+                matches!(op, WalletOp::RequireFtMetadata { token_id, .. } if *token_id == p.receiver_id)
+            })
+        };
         self.external
             .iter()
-            .map(NearPromise::estimate_gas)
+            .map(|p| {
+                let gas = p.estimate_gas();
+                if checked(p) {
+                    gas.saturating_add(FT_METADATA_GAS)
+                        .saturating_add(FT_METADATA_CALLBACK_GAS)
+                } else {
+                    gas
+                }
+            })
             .fold(gas, Gas::saturating_add)
     }
 }

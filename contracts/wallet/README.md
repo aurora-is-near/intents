@@ -16,9 +16,9 @@ A generic minimalistic wallet smart-contract that enables for true *sharded* and
   recovery and more.
 * Can support *any* [**signing standards**](#signing-standards). As of now, we
   have support for **passkeys** (both `p256` and `ed25519`) and **Ethereum
-  wallets** via [EIP-712](https://eips.ethereum.org/EIPS/eip-712)
-  (`eth_signTypedData_v4`), with clear signing. Additional variants can be
-  implemented by *anyone* in the future.
+  wallets** via `personal_sign` over a readable message or EIP-712 typed data.
+  Additional variants
+  can be implemented by *anyone* in the future.
 * **Non-sequential** timeout-based [nonces](#nonces) enable *concurrent* request
   and avoid head-of-line blocking.
 * `AccountIds` are [deterministically derived](https://github.com/near/NEPs/blob/master/neps/nep-0616.md#deterministic-accountids)
@@ -48,10 +48,26 @@ A wallet contract has two main entrypoints for executing requests:
 Each `request` contains:
 
 * `internal`: *(optional)* list of wallet operations: enable/disable signature,
-  add/remove extension
+  add/remove extension, require token metadata (see
+  [token metadata checks](#token-metadata-checks))
 * `external`: *(optional)* promises (i.e. cross-contract calls) to execute.
 
+Signed request and NEP-641 messages, the authorization envelope and the
+arguments of `w_execute_signed`, `w_execute_extension` and `w_resolve_auth`
+reject JSON fields that the contract does not define, and state init rejects
+duplicate storage keys, so nothing is silently ignored. Absent optional
+fields take their defaults; `null` is accepted only for `refund_to`. Values
+are parsed before they are signed or shown, so non-canonical forms (e.g. the
+amount `"01"`, a timestamp with an offset, unpadded base64) stand for their
+canonical value. Requests must omit fields that the contract does not define.
+
 ### Signing Standards
+
+Two EVM variants are separate contracts: [EIP-191](signatures/evm/eip-191/README.md)
+signs the full readable execution or NEP-641 message with `personal_sign`, and
+[EIP-712](signatures/evm/eip-712/README.md) signs typed data derived from it with
+`eth_signTypedData_v4`. Their documentation describes the exact formats,
+clear-signing limits, tests, and audit requirements.
 
 A single wallet-contract variant supports only a single signing standard, which
 is fixed at the time of a deployment. Each variant is deployed as a
@@ -61,19 +77,19 @@ A public key of the wallet contract instance is also fixed at the time of first
 initialization and **cannot** be changed later. However, signature can still be
 disabled by signer/extension (see [key rotation](#key-rotation)).
 
-A variant MAY store a *derivative* of the public key instead, as long as each
-proof still binds the key: the `eip712` variant stores the signer's `0x`
-Ethereum address and derives it from the public key it recovers from the proof.
-Ethereum wallets expose the address without any signing ceremony, so a client
-knows the wallet's deterministic `AccountId` as soon as the user connects.
+The readable v1 signing format is implemented in this crate's
+`readable_message` module, behind the opt-in `readable-message` feature, so
+other variants do not include it. Each variant that uses it supplies its own
+identity fields, such as the Ethereum address. Fields have a fixed order, with
+wallet operations before external calls; each `add_extension` adds a warning
+line, and a request passed to another wallet's `w_execute_extension()` is shown
+by the same rules.
 
-Most standards sign the *canonical digest* of the message
-(`SHA3-256(domain || borsh(msg))`), since general-purpose signers (e.g. passkey
-authenticators) implement blind signing anyway. **Clear-signing** standards
-(e.g. [EIP-712](https://eips.ethereum.org/EIPS/eip-712), where the wallet
-displays the structure being signed) instead bind the proof to the *contents*
-of the message: their schemas verify that the signed structure denotes exactly
-the message the contract is about to act upon.
+A variant MAY store a *derivative* of the public key instead, as long as each
+proof still binds the key: the EVM variants store the signer's `0x` Ethereum
+address and compares it with the address of the public key it recovers from the
+proof. Ethereum wallets expose the address without any signing ceremony, so the
+wallet's deterministic `AccountId` can be derived as soon as the user connects.
 
 ### Extensions
 
@@ -95,7 +111,7 @@ whole request fails.
 
 Wallet contract implements **non-sequential** double-timeout window nonces for
 replay protection, enabling *concurrent* request submission from multiple
-*non-coordinated* clients.
+*non-coordinated* applications.
 
 * Each signed request message includes a 32-bit `msg.nonce`, `msg.created_at`
   and a corresponding `msg.timeout` which is the *maximum* validity of this
@@ -112,9 +128,15 @@ corresponding signed request will fail.
 > **NOTE**: The contract ensures that `now() - timeout <= created_at <= now()`,
 > where `now()` is the current block timestamp. Due to the desentralized nature
 > of consensus in blockchains, block timestamps usually lag a bit behind the
-> actual time when it's produced. As a result, clients are recommended to set
+> actual time when it's produced. As a result, signers are recommended to set
 > `created_at` slightly (e.g. 60 seconds) before the actual time of signing, so
 > that it doesn't fail on-chain if it arrives too fast.
+
+A signed request whose execution fails (for example, its deposits exceed the
+balance) is rolled back with its receipt, so its nonce stays unused: anyone
+who saw the failed transaction can submit the same request again until it
+expires. To retry, resubmit that request or sign the new one with the same
+nonce, so that at most one of them executes, or wait until it expires.
 
 #### Optimal nonce generation algorithm
 
@@ -163,6 +185,14 @@ Requests can optionally include arbitrary number of promises (i.e. cross-contrac
 All created promises are executed concurrently and independently of each other,
 without waiting on previous ones to complete
 
+A promise's `refund_to` (by default the wallet) receives its failed and unused
+deposits, including the unused part of a `StateInit` budget. Readable signing
+formats warn when it is another account and the promise attaches NEAR.
+
+A function call with `gas` 0 (the default) gets only the gas left from what the
+relayer attached, shared by `gas_weight`, so the relayer can make it fail while
+other promises succeed. Set `gas` for calls that must not depend on the relayer.
+
 Supported actions within promises are:
 
 | Action | Description |
@@ -171,11 +201,58 @@ Supported actions within promises are:
 | `Transfer` | Send NEAR tokens |
 | `StateInit` | Deploy a new contract at a [deterministic AccountId](https://github.com/near/NEPs/blob/master/neps/nep-0616.md) |
 
+#### `StateInit` storage deposit and funding
+
+`StateInit.deposit` is a refundable storage budget, not a transfer of the full
+amount to the new account. At that action, the runtime retains only the balance
+missing for the account's current storage requirement and refunds the rest to
+`refund_to` (or the wallet if unset). For a zero-balance account it can refund the
+entire deposit. See the [NEAR runtime's deposit settlement](https://github.com/near/nearcore/blob/2.14.0/runtime/runtime/src/deterministic_account_id.rs).
+
+Storage written by a later function call is not covered by an already-refunded
+`StateInit` deposit. Fund that storage separately, for example with an explicit
+`Transfer` between `StateInit` and the initializing call in the same promise.
+The readable message binds both actions and the refund target; the wallet does
+not convert a storage deposit into a transfer.
+
 For security reasons, self-calls are **not** supported.
 
 Other actions (e.g. `DeployContract`, `AddKey`, etc.) are intentionally **not**
 supported: wallet contracts are not self-upgradable and do not allow creating
 subaccounts.
+
+### Token metadata checks
+
+The `require_ft_metadata` operation names a token and its expected NEP-148
+`decimals` and `symbol`. Promises of the same request to that token are created
+only after the token's `ft_metadata()` returns exactly these values: the wallet
+calls `ft_metadata()` and creates the promise in its private
+`w_on_ft_metadata()` callback. If the values differ, the call fails or the
+result exceeds 32 KiB, the promise is not created and the request's nonce stays
+used. A request may require metadata of each token at most once. Only
+promises to that token wait for the check: the request's wallet operations
+and other promises take effect whatever its result. Formats that require the
+check for NEP-141 transfers cannot transfer a token whose `ft_metadata()`
+fails, exceeds 32 KiB or needs more than 5 Tgas; an extension still can.
+
+Each checked promise costs two more receipts. The wallet reserves 5 Tgas for
+`ft_metadata()` and 10 Tgas for the callback in addition to the promise's own
+gas; `Request::estimate_gas()` includes both. Unused gas is shared as without the
+check: `ft_metadata()` gets none, and the callback gets the total `gas_weight` of
+the promise's function calls.
+
+For each checked promise, the sum of its call weights must fit `u64`. An overflow
+rejects the request instead of changing the gas shares. The failed receipt
+persists no wallet operations, nonce commitment or outgoing promises. Unchecked
+promises retain the runtime's native weight semantics.
+This bound is enforced during execution, not when constructing a signing message.
+
+The check runs before the whole promise. A promise that itself creates the token
+(`StateInit` and initialization) therefore fails the check, and nothing is
+created. Create and initialize the token in an earlier request, then transfer.
+
+The readable signing format uses these values to show NEP-141 transfer amounts
+with decimals and symbol.
 
 ## Example flows
 

@@ -7,22 +7,12 @@ use defuse_crypto::secp256k1::{Secp256k1UncompressedPublicKey, k256::ecdsa::Veri
 use defuse_digest::{Digest, sha3::Keccak256};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 
-/// [Ethereum address](https://ethereum.org/en/developers/docs/accounts/#account-creation),
-/// i.e. the last 20 bytes of `keccak256(uncompressed_public_key)`, stored in
-/// the [state](defuse_wallet::State) of the
-/// [`WalletEip712`](crate::WalletEip712) contract variant.
+/// Ethereum address: the last 20 bytes of `keccak256` of the uncompressed
+/// public key, stored as the signer identity of EVM wallet variants.
 ///
-/// # Why the address and not the public key
-///
-/// Ethereum wallets expose the *address* (e.g. `eth_requestAccounts`), while
-/// the public key can only be recovered from a signature. Since the
-/// [deterministic `AccountId`](https://github.com/near/NEPs/blob/master/neps/nep-0616.md)
-/// of a wallet-contract instance is derived from its initial state, storing
-/// the address means a client knows its NEAR account id right away — without
-/// a preliminary signing ceremony just to learn the public key.
-///
-/// The contract recovers the public key from the proof and derives this
-/// address from it, so the binding to the key is preserved.
+/// Wallets expose the address without signing (`eth_requestAccounts`), so a
+/// client knows the NEP-616 account derived from it at once. Verification
+/// recovers the key from the proof and compares its address.
 #[cfg_attr(
     feature = "abi",
     derive(::borsh::BorshSchema, ::schemars::JsonSchema),
@@ -105,10 +95,8 @@ impl FromStr for EthAddress {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.strip_prefix("0x").ok_or(ParseEthAddressError::NoPrefix)?;
-
         let mut address = [0u8; 20];
-        // accepts both lowercase and EIP-55 checksummed (mixed-case) hex,
-        // without verifying the checksum
+        // Any hex case; an EIP-55 checksum is not verified.
         hex::decode_to_slice(s, &mut address)?;
 
         Ok(Self(address))
@@ -132,9 +120,7 @@ mod tests {
 
     use super::*;
 
-    /// Known-answer vector: `0x` addresses MUST be derived exactly as on
-    /// Ethereum, so that the wallet is controlled by the very same key the
-    /// user already has.
+    /// Known-answer vector: derived exactly as on Ethereum.
     #[rstest]
     #[case(
         hex!("85a66984273f338ce4ef7b85e5430b008307e8591bb7c1b980852cf6423770b801f41e9438155eb53a5e20f748640093bb42ae3aeca035f7b7fd7a1a21f22f68"),
@@ -147,8 +133,7 @@ mod tests {
         assert_eq!(EthAddress::from(public_key.into()).to_string(), address);
     }
 
-    /// Derivation all the way from a private key, cross-checked against an
-    /// independent secp256k1 + keccak256 implementation.
+    /// From a private key; matches an independent implementation.
     #[rstest]
     fn derive_from_private_key() {
         let key = defuse_crypto::secp256k1::k256::ecdsa::SigningKey::from_bytes(

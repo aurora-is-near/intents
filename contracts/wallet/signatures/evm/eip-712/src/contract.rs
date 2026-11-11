@@ -6,7 +6,7 @@ wallet! {
     #[wallet(
         schema = WalletEip712,
         metadata(
-            standard(standard = "wallet-eip712", version = "1.0.0")
+            standard(standard = "wallet-evm-eip712", version = "1.0.0")
         )
     )]
     struct Contract(_);
