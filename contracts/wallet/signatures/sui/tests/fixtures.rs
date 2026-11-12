@@ -4,6 +4,8 @@ use std::time::Duration;
 
 use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
 use defuse_wallet_sui::{SuiPublicKey, offchain_signing_message, request_signing_message};
+// Link the native NEAR host mocks used by the deterministic-address hash.
+use near_sdk as _;
 use serde_json::{Value, json};
 
 fn vectors() -> Vec<Value> {
@@ -41,7 +43,7 @@ fn official_sui_sdk_vectors() {
 
 #[test]
 fn execution_fields_are_bound() {
-    for all in vectors().chunks_exact(8) {
+    for all in vectors().chunks_exact(9) {
         let v = &all[2];
         let original = &v["msg"];
         let mutations = [
@@ -102,7 +104,7 @@ fn execution_fields_are_bound() {
 
 #[test]
 fn transfer_refund_and_state_init_are_bound() {
-    for all in vectors().chunks_exact(8) {
+    for all in vectors().chunks_exact(9) {
         for (index, pointer, value) in [
             (1, "/request/external/0/refund_to", json!("other.near")),
             (
@@ -140,7 +142,7 @@ fn transfer_refund_and_state_init_are_bound() {
 
 #[test]
 fn offchain_fields_are_bound_without_normalizing_payload() {
-    for all in vectors().chunks_exact(8) {
+    for all in vectors().chunks_exact(9) {
         let v = &all[5];
         for (pointer, value) in [
             ("/chain_id", json!("mainnet")),
@@ -168,7 +170,7 @@ fn offchain_fields_are_bound_without_normalizing_payload() {
 
 #[test]
 fn malformed_wrong_key_and_cross_domain_proofs_fail() {
-    for all in vectors().chunks_exact(8) {
+    for all in vectors().chunks_exact(9) {
         let v = &all[0];
         let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
         for proof in [
@@ -196,7 +198,7 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
 
 #[test]
 fn limits_and_ambiguous_timeout_are_rejected() {
-    for all in vectors().chunks_exact(8) {
+    for all in vectors().chunks_exact(9) {
         let v = &all[0];
         let mut msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
         msg.timeout = Duration::from_nanos(1);

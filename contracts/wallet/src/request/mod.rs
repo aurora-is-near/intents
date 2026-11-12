@@ -14,7 +14,8 @@ pub use defuse_near_promise::*;
 #[cfg_attr(
     feature = "serde",
     derive(::serde::Serialize, ::serde::Deserialize),
-    cfg_attr(feature = "schemars-v0_8", derive(::schemars::JsonSchema))
+    cfg_attr(feature = "schemars-v0_8", derive(::schemars::JsonSchema)),
+    serde(deny_unknown_fields)
 )]
 #[cfg_attr(
     feature = "borsh",
@@ -38,6 +39,10 @@ pub struct Request {
     #[cfg_attr(
         feature = "serde",
         serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
+    #[cfg_attr(
+        feature = "serde",
+        serde(deserialize_with = "crate::serde_adapters::promises")
     )]
     pub external: Vec<NearPromise>,
 }

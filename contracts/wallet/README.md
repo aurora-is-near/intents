@@ -50,6 +50,15 @@ Each `request` contains:
   [token metadata checks](#token-metadata-checks))
 * `external`: *(optional)* promises (i.e. cross-contract calls) to execute.
 
+Signed request and NEP-641 messages, the authorization envelope and the
+arguments of `w_execute_signed`, `w_execute_extension` and `w_resolve_auth`
+reject JSON fields that the contract does not define, and state init rejects
+duplicate storage keys, so nothing is silently ignored. Absent optional
+fields take their defaults; `null` is accepted only for `refund_to`. Values
+are parsed before they are signed or shown, so non-canonical forms (e.g. the
+amount `"01"`, a timestamp with an offset, unpadded base64) stand for their
+canonical value. Requests must omit fields that the contract does not define.
+
 ### Signing Standards
 
 The [Sui variants](signatures/sui/README.md) reuse the readable message renderer
@@ -69,6 +78,9 @@ The readable v1 signing format used by the Sui variants is implemented in this
 crate's `readable_message` module, behind the opt-in `readable-message` feature,
 so other variants do not include it. Each variant that uses it supplies its own
 identity fields, such as the Sui public key and address.
+Fields have a fixed order, with wallet operations before external
+calls; each `add_extension` adds a warning line, and a request passed to
+another wallet's `w_execute_extension()` is shown by the same rules.
 
 ### Extensions
 
@@ -90,7 +102,7 @@ whole request fails.
 
 Wallet contract implements **non-sequential** double-timeout window nonces for
 replay protection, enabling *concurrent* request submission from multiple
-*non-coordinated* clients.
+*non-coordinated* applications.
 
 * Each signed request message includes a 32-bit `msg.nonce`, `msg.created_at`
   and a corresponding `msg.timeout` which is the *maximum* validity of this
@@ -107,9 +119,15 @@ corresponding signed request will fail.
 > **NOTE**: The contract ensures that `now() - timeout <= created_at <= now()`,
 > where `now()` is the current block timestamp. Due to the desentralized nature
 > of consensus in blockchains, block timestamps usually lag a bit behind the
-> actual time when it's produced. As a result, clients are recommended to set
+> actual time when it's produced. As a result, signers are recommended to set
 > `created_at` slightly (e.g. 60 seconds) before the actual time of signing, so
 > that it doesn't fail on-chain if it arrives too fast.
+
+A signed request whose execution fails (for example, its deposits exceed the
+balance) is rolled back with its receipt, so its nonce stays unused: anyone
+who saw the failed transaction can submit the same request again until it
+expires. To retry, resubmit that request or sign the new one with the same
+nonce, so that at most one of them executes, or wait until it expires.
 
 #### Optimal nonce generation algorithm
 
@@ -158,6 +176,14 @@ Requests can optionally include arbitrary number of promises (i.e. cross-contrac
 All created promises are executed concurrently and independently of each other,
 without waiting on previous ones to complete
 
+A promise's `refund_to` (by default the wallet) receives its failed and unused
+deposits, including the unused part of a `StateInit` budget. Readable signing
+formats warn when it is another account and the promise attaches NEAR.
+
+A function call with `gas` 0 (the default) gets only the gas left from what the
+relayer attached, shared by `gas_weight`, so the relayer can make it fail while
+other promises succeed. Set `gas` for calls that must not depend on the relayer.
+
 Supported actions within promises are:
 
 | Action | Description |
@@ -194,7 +220,11 @@ only after the token's `ft_metadata()` returns exactly these values: the wallet
 calls `ft_metadata()` and creates the promise in its private
 `w_on_ft_metadata()` callback. If the values differ, the call fails or the
 result exceeds 32 KiB, the promise is not created and the request's nonce stays
-used. A request may require metadata of each token at most once.
+used. A request may require metadata of each token at most once. Only
+promises to that token wait for the check: the request's wallet operations
+and other promises take effect whatever its result. Formats that require the
+check for NEP-141 transfers cannot transfer a token whose `ft_metadata()`
+fails, exceeds 32 KiB or needs more than 5 Tgas; an extension still can.
 
 Each checked promise costs two more receipts. The wallet reserves 5 Tgas for
 `ft_metadata()` and 10 Tgas for the callback in addition to the promise's own

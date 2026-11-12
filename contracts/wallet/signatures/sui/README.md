@@ -27,7 +27,7 @@ address derivation together with the signing key and the initial wallet state.
 ### Signed message
 
 The contract reconstructs the message from the parsed request and the stored
-key; no client-provided text, digest or address is trusted. The message is
+key; no dApp-provided text, digest or address is trusted. The message is
 the purpose header (`REQUEST_PREFIX` for `w_execute_signed()`, `OFFCHAIN_PREFIX`
 for NEP-641 authorizations) followed by a JSON document and a trailing LF:
 
@@ -62,6 +62,9 @@ for NEP-641 authorizations) followed by a JSON document and a trailing LF:
   `decimals` and `symbol` in the same way, for example `1.5 USDC`. The wallet
   creates promises to that token only after its `ft_metadata()` returns exactly
   these values (see [token metadata checks](../../README.md#token-metadata-checks)).
+  Its arguments may be only the method's parameters (`receiver_id`, `amount`,
+  `memo`, and `msg` for `ft_transfer_call`): keys the token ignores could
+  imitate a shown amount.
 - `StateInit.deposit` is a refundable budget for storage at that action, not
   funding for later calls; see [`StateInit` storage deposit and funding](../../README.md#stateinit-storage-deposit-and-funding).
 - `nonce`, `timeout_secs` and `decimals` are JSON numbers; gas and
@@ -70,9 +73,31 @@ for NEP-641 authorizations) followed by a JSON document and a trailing LF:
   to nine digits with trailing zeros removed, and are omitted when zero, for
   example `2026-11-03T12:34:56.12Z`. They must fit unsigned 64-bit Unix
   nanoseconds; `timeout_secs` must fit `u32`.
-- Object keys are sorted at every level except inside `args`, and arrays keep
-  their order. The document is indented with two spaces, with `": "` after
-  keys.
+- Fields have a fixed order: `chain_id`, `signer_id`, `sui_public_key`,
+  `sui_address`, then `nonce`, `created_at`, `timeout_secs`, `pay_for_gas` and
+  `request`, which lists `internal` wallet operations before `external`
+  promises; a promise shows `receiver_id` and `refund_to` before its actions,
+  and a call shows its method, deposit, gas and gas weight before `args`. Only
+  state init is shown with sorted keys; arrays keep their order. The document
+  is indented with two spaces, with `": "` after keys.
+- Each `add_extension` adds `WARNING: add_extension gives <account> full
+  control of this wallet.` before the JSON. Each promise whose
+  attached NEAR (transfers and deposits) can be refunded to an account other
+  than the executing wallet adds `WARNING: up to <amount> sent to <receiver>
+  can be refunded to <refund_to>, not to this wallet.`
+- A call of another wallet's `w_execute_extension` (this wallet as its
+  extension) shows its `request` by the same rules, including warnings that
+  name that wallet and metadata requirements for its token transfers.
+  The arguments must be exactly the serde form of that request (the
+  contract's field order, defaults omitted), so the message determines them;
+  there `refund_to` `null` means the wallet that executes the request, and
+  state-init keys must have the same order as bytes and as JavaScript object
+  keys (array indices first).
+- Before rendering, raw function-call arguments (a nested request with its
+  base64 encoding), state data, token symbols and 64 bytes per operation,
+  promise and action must fit 16 KiB; JSON arguments nest at most 127 levels.
+  Fields that the contract does not define and duplicate state keys are
+  rejected.
 - Every UTF-16 code unit from U+007F upward is escaped as lowercase `\uXXXX`,
   so the message is ASCII. This includes bidi controls and line separators.
 - The NEP-641 payload is never parsed or normalized. Call arguments are
@@ -127,19 +152,21 @@ The format does not decode them further:
 - Non-ASCII text is shown as `\uXXXX` escapes.
 - `deterministic_state_init` data is shown as base64 keys and values.
 
-These parts are not clear-signed. A displayed call also says nothing about the
-called contract's behavior. The token symbol comes from the token contract's
+These parts are not clear-signed. Warning lines, amounts outside `args` and NEP-141 transfer
+amounts are written by the contract; other text inside `args` comes from the
+dApp and may imitate them. A displayed call also
+says nothing about the called contract's behavior. The token symbol comes from the token contract's
 own metadata, so it identifies the token only together with the receiver
 account.
 
-Signatures of the tested execution and offchain messages were captured from
-Slush 26.22.0 (version reported by the tester) with a direct Ed25519 account;
-they are stored in `tests/fixtures/slush.json`. Both signatures verify over the
-captured bytes. The offchain message is unchanged and accepted. The execution
-message predates amounts with decimals and symbol, so the contract renders
-that request differently and rejects the capture; a new execution capture,
-including a token transfer, is needed. Display support in other wallets, on
-mobile and on hardware wallets is unverified.
+Slush (version not recorded) with a direct Ed25519 account signed all five
+display-check messages of the current format: execution effects with token
+transfers, state init, offchain, a nested `w_execute_extension` request and
+the 16 KiB message. They are in `tests/fixtures/slush.json` with the text
+copied from each prompt: after the page name, the origin and the shortened
+signing address, it shows the whole signed message, warnings first. The
+contract accepts every signature. Secp256k1 and P-256 accounts, other
+wallets, mobile and hardware wallets are unverified.
 
 ## Trust boundaries
 
@@ -166,6 +193,11 @@ cargo test -p defuse-wallet-sui --all-features --locked
 
 Sandbox tests use the standard Docker-backed NEAR sandbox and the contract
 artifacts in `res/`.
+
+Build each variant on its own, as the `make` targets do: one `cargo build` of
+several variants links all their verifiers into each WASM, which changes the
+code hash and therefore every derived wallet account. The P-256 variant needs
+the `p256_verify` host function (NEAR protocol version 85 or later).
 
 `WalletSuiSigner::<Ed25519, _>::new(signer)` adapts a shared crypto signer to
 both SDK signing paths; use `Secp256k1` or `P256` for the other schemes.

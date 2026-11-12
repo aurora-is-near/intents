@@ -16,7 +16,12 @@ pub const FT_METADATA_CALLBACK_GAS: Gas = Gas::from_tgas(10);
     feature = "serde",
     derive(::serde::Serialize, ::serde::Deserialize),
     cfg_attr(feature = "schemars-v0_8", derive(::schemars::JsonSchema)),
-    serde(tag = "op", content = "payload", rename_all = "snake_case")
+    serde(
+        tag = "op",
+        content = "payload",
+        rename_all = "snake_case",
+        deny_unknown_fields
+    )
 )]
 #[cfg_attr(
     feature = "borsh",
