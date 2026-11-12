@@ -598,6 +598,7 @@ macro_rules! wallet {
             ///
             /// SHOULD be `#[payable]` and accept ANY attached deposit.
             #[payable]
+            #[deny_unknown_arguments]
             fn w_execute_signed(
                 &mut self,
                 msg: $crate::RequestMessage,
@@ -610,6 +611,7 @@ macro_rules! wallet {
             ///
             /// Requires at least 1yN attached.
             #[payable]
+            #[deny_unknown_arguments]
             fn w_execute_extension(&mut self, request: $crate::Request) {
                 self.0.w_execute_extension(request);
             }
@@ -658,6 +660,7 @@ macro_rules! wallet {
         #[$crate::near_sdk::near]
         impl $crate::offchain::AuthResolver for $contract {
             /// Resolve offchain authorization.
+            #[deny_unknown_arguments]
             fn w_resolve_auth(
                 &self,
                 path: ::std::vec::Vec<$crate::AccountId>,

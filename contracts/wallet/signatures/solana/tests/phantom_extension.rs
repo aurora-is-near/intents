@@ -1,3 +1,6 @@
+//! Real Phantom `signMessage` signatures from the display check (see
+//! `provenance` in `fixtures/phantom-extension.json`).
+
 use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
 use defuse_wallet_solana::{
     WalletSolana,
@@ -8,13 +11,6 @@ use defuse_wallet_solana::{
     offchain_signing_message, request_signing_message,
 };
 use serde_json::Value;
-
-fn vectors() -> Vec<Value> {
-    serde_json::from_str::<Value>(include_str!("fixtures/phantom-extension.json")).unwrap()["vectors"]
-        .as_array()
-        .unwrap()
-        .clone()
-}
 
 fn public_key(vector: &Value) -> Ed25519PublicKey {
     format!("ed25519:{}", vector["public_key"].as_str().unwrap())
@@ -29,43 +25,66 @@ fn signs(key: &Ed25519PublicKey, message: &str, proof: &str) -> bool {
     Ed25519::verify(&key, message.as_bytes(), &signature.into())
 }
 
-#[test]
-fn captured_phantom_execution_signature_predates_amount_format() {
-    let all = vectors();
-    let vector = &all[0];
-    let key = public_key(vector);
-    let proof = vector["proof"].as_str().unwrap();
-    let signed = vector["message"].as_str().unwrap();
-    let msg: RequestMessage = serde_json::from_value(vector["msg"].clone()).unwrap();
-
-    assert!(signs(&key, signed, proof));
-    assert!(!signs(&key, signed, all[1]["proof"].as_str().unwrap()));
-    // Captured before amounts were shown with decimals and symbol: the
-    // contract now renders a different message and rejects this proof.
-    // A new capture is needed for execution display.
-    assert!(signed.contains("\"amount_yoctonear\""));
-    assert_ne!(request_signing_message(&key, &msg).unwrap(), signed);
-    assert!(!WalletSolana::verify_request_msg(&key, &msg, proof));
+fn message<'a>(vectors: &'a [Value], profile: &str) -> &'a str {
+    vectors.iter().find(|v| v["profile"] == profile).unwrap()["message"]
+        .as_str()
+        .unwrap()
 }
 
 #[test]
-fn captured_phantom_offchain_signature_preserves_exact_payload() {
-    let all = vectors();
-    let vector = &all[1];
-    let key = public_key(vector);
-    let proof = vector["proof"].as_str().unwrap();
-    let mut msg: OffchainMessage = serde_json::from_value(vector["msg"].clone()).unwrap();
-
-    assert_eq!(
-        offchain_signing_message(&key, &msg).unwrap(),
-        vector["message"]
-    );
-    assert!(WalletSolana::verify_offchain_msg(&key, &msg, proof));
-    assert!(!WalletSolana::verify_offchain_msg(
-        &key,
-        &msg,
-        all[0]["proof"].as_str().unwrap()
+fn real_phantom_signatures_verify() {
+    let fixture: Value =
+        serde_json::from_str(include_str!("fixtures/phantom-extension.json")).unwrap();
+    let vectors = fixture["vectors"].as_array().unwrap();
+    assert_eq!(vectors.len(), 4);
+    for v in vectors {
+        let key = public_key(v);
+        let proof = v["proof"].as_str().unwrap();
+        let signed = v["message"].as_str().unwrap();
+        assert!(signs(&key, signed, proof));
+        // A proof signs only its own message.
+        for other in vectors.iter().filter(|other| *other != v) {
+            assert!(!signs(&key, other["message"].as_str().unwrap(), proof));
+        }
+        // The contract renders exactly that text and accepts the proof.
+        let (rendered, verified) = if v["kind"] == "request" {
+            let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+            (
+                request_signing_message(&key, &msg).unwrap(),
+                WalletSolana::verify_request_msg(&key, &msg, proof),
+            )
+        } else {
+            let msg: OffchainMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+            (
+                offchain_signing_message(&key, &msg).unwrap(),
+                WalletSolana::verify_offchain_msg(&key, &msg, proof),
+            )
+        };
+        assert_eq!(rendered, signed);
+        assert!(verified);
+    }
+    // The signed messages put the warnings before the JSON, show NEAR and
+    // token amounts with decimals and symbol, and decode the nested request.
+    let effects = message(vectors, "execution-effects");
+    for warning in [
+        "WARNING: add_extension gives temporary.display-check.near full control of this wallet.\n",
+        "WARNING: add_extension gives recovery.display-check.near full control of this wallet.\n",
+        "WARNING: up to 1.5 NEAR sent to recipient.display-check.near can be refunded to refund.native.display-check.near, not to this wallet.\n",
+        "WARNING: up to 0.000000000000000000000002 NEAR sent to usdc.display-check.near can be refunded to refund.token.display-check.near, not to this wallet.\n",
+    ] {
+        assert!(effects.find(warning).unwrap() < effects.find('{').unwrap());
+    }
+    assert!(effects.contains("\"amount\": \"1.5 USDC\""));
+    assert!(effects.contains("\"amount\": \"1.5 NEAR\""));
+    let deployment = message(vectors, "execution-deployment");
+    assert!(deployment.contains(
+        "WARNING: up to 0.375 NEAR sent to 0s762910a479b0c04f9725b03cd7931dc5064ab0ab can be refunded to refund.deploy.display-check.near, not to this wallet.\n"
     ));
-    msg.payload.push(' ');
-    assert!(!WalletSolana::verify_offchain_msg(&key, &msg, proof));
+    assert!(deployment.contains("\"deposit\": \"0.25 NEAR\""));
+    let extension = message(vectors, "execution-extension");
+    assert!(extension.contains(
+        "WARNING: add_extension gives helper.display-check.near full control of wallet vault.display-check.near.\n"
+    ));
+    assert!(extension.contains("\"function_name\": \"w_execute_extension\""));
+    assert!(extension.contains("\"amount\": \"2.5 USDC\""));
 }

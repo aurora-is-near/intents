@@ -27,7 +27,7 @@ near-sdk = { workspace = true, optional = true }
 schemars = { workspace = true, features = ["derive"], optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde_json = { workspace = true, optional = true }
-serde_with = { workspace = true, optional = true }
+serde_with = { workspace = true, features = ["base64"], optional = true }
 
 [features]
 default = ["std"]

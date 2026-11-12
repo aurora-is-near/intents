@@ -2,8 +2,12 @@ use std::time::Duration;
 
 use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
 use defuse_wallet_solana::{
-    WalletSolana, crypto::ed25519::Ed25519PublicKey, offchain_signing_message,
-    request_signing_message,
+    WalletSolana,
+    crypto::ed25519::{
+        Ed25519PublicKey, Ed25519Signature,
+        ed25519_dalek::{Signature, Verifier, VerifyingKey},
+    },
+    offchain_signing_message, request_signing_message,
 };
 use serde_json::{Value, json};
 
@@ -184,6 +188,25 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
         &Ed25519PublicKey([0; 32]),
         &msg,
         v["proof"].as_str().unwrap()
+    ));
+    // With the identity point as the key, R = identity and s = 0 satisfy the
+    // Ed25519 equation for every message (the NEAR host function accepts
+    // such a forgery); only the weak-key check rejects it.
+    let mut identity = [0; 32];
+    identity[0] = 1;
+    let mut forged = [0; 64];
+    forged[0] = 1;
+    let message = request_signing_message(&Ed25519PublicKey(identity), &msg).unwrap();
+    assert!(
+        VerifyingKey::from_bytes(&identity)
+            .unwrap()
+            .verify(message.as_bytes(), &Signature::from_bytes(&forged))
+            .is_ok()
+    );
+    assert!(!WalletSolana::verify_request_msg(
+        &Ed25519PublicKey(identity),
+        &msg,
+        &Ed25519Signature(forged).to_string()
     ));
     let auth: OffchainMessage = serde_json::from_value(all[4]["msg"].clone()).unwrap();
     assert!(!WalletSolana::verify_offchain_msg(
