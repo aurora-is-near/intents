@@ -6,6 +6,8 @@ use crate::{AccountIdRef, Gas, amounts::Amounts, intents::tokens::Transfer};
 
 pub const MAX_TOKEN_ID_LEN: usize = 127;
 
+pub const BATCH_MAX_TOKENS: usize = 10;
+
 pub const MT_ON_TRANSFER_GAS_MIN: Gas = Gas::from_tgas(5);
 pub const MT_ON_TRANSFER_GAS_DEFAULT: Gas = Gas::from_tgas(30);
 
@@ -47,7 +49,7 @@ pub mod imt {
     }
 
     #[serde_as]
-    #[cfg_attr(feature = "abi", derive(::schemars::JsonSchema))]
+    #[cfg_attr(feature = "schemars-v0_8", derive(::schemars::JsonSchema))]
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct ImtMintEvent<'a> {
         pub receiver_id: Cow<'a, AccountIdRef>,
@@ -72,7 +74,7 @@ pub mod imt {
 }
 
 #[serde_as]
-#[cfg_attr(feature = "abi", derive(::schemars::JsonSchema))]
+#[cfg_attr(feature = "schemars-v0_8", derive(::schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransferEvent<'a> {
     pub receiver_id: Cow<'a, AccountIdRef>,

@@ -10,6 +10,7 @@ use crate::{
     },
     public_key::PublicKey,
     token_id::{TokenId, nep141::Nep141TokenId, nep171::Nep171TokenId, nep245::Nep245TokenId},
+    tokens::BATCH_MAX_TOKENS,
 };
 use defuse_bitmap::{U248, U256};
 use std::{
@@ -100,7 +101,8 @@ where
         self.accounts
             .get(account_id)
             .map(Lock::as_inner_unchecked)
-            .and_then(|account| account.token_amounts.get(token_id).copied())
+            .and_then(|account| account.token_amounts.get(token_id))
+            .copied()
             .unwrap_or_else(|| self.view.balance_of(account_id, token_id))
     }
 
@@ -209,15 +211,18 @@ where
             })
             .as_inner_unchecked_mut();
         for (token_id, amount) in token_amounts {
-            if account.token_amounts.get(&token_id).is_none() {
-                account
-                    .token_amounts
-                    .add(token_id.clone(), self.view.balance_of(&owner_id, &token_id))
-                    .ok_or(DefuseError::BalanceOverflow)?;
+            if amount == 0 {
+                return Err(DefuseError::InvalidIntent);
             }
-            account
+
+            let balance = account
                 .token_amounts
-                .add(token_id, amount)
+                .entry(token_id)
+                // cache zero balances as well
+                .or_insert_with_key(|token_id| self.view.balance_of(&owner_id, token_id));
+
+            *balance = balance
+                .checked_add(amount)
                 .ok_or(DefuseError::BalanceOverflow)?;
         }
         Ok(())
@@ -240,15 +245,14 @@ where
                 return Err(DefuseError::InvalidIntent);
             }
 
-            if account.token_amounts.get(&token_id).is_none() {
-                account
-                    .token_amounts
-                    .add(token_id.clone(), self.view.balance_of(owner_id, &token_id))
-                    .ok_or(DefuseError::BalanceOverflow)?;
-            }
-            account
+            let balance = account
                 .token_amounts
-                .sub(token_id, amount)
+                .entry(token_id)
+                // cache zero balances as well
+                .or_insert_with_key(|token_id| self.view.balance_of(owner_id, token_id));
+
+            *balance = balance
+                .checked_sub(amount)
                 .ok_or(DefuseError::BalanceOverflow)?;
         }
         Ok(())
@@ -291,6 +295,10 @@ where
             return Err(DefuseError::InvalidIntent);
         }
 
+        if withdraw.token_ids.len() > BATCH_MAX_TOKENS {
+            return Err(DefuseError::TooManyTokens(withdraw.token_ids.len()));
+        }
+
         self.internal_sub_balance(
             owner_id,
             withdraw
@@ -324,9 +332,14 @@ where
         &self,
         _sender_id: &AccountIdRef,
         _receiver_id: AccountId,
-        _tokens: Amounts,
+        tokens: Amounts,
         _notification: NotifyOnTransfer,
-    ) {
+    ) -> Result<()> {
+        if tokens.len() > BATCH_MAX_TOKENS {
+            return Err(DefuseError::TooManyTokens(tokens.len()));
+        }
+
+        Ok(())
     }
 
     fn storage_deposit(
@@ -356,7 +369,7 @@ where
                 // toggle
                 .auth_by_predecessor_id_toggled ^= true;
         }
-        Ok(was_enabled)
+        Ok(toggle)
     }
 
     fn auth_call(&mut self, signer_id: &AccountIdRef, auth_call: AuthCall) -> Result<()> {
@@ -430,7 +443,7 @@ pub struct CachedAccount {
     public_keys_added: HashSet<PublicKey>,
     public_keys_removed: HashSet<PublicKey>,
 
-    token_amounts: Amounts<HashMap<TokenId, u128>>,
+    token_amounts: HashMap<TokenId, u128>,
 }
 
 impl CachedAccount {

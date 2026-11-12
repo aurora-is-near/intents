@@ -1,3 +1,5 @@
+//! Ed25519 Digital Signature Algorithm
+
 pub use ed25519_dalek;
 use ed25519_dalek::{Signature, VerifyingKey};
 
@@ -43,6 +45,7 @@ const _: () = {
     use core::convert::Infallible;
 
     use ed25519_dalek::SigningKey;
+    use futures_util::future;
 
     use crate::Signer;
 
@@ -54,8 +57,13 @@ const _: () = {
             self.verifying_key()
         }
 
-        async fn sign(&self, msg: &[u8]) -> Result<<Ed25519 as Curve>::Signature, Self::Error> {
-            Ok(ed25519_dalek::Signer::sign(self, msg))
+        #[inline]
+        fn sign(
+            &self,
+            msg: &[u8],
+        ) -> impl Future<Output = Result<<Ed25519 as Curve>::Signature, Self::Error>> + Send
+        {
+            future::ok(ed25519_dalek::Signer::sign(self, msg))
         }
     }
 };
@@ -77,7 +85,6 @@ const _: () = {
     cfg_attr(feature = "borsh-schema", derive(::borsh::BorshSchema))
 )]
 #[derive(
-    Debug,
     Clone,
     Copy,
     PartialEq,
@@ -155,7 +162,6 @@ impl TryFrom<&Ed25519PublicKey> for VerifyingKey {
     cfg_attr(feature = "borsh-schema", derive(::borsh::BorshSchema))
 )]
 #[derive(
-    Debug,
     Clone,
     Copy,
     PartialEq,
@@ -215,7 +221,7 @@ impl From<&Ed25519Signature> for Signature {
 #[cfg(feature = "fmt")]
 const _: () = {
     use core::{
-        fmt::{self, Display},
+        fmt::{self, Debug, Display},
         str::FromStr,
     };
 
@@ -232,6 +238,13 @@ const _: () = {
         }
     }
 
+    impl Debug for Ed25519PublicKey {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            Display::fmt(self, f)
+        }
+    }
+
     impl FromStr for Ed25519PublicKey {
         type Err = ParseCurveError;
 
@@ -245,6 +258,13 @@ const _: () = {
         #[inline]
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             f.write_str(&Ed25519::to_base58(self.0))
+        }
+    }
+
+    impl Debug for Ed25519Signature {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            Display::fmt(self, f)
         }
     }
 

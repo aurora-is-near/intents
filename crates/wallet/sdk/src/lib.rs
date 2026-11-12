@@ -482,7 +482,7 @@ where
     #[cfg(feature = "near-kit")]
     /// Check if [real account ID](Self::real_account_id) is initialized on-chain.
     async fn check_initialized(&self) -> Result<bool> {
-        use near_kit::{BlockReference, Finality, RpcError};
+        use near_kit::rpc::{BlockReference, Finality, RpcError};
 
         if self.initialized.load(Relaxed) {
             return Ok(true);
@@ -500,7 +500,7 @@ where
             .await
         {
             Ok(account) => account.has_contract(),
-            Err(RpcError::AccountNotFound(_)) => false,
+            Err(RpcError::AccountNotFound { .. }) => false,
             Err(err) => return Err(err.into()),
         };
 
@@ -518,7 +518,7 @@ where
     /// This method panics when called on wallet with non-empty configured
     /// [extension chain](Self::as_extension_of).
     pub async fn initialize(&self) -> Result<()> {
-        use near_kit::{ExecutionStatus, Final};
+        use near_kit::{rpc::ExecutionStatus, transaction::Final};
 
         assert!(
             self.as_extension_chain().is_empty(),
@@ -764,14 +764,14 @@ where
     ///
     /// ```rust,no_run
     /// use defuse_wallet_sdk::mpc::kdf::{
-    ///     DeriveSigner, crypto::{Curve, ed25519::Ed25519},
+    ///     DeriveExt, crypto::{Curve, ed25519::Ed25519},
     /// };
     /// # use defuse_wallet_sdk::{Wallet, AccountIdRef};
     /// # use defuse_wallet_ed25519::{
     /// #   WalletEd25519, WalletEd25519Signer,
     /// #   crypto::ed25519::ed25519_dalek::SigningKey,
     /// # };
-    /// # #[tokio::main]
+    /// # #[tokio::main(flavor = "local")]
     /// # async fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// # let wallet = Wallet::<WalletEd25519>::new(
     /// #     [0u8; 32],
@@ -797,7 +797,7 @@ where
     ///
     /// ```rust,no_run
     /// use defuse_wallet_sdk::mpc::kdf::{
-    ///     DeriveSigner, RecoverableDeriveSigner,
+    ///     DeriveExt,
     ///     crypto::{RecoverableCurve, secp256k1::Secp256k1},
     /// };
     /// # use defuse_wallet_sdk::{Wallet, AccountIdRef};
@@ -806,7 +806,7 @@ where
     /// #   crypto::ed25519::ed25519_dalek::SigningKey,
     /// # };
     /// # use hex_literal::hex;
-    /// # #[tokio::main]
+    /// # #[tokio::main(flavor = "local")]
     /// # async fn main() -> Result<(), Box<dyn core::error::Error>> {
     /// # let wallet = Wallet::<WalletEd25519>::new(
     /// #     [0u8; 32],

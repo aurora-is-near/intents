@@ -10,12 +10,14 @@ pub use defuse_mpc_kdf as kdf;
 use std::{borrow::Cow, cell::LazyCell, error::Error as StdError, fmt::Debug};
 
 use defuse_mpc_kdf::{
-    Additive, Derive, DeriveSigner, RecoverableDeriveSigner, Schema, TweakSchema, crypto::Curve,
+    DeriveExt, DeriveSigner, RecoverableDeriveSigner, TweakSchema,
+    crypto::Curve,
+    schema::{Additive, WithSchema},
 };
 use defuse_near_promise::{AccountId, AccountIdRef, Gas, NearToken, actions::FunctionCall};
 use defuse_near_sender::{ArcNearSender, NearSender, SentTransaction};
 use impl_tools::autoimpl;
-use near_kit::{CryptoHash, ExecutedOptimistic, ExecutionStatus, Near};
+use near_kit::{CryptoHash, Near, rpc::ExecutionStatus, transaction::ExecutedOptimistic};
 
 use crate::contract::{MpcContract, Payload, PublicKeyArgs, SignArgs, SignRequest, SignResponse};
 
@@ -150,13 +152,14 @@ where
     type Error = Error;
 
     type Schema<'a>
-        = Derive<Additive<C>, TweakSchema<C>>
+        = WithSchema<Additive<C>, TweakSchema<C>>
     where
         Self: 'a;
 
+    #[inline]
     fn schema(&self) -> Self::Schema<'_> {
         Additive::new(self.mpc_public_key.clone())
-            .derive_with(defuse_mpc_kdf::tweak(self.predecessor_id()))
+            .with_schema(defuse_mpc_kdf::tweak(self.predecessor_id()))
     }
 
     #[cfg_attr(feature = "tracing", tracing::instrument(skip_all, fields(

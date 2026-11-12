@@ -34,17 +34,17 @@ jobs:
         with:
           cache: false
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Clean docs folder
         run: cargo clean --doc
       - name: Build docs
-        run: cargo doc --workspace --no-deps --all-features --features near-sdk/non-contract-usage
+        run: make doc
       - name: Add redirect
         run: echo '<meta http-equiv="refresh" content="0;url=defuse/index.html">' > target/doc/index.html
       - name: Remove lock file
         run: rm -f target/doc/.lock
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           # Upload docs dir
           path: "target/doc"
@@ -59,4 +59,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

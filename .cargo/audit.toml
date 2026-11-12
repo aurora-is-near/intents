@@ -3,9 +3,10 @@
 
 [advisories]
 ignore = [
-  # wasmtime: type indices can be mixed up between engines.
-  # Pulled in transitively via near-vm-runner (near-sdk's `unit-testing`
-  # dev/test-only feature, restricted to cfg(not(target_arch = "wasm32"))),
-  # never linked into the on-chain contract wasm.
-  "RUSTSEC-2026-0222",
+  # crypto-bigint 0.5.5: timing variability in constant-time ops.
+  # Pulled in via near-vm-runner (near-sdk's `unit-testing`
+  # feature, restricted to cfg(not(target_arch = "wasm32"))),
+  # never linked into the contract wasm.
+  # BLOCKED: near-vm-runner 0.38.0 (latest) requires p256 ^0.13.
+  "RUSTSEC-2026-0387",
 ]

@@ -16,7 +16,7 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 use crate::{AccountId, AccountIdRef};
 
 #[cfg_attr(any(feature = "arbitrary", test), derive(arbitrary::Arbitrary))]
-#[cfg_attr(feature = "abi", derive(::borsh::BorshSchema))]
+#[cfg_attr(feature = "borsh-schema", derive(::borsh::BorshSchema))]
 #[derive(
     Clone,
     Copy,
@@ -134,7 +134,7 @@ impl FromStr for PublicKey {
     }
 }
 
-#[cfg(feature = "abi")]
+#[cfg(feature = "schemars-v0_8")]
 const _: () = {
     use schemars::{
         JsonSchema,
@@ -200,7 +200,7 @@ const _: () = {
 
 #[cfg(feature = "near-kit")]
 const _: () = {
-    use near_kit::types::PublicKey as NearPublicKey;
+    use near_kit::signer::PublicKey as NearPublicKey;
 
     #[allow(clippy::fallible_impl_from)] // this is used only in tests
     impl From<NearPublicKey> for PublicKey {
@@ -209,7 +209,7 @@ const _: () = {
             match pk {
                 NearPublicKey::Ed25519(pk) => Self::Ed25519(pk.into()),
                 NearPublicKey::Secp256k1(pk) => Self::Secp256k1(pk.into()),
-                _ => panic!("unsupported public key type"),
+                NearPublicKey::MlDsa65(_) => panic!("unsupported public key type"),
             }
         }
     }

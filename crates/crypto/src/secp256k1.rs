@@ -1,3 +1,5 @@
+//! Secp256k1 (a.k.a. k256) Elliptic Curve Digital Signature Algorithm
+
 pub use k256;
 
 use k256::{
@@ -101,6 +103,7 @@ impl RecoverableCurve for Secp256k1 {
 
 #[cfg(feature = "signing")]
 const _: () = {
+    use futures_util::{TryFutureExt, future};
     use k256::ecdsa::{Error, SigningKey};
 
     use crate::{RecoverableSigner, Signer};
@@ -117,13 +120,13 @@ const _: () = {
         /// function).
         ///
         /// If given prehash is of different length, an error will be returned.
-        async fn sign(
+        #[inline]
+        fn sign(
             &self,
             prehash: &[u8],
-        ) -> Result<<Secp256k1 as Curve>::Signature, Self::Error> {
-            RecoverableSigner::sign_recoverable(self, prehash)
-                .await
-                .map(|s| s.0)
+        ) -> impl Future<Output = Result<<Secp256k1 as Curve>::Signature, Self::Error>> + Send
+        {
+            RecoverableSigner::sign_recoverable(self, prehash).map_ok(|s| s.0)
         }
     }
 
@@ -132,23 +135,26 @@ const _: () = {
         /// function) and return a signature along with recovery id.
         ///
         /// If given prehash is of different length, an error will be returned.
-        async fn sign_recoverable(
+        #[inline]
+        fn sign_recoverable(
             &self,
             prehash: &[u8],
-        ) -> Result<
-            (
-                <Secp256k1 as Curve>::Signature,
-                <Secp256k1 as RecoverableCurve>::RecoveryId,
-            ),
-            Self::Error,
-        > {
-            let prehash: &[u8; 32] = prehash
-                .try_into()
-                .map_err(|_| Error::from_source("prehash must be 32 bytes long"))?;
+        ) -> impl Future<
+            Output = Result<
+                (
+                    <Secp256k1 as Curve>::Signature,
+                    <Secp256k1 as RecoverableCurve>::RecoveryId,
+                ),
+                Self::Error,
+            >,
+        > + Send {
+            let Ok(prehash) = <&[u8; 32]>::try_from(prehash) else {
+                return future::err(Error::from_source("prehash must be 32 bytes long"));
+            };
 
             // Signature is automatically normalized to be low-S form, since
             // `<k256::Secp256k1 as EcdsaCurve>::NORMALIZE_S` is set.
-            Ok(self.sign_prehash_recoverable(prehash))
+            future::ok(self.sign_prehash_recoverable(prehash))
         }
     }
 };
@@ -170,7 +176,6 @@ const _: () = {
     cfg_attr(feature = "borsh-schema", derive(::borsh::BorshSchema))
 )]
 #[derive(
-    Debug,
     Clone,
     Copy,
     PartialEq,
@@ -191,6 +196,29 @@ pub struct Secp256k1UncompressedPublicKey(
 );
 
 impl Secp256k1UncompressedPublicKey {
+    /// Compress public key
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use defuse_crypto::secp256k1::{
+    /// #     Secp256k1CompressedPublicKey,
+    /// #     Secp256k1UncompressedPublicKey,
+    /// # };
+    /// # use hex_literal::hex;
+    /// assert_eq!(
+    ///     Secp256k1UncompressedPublicKey(hex!("85a66984273f338ce4ef7b85e5430b008307e8591bb7c1b980852cf6423770b801f41e9438155eb53a5e20f748640093bb42ae3aeca035f7b7fd7a1a21f22f68"))
+    ///         .compress()
+    ///         .unwrap()
+    ///         .0,
+    ///     hex!("0285a66984273f338ce4ef7b85e5430b008307e8591bb7c1b980852cf6423770b8"),
+    /// );
+    /// ```
+    #[inline]
+    pub fn compress(&self) -> Result<Secp256k1CompressedPublicKey, k256::ecdsa::Error> {
+        VerifyingKey::try_from(self).map(Into::into)
+    }
+
     #[cfg(feature = "schemars-v0_8")]
     const fn example() -> Self {
         Self(hex_literal::hex!(
@@ -237,6 +265,203 @@ impl TryFrom<&Secp256k1UncompressedPublicKey> for VerifyingKey {
     }
 }
 
+impl TryFrom<Secp256k1UncompressedPublicKey> for Secp256k1CompressedPublicKey {
+    type Error = k256::ecdsa::Error;
+
+    #[inline]
+    fn try_from(pk: Secp256k1UncompressedPublicKey) -> Result<Self, Self::Error> {
+        (&pk).try_into()
+    }
+}
+
+impl TryFrom<&Secp256k1UncompressedPublicKey> for Secp256k1CompressedPublicKey {
+    type Error = k256::ecdsa::Error;
+
+    #[inline]
+    fn try_from(pk: &Secp256k1UncompressedPublicKey) -> Result<Self, Self::Error> {
+        pk.compress()
+    }
+}
+
+/// Compressed Secp256k1 public key **with** leading SEC-1 tag byte.
+#[cfg_attr(
+    feature = "serde",
+    derive(::serde_with::SerializeDisplay, ::serde_with::DeserializeFromStr),
+    cfg_attr(
+        feature = "schemars-v0_8",
+        derive(::schemars::JsonSchema),
+        schemars(example = "Self::example"),
+    )
+)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
+#[cfg_attr(
+    feature = "borsh",
+    derive(::borsh::BorshSerialize, ::borsh::BorshDeserialize),
+    cfg_attr(feature = "borsh-schema", derive(::borsh::BorshSchema))
+)]
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    derive_more::AsRef,
+    derive_more::From,
+    derive_more::Into,
+)]
+#[as_ref([u8], [u8; 33])]
+#[into(owned, ref)]
+#[repr(transparent)]
+pub struct Secp256k1CompressedPublicKey(
+    // schemars@0.8 ignores `with` at struct level for newtypes; must be on the field
+    #[cfg_attr(feature = "schemars-v0_8", schemars(with = "String"))] pub [u8; 33],
+);
+
+impl Secp256k1CompressedPublicKey {
+    #[cfg(feature = "schemars-v0_8")]
+    const fn example() -> Self {
+        Self(hex_literal::hex!(
+            "0285a66984273f338ce4ef7b85e5430b008307e8591bb7c1b980852cf6423770b8"
+        ))
+    }
+}
+
+impl From<VerifyingKey> for Secp256k1CompressedPublicKey {
+    #[inline]
+    fn from(value: VerifyingKey) -> Self {
+        (&value).into()
+    }
+}
+
+impl From<&VerifyingKey> for Secp256k1CompressedPublicKey {
+    #[inline]
+    fn from(value: &VerifyingKey) -> Self {
+        Self(
+            value
+                .to_sec1_point(true) // compress
+                .as_bytes()
+                .try_into()
+                // compressed key is exactly 33 bytes
+                .unwrap_or_else(|_| unreachable!()),
+        )
+    }
+}
+
+impl TryFrom<Secp256k1CompressedPublicKey> for VerifyingKey {
+    type Error = k256::ecdsa::Error;
+
+    #[inline]
+    fn try_from(value: Secp256k1CompressedPublicKey) -> Result<Self, Self::Error> {
+        (&value).try_into()
+    }
+}
+
+impl TryFrom<&Secp256k1CompressedPublicKey> for VerifyingKey {
+    type Error = k256::ecdsa::Error;
+
+    #[inline]
+    fn try_from(value: &Secp256k1CompressedPublicKey) -> Result<Self, Self::Error> {
+        Self::from_sec1_bytes(&value.0)
+    }
+}
+
+impl TryFrom<Secp256k1CompressedPublicKey> for Secp256k1UncompressedPublicKey {
+    type Error = k256::ecdsa::Error;
+
+    #[inline]
+    fn try_from(pk: Secp256k1CompressedPublicKey) -> Result<Self, Self::Error> {
+        (&pk).try_into()
+    }
+}
+
+impl TryFrom<&Secp256k1CompressedPublicKey> for Secp256k1UncompressedPublicKey {
+    type Error = k256::ecdsa::Error;
+
+    #[inline]
+    fn try_from(pk: &Secp256k1CompressedPublicKey) -> Result<Self, Self::Error> {
+        VerifyingKey::try_from(pk).map(Into::into)
+    }
+}
+
+/// Secp256k1 signature **without** recovery byte
+#[cfg_attr(
+    feature = "serde",
+    derive(::serde_with::SerializeDisplay, ::serde_with::DeserializeFromStr),
+    cfg_attr(
+        feature = "schemars-v0_8",
+        derive(::schemars::JsonSchema),
+        schemars(example = "Self::example"),
+    )
+)]
+#[cfg_attr(feature = "arbitrary", derive(::arbitrary::Arbitrary))]
+#[cfg_attr(
+    feature = "borsh",
+    derive(::borsh::BorshSerialize, ::borsh::BorshDeserialize),
+    cfg_attr(feature = "borsh-schema", derive(::borsh::BorshSchema))
+)]
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    derive_more::AsRef,
+    derive_more::From,
+    derive_more::Into,
+)]
+#[as_ref([u8], [u8; 64])]
+#[into(owned, ref)]
+#[repr(transparent)]
+pub struct Secp256k1Signature(
+    // schemars@0.8 ignores `with` at struct level for newtypes; must be on the field
+    #[cfg_attr(feature = "schemars-v0_8", schemars(with = "String"))] pub [u8; 64],
+);
+
+impl Secp256k1Signature {
+    #[cfg(feature = "schemars-v0_8")]
+    const fn example() -> Self {
+        Self(hex_literal::hex!(
+            "7800a70d05cde2c49ed546a6ce887ce6027c2c268c0285f6efef0cdfc4366b23643790f67a86468ee8301ed12cfffcb07c6530f90a9327ec057800fabd332e47"
+        ))
+    }
+}
+
+impl From<Signature> for Secp256k1Signature {
+    #[inline]
+    fn from(value: Signature) -> Self {
+        (&value).into()
+    }
+}
+
+impl From<&Signature> for Secp256k1Signature {
+    #[inline]
+    fn from(value: &Signature) -> Self {
+        Self(value.to_bytes().into())
+    }
+}
+
+impl TryFrom<Secp256k1Signature> for Signature {
+    type Error = k256::ecdsa::Error;
+
+    #[inline]
+    fn try_from(value: Secp256k1Signature) -> Result<Self, Self::Error> {
+        (&value).try_into()
+    }
+}
+
+impl TryFrom<&Secp256k1Signature> for Signature {
+    type Error = k256::ecdsa::Error;
+
+    #[inline]
+    fn try_from(value: &Secp256k1Signature) -> Result<Self, Self::Error> {
+        Self::from_bytes((&value.0).into())
+    }
+}
+
 /// Recoverable 65-byte secp256k1 signature, i.e. 64-byte signature with
 /// additional recovery byte
 #[cfg_attr(
@@ -255,7 +480,6 @@ impl TryFrom<&Secp256k1UncompressedPublicKey> for VerifyingKey {
     cfg_attr(feature = "borsh-schema", derive(::borsh::BorshSchema))
 )]
 #[derive(
-    Debug,
     Clone,
     Copy,
     PartialEq,
@@ -281,6 +505,14 @@ impl Secp256k1RecoverableSignature {
         Self(hex_literal::hex!(
             "7800a70d05cde2c49ed546a6ce887ce6027c2c268c0285f6efef0cdfc4366b23643790f67a86468ee8301ed12cfffcb07c6530f90a9327ec057800fabd332e4701"
         ))
+    }
+}
+
+impl From<Secp256k1RecoverableSignature> for Secp256k1Signature {
+    #[inline]
+    fn from(sig: Secp256k1RecoverableSignature) -> Self {
+        let [sig @ .., _v] = sig.0;
+        Self(sig)
     }
 }
 
@@ -344,7 +576,7 @@ impl TryFrom<&Secp256k1RecoverableSignature> for Signature {
 #[cfg(feature = "fmt")]
 const _: () = {
     use core::{
-        fmt::{self, Display},
+        fmt::{self, Debug, Display},
         str::FromStr,
     };
 
@@ -354,10 +586,40 @@ const _: () = {
         const CURVE_TYPE: &str = "secp256k1";
     }
 
+    impl Display for Secp256k1CompressedPublicKey {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str(&Secp256k1::to_base58(self.0))
+        }
+    }
+
+    impl Debug for Secp256k1CompressedPublicKey {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            Display::fmt(self, f)
+        }
+    }
+
+    impl FromStr for Secp256k1CompressedPublicKey {
+        type Err = ParseCurveError;
+
+        #[inline]
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            Secp256k1::parse_base58(s).map(Self)
+        }
+    }
+
     impl Display for Secp256k1UncompressedPublicKey {
         #[inline]
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             f.write_str(&Secp256k1::to_base58(self.0))
+        }
+    }
+
+    impl Debug for Secp256k1UncompressedPublicKey {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            Display::fmt(self, f)
         }
     }
 
@@ -370,10 +632,40 @@ const _: () = {
         }
     }
 
+    impl Display for Secp256k1Signature {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str(&Secp256k1::to_base58(self.0))
+        }
+    }
+
+    impl Debug for Secp256k1Signature {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            Display::fmt(self, f)
+        }
+    }
+
+    impl FromStr for Secp256k1Signature {
+        type Err = ParseCurveError;
+
+        #[inline]
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            Secp256k1::parse_base58(s).map(Self)
+        }
+    }
+
     impl Display for Secp256k1RecoverableSignature {
         #[inline]
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             f.write_str(&Secp256k1::to_base58(self.0))
+        }
+    }
+
+    impl Debug for Secp256k1RecoverableSignature {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            Display::fmt(self, f)
         }
     }
 

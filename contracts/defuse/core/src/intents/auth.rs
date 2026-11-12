@@ -1,26 +1,25 @@
-use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AccountId, AccountIdRef, Gas, NearToken, Result, StateInit,
+    AccountId, AccountIdRef, Gas, NearToken, Result,
     engine::{Engine, Inspector, State},
     intents::ExecutableIntent,
 };
 
 /// Call `contract_id::on_auth(signer_id, msg)` with `signer_id`
 /// of intent.
-#[cfg_attr(feature = "abi", derive(::schemars::JsonSchema, ::borsh::BorshSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, BorshSerialize, BorshDeserialize)]
+#[cfg_attr(feature = "schemars-v0_8", derive(::schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthCall {
     /// Callee for `on_auth()`
     pub contract_id: AccountId,
 
-    /// Optionally initialize the receiver's contract (Deterministic `AccountId`)
-    /// via [`state_init`](https://github.com/near/NEPs/blob/master/neps/nep-0616.md#stateinit-action)
-    /// right before calling `on_auth()` (in the same receipt).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub state_init: Option<StateInit>,
-
+    // TODO: replace with UniversalStateInit
+    // /// Optionally initialize the receiver's contract (Deterministic `AccountId`)
+    // /// via [`state_init`](https://github.com/near/NEPs/blob/master/neps/nep-0616.md#stateinit-action)
+    // /// right before calling `on_auth()` (in the same receipt).
+    // #[serde(default, skip_serializing_if = "Option::is_none")]
+    // pub state_init: Option<StateInit>,
     /// `msg` to pass in `on_auth()`
     pub msg: String,
 
