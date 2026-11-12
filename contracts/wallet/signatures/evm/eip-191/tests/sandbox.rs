@@ -13,7 +13,8 @@ use defuse_wallet_evm_eip191::{
 };
 use defuse_wallet_sdk::{Wallet, WalletBuilder, WalletSigner, client::WalletContract};
 use k256::elliptic_curve::Generate;
-use near_kit::{Final, FinalExecutionOutcome, Near, PublishMode, sandbox::SandboxConfig};
+use near_kit::{Near, protocol::PublishMode, rpc::FinalExecutionOutcome, transaction::Final};
+use near_kit_sandbox::SandboxConfig;
 use sha2::{Digest, Sha256};
 
 type EvmWallet = Wallet<WalletEip191>;
@@ -41,7 +42,10 @@ fn signer() -> WalletEip191Signer<SigningKey> {
 
 #[tokio::test]
 async fn wallet_executes_and_resolves_authorization_in_wasm() {
-    let near = SandboxConfig::shared().await.client();
+    let near = SandboxConfig::shared()
+        .await
+        .expect("failed to start sandbox")
+        .client();
     let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../../../..")
         .join(env::var("DEFUSE_USE_OUT_DIR").as_deref().unwrap_or("res"));
@@ -342,6 +346,7 @@ async fn check_ft_metadata(near: &Near, wallet: &EvmWallet, recipient: &EvmWalle
         .args(serde_json::json!({ "account_id": recipient.account_id() }))
         .deposit(NearToken::from_millinear(10))
         .gas(Gas::from_tgas(30))
+        .finish()
         .wait_until::<Final>()
         .await
         .unwrap()
@@ -537,7 +542,10 @@ fn metadata_mismatch(outcome: &FinalExecutionOutcome) -> bool {
 
 #[tokio::test]
 async fn metadata_weight_overflow_rolls_back_request() {
-    let near = SandboxConfig::shared().await.client();
+    let near = SandboxConfig::shared()
+        .await
+        .expect("failed to start sandbox")
+        .client();
     let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../../../..")
         .join(env::var("DEFUSE_USE_OUT_DIR").as_deref().unwrap_or("res"));

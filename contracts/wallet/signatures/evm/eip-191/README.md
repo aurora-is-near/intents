@@ -117,6 +117,6 @@ audit is required before production.
 ## Build and test
 
 ```sh
-cargo test -p defuse-wallet-evm-eip191 --all-features
 make defuse-wallet-evm-eip191
+cargo test -p defuse-wallet-evm-eip191 --all-features
 ```

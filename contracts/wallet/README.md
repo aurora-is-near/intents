@@ -132,11 +132,15 @@ corresponding signed request will fail.
 > `created_at` slightly (e.g. 60 seconds) before the actual time of signing, so
 > that it doesn't fail on-chain if it arrives too fast.
 
-A signed request whose execution fails (for example, its deposits exceed the
-balance) is rolled back with its receipt, so its nonce stays unused: anyone
-who saw the failed transaction can submit the same request again until it
-expires. To retry, resubmit that request or sign the new one with the same
-nonce, so that at most one of them executes, or wait until it expires.
+If the `w_execute_signed()` receipt fails (for example, the promises it
+creates attach more NEAR than the wallet holds), it is rolled back, so the
+request's nonce stays unused: anyone who saw the failed transaction can submit
+the same request again until it expires. To retry, resubmit that request or
+sign the new one with the same nonce, so that at most one of them executes, or
+wait until it expires. Later receipts do not roll it back: if a created
+promise, an `ft_metadata()` check or its callback fails (for example, a checked
+promise attaches more NEAR than the wallet holds when the callback creates
+it), the nonce stays used and the request cannot be executed again.
 
 #### Optimal nonce generation algorithm
 
@@ -237,7 +241,9 @@ fails, exceeds 32 KiB or needs more than 5 Tgas; an extension still can.
 
 Each checked promise costs two more receipts. The wallet reserves 5 Tgas for
 `ft_metadata()` and 10 Tgas for the callback in addition to the promise's own
-gas; `Request::estimate_gas()` includes both. Unused gas is shared as without the
+gas. `Request::estimate_gas()` includes both reserves and estimates the creation
+of both calls like other function calls, without counting the callback's
+arguments (the promise) per byte. Unused gas is shared as without the
 check: `ft_metadata()` gets none, and the callback gets the total `gas_weight` of
 the promise's function calls.
 

@@ -93,7 +93,9 @@ impl Request {
             PER_INTERNAL_OP.saturating_mul(self.internal.len().try_into().unwrap_or(u64::MAX)),
         );
 
-        // Promises to a token with required metadata also check it first.
+        // Promises to a token with required metadata also check it first:
+        // the wallet schedules `ft_metadata()` and the `w_on_ft_metadata()`
+        // callback, which gets the promise's gas and creates the promise.
         let checked = |p: &NearPromise| {
             self.internal.iter().any(|op| {
                 matches!(op, WalletOp::RequireFtMetadata { token_id, .. } if *token_id == p.receiver_id)
@@ -103,12 +105,18 @@ impl Request {
             .iter()
             .map(|p| {
                 let gas = p.estimate_gas();
-                if checked(p) {
-                    gas.saturating_add(FT_METADATA_GAS)
-                        .saturating_add(FT_METADATA_CALLBACK_GAS)
-                } else {
-                    gas
+                if !checked(p) {
+                    return gas;
                 }
+                let call = |name: &str, gas| {
+                    NearPromise::new(p.receiver_id.clone())
+                        .function_call(actions::FunctionCall::name(name).gas(gas))
+                        .estimate_gas()
+                };
+                call("ft_metadata", FT_METADATA_GAS).saturating_add(call(
+                    "w_on_ft_metadata",
+                    gas.saturating_add(FT_METADATA_CALLBACK_GAS),
+                ))
             })
             .fold(gas, Gas::saturating_add)
     }
@@ -153,5 +161,45 @@ impl From<NearPromise> for Request {
     #[inline]
     fn from(p: NearPromise) -> Self {
         Self::from_iter([p])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use near_account_id::AccountId;
+
+    use super::*;
+
+    /// A promise checked by [`WalletOp::RequireFtMetadata`] also costs the
+    /// `ft_metadata()` call and its callback: their gas and their creation.
+    #[test]
+    fn estimate_gas_includes_ft_metadata_check() {
+        let p = NearPromise::new("token.near".parse::<AccountId>().unwrap())
+            .function_call(actions::FunctionCall::name("ft_transfer").gas(Gas::from_tgas(10)));
+        let request = |token_id: &str| {
+            Request::new()
+                .internal([WalletOp::require_ft_metadata(
+                    token_id.parse::<AccountId>().unwrap(),
+                    6,
+                    "USDC",
+                )])
+                .external([p.clone()])
+        };
+        let call = |name: &str, gas| {
+            NearPromise::new("wallet.near".parse::<AccountId>().unwrap())
+                .function_call(actions::FunctionCall::name(name).gas(gas))
+                .estimate_gas()
+        };
+        assert_eq!(
+            request("token.near").estimate_gas(),
+            request("other.near")
+                .estimate_gas()
+                .saturating_sub(p.estimate_gas())
+                .saturating_add(call("ft_metadata", FT_METADATA_GAS))
+                .saturating_add(call(
+                    "w_on_ft_metadata",
+                    p.estimate_gas().saturating_add(FT_METADATA_CALLBACK_GAS),
+                )),
+        );
     }
 }

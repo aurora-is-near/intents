@@ -3,7 +3,14 @@ use defuse_wallet::{
 };
 use defuse_wallet_evm_eip191::{
     EthAddress, MessageError, SignError, WalletEip191, WalletEip191Signer,
-    crypto::secp256k1::k256::ecdsa::SigningKey, request_signing_message,
+    crypto::{
+        RecoverableSigner, Signer,
+        secp256k1::{
+            Secp256k1,
+            k256::ecdsa::{RecoveryId, Signature, SigningKey, VerifyingKey},
+        },
+    },
+    request_signing_message,
 };
 use defuse_wallet_sdk::{GlobalContractId, State, StateInit, StateInitV1, Wallet, WalletSigner};
 use hex_literal::hex;
@@ -125,4 +132,46 @@ fn account_id_derivable_from_address_alone() {
         derived,
         *Wallet::<WalletEip191>::new(CODE, signer()).account_id()
     );
+}
+
+/// Returns the high-S form of each signature, which `RecoverableSigner` allows.
+struct HighS(SigningKey);
+
+impl Signer<Secp256k1> for HighS {
+    type Error = <SigningKey as Signer<Secp256k1>>::Error;
+
+    fn public_key(&self) -> VerifyingKey {
+        Signer::<Secp256k1>::public_key(&self.0)
+    }
+
+    async fn sign(&self, msg: &[u8]) -> Result<Signature, Self::Error> {
+        Ok(self.sign_recoverable(msg).await?.0)
+    }
+}
+
+impl RecoverableSigner<Secp256k1> for HighS {
+    async fn sign_recoverable(&self, msg: &[u8]) -> Result<(Signature, RecoveryId), Self::Error> {
+        let (signature, recovery_id) =
+            RecoverableSigner::<Secp256k1>::sign_recoverable(&self.0, msg).await?;
+        let (r, s) = signature.split_scalars();
+        let high_s = Signature::from_scalars(r, -s).unwrap();
+        assert_ne!(high_s, signature);
+        Ok((
+            high_s,
+            RecoveryId::new(!recovery_id.is_y_odd(), recovery_id.is_x_reduced()),
+        ))
+    }
+}
+
+/// A high-S signature from the signer is encoded as the equivalent low-S proof.
+#[tokio::test]
+async fn signer_normalizes_high_s_signatures() {
+    let wallet = Wallet::<WalletEip191>::new(CODE, WalletEip191Signer(HighS(signer().0)));
+    let (msg, proof) = wallet.sign(Request::new()).await.unwrap();
+    assert!(WalletEip191::verify_request_msg(
+        &wallet.public_key(),
+        &msg,
+        &proof
+    ));
+    assert_eq!(proof, signer().sign_request_msg(&msg).await.unwrap());
 }

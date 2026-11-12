@@ -99,8 +99,8 @@ update authority. An independent audit is required before production.
 ## Build and test
 
 ```sh
-cargo test -p defuse-wallet-evm-eip712 --all-features
 make defuse-wallet-evm-eip712
+cargo test -p defuse-wallet-evm-eip712 --all-features
 ```
 
 Vectors in `tests/fixtures/eip712.json` are hashed and signed by

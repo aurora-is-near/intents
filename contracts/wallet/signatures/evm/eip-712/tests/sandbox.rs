@@ -12,7 +12,8 @@ use defuse_wallet_evm_eip712::{
 };
 use defuse_wallet_sdk::{Wallet, WalletSigner, client::WalletContract};
 use k256::elliptic_curve::Generate;
-use near_kit::{Final, PublishMode, sandbox::SandboxConfig};
+use near_kit::{protocol::PublishMode, transaction::Final};
+use near_kit_sandbox::SandboxConfig;
 use sha2::{Digest, Sha256};
 
 type Eip712Wallet = Wallet<WalletEip712>;
@@ -23,7 +24,10 @@ fn signer() -> WalletEip712Signer<SigningKey> {
 
 #[tokio::test]
 async fn wallet_executes_and_resolves_authorization_in_wasm() {
-    let near = SandboxConfig::shared().await.client();
+    let near = SandboxConfig::shared()
+        .await
+        .expect("failed to start sandbox")
+        .client();
     let directory = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../../../..")
         .join(env::var("DEFUSE_USE_OUT_DIR").as_deref().unwrap_or("res"));

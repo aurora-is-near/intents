@@ -46,12 +46,22 @@ impl EvmProof {
     }
 
     /// Sign `prehash` and encode the proof.
+    ///
+    /// A signer may return a high-S signature, which [`parse`](Self::parse)
+    /// rejects: it is replaced with the equivalent low-S signature, whose
+    /// recovery id has the opposite y parity.
     #[cfg(feature = "signer")]
     pub async fn sign<S>(signer: &S, prehash: &[u8; 32]) -> Result<String, S::Error>
     where
         S: defuse_crypto::RecoverableSigner<Secp256k1>,
     {
-        let signature = signer.sign_recoverable(prehash).await?;
-        Ok(Secp256k1RecoverableSignature::from(signature).to_string())
+        let (signature, recovery_id) = signer.sign_recoverable(prehash).await?;
+        let low_s = signature.normalize_s();
+        let recovery_id = if low_s == signature {
+            recovery_id
+        } else {
+            RecoveryId::new(!recovery_id.is_y_odd(), recovery_id.is_x_reduced())
+        };
+        Ok(Secp256k1RecoverableSignature::from((low_s, recovery_id)).to_string())
     }
 }
