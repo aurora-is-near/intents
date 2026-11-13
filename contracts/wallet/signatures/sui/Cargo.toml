@@ -1,0 +1,45 @@
+lints.workspace = true
+
+[package]
+name = "defuse-wallet-sui"
+edition.workspace = true
+version = "0.1.0"
+rust-version.workspace = true
+repository.workspace = true
+readme = "README.md"
+
+[dependencies]
+base64.workspace = true
+blake2.workspace = true
+borsh = { workspace = true, features = ["derive"] }
+defuse-crypto.workspace = true
+defuse-digest = { workspace = true, optional = true }
+defuse-wallet = { workspace = true, features = ["borsh", "digest", "json", "readable-message", "serde"] }
+hex.workspace = true
+schemars = { workspace = true, features = ["derive"], optional = true }
+serde_with.workspace = true
+thiserror.workspace = true
+
+defuse-wallet-sdk = { workspace = true, optional = true }
+
+[features]
+abi = ["borsh/unstable__schema", "defuse-wallet/abi", "dep:schemars"]
+ed25519 = ["defuse-crypto/ed25519"]
+secp256k1 = ["defuse-crypto/secp256k1", "defuse-digest/sha2"]
+p256 = ["defuse-crypto/p256", "defuse-digest/sha2"]
+
+signer = ["defuse-crypto/signing", "dep:defuse-wallet-sdk"]
+
+
+[dev-dependencies]
+defuse-wallet-sui = { path = ".", features = ["abi", "signer", "ed25519", "secp256k1", "p256"] }
+rand.workspace = true
+serde_json.workspace = true
+
+defuse-nep641 = { workspace = true, features = ["resolver"] }
+near-kit.workspace = true
+near-kit-sandbox.workspace = true
+sha2.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
+
+near-sdk = { workspace = true, features = ["unit-testing"] }

@@ -1955,6 +1955,62 @@ dependencies = [
 ]
 
 [[package]]
+name = "defuse-wallet-sui"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "blake2",
+ "borsh",
+ "defuse-crypto",
+ "defuse-digest",
+ "defuse-nep641",
+ "defuse-wallet",
+ "defuse-wallet-sdk",
+ "defuse-wallet-sui",
+ "hex",
+ "near-kit",
+ "near-kit-sandbox",
+ "near-sdk",
+ "rand 0.10.3",
+ "schemars 0.8.22",
+ "serde_json",
+ "serde_with",
+ "sha2 0.11.1",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
+name = "defuse-wallet-sui-ed25519"
+version = "0.1.0"
+dependencies = [
+ "defuse-wallet",
+ "defuse-wallet-sui",
+ "defuse-wallet-sui-ed25519",
+ "near-sdk",
+]
+
+[[package]]
+name = "defuse-wallet-sui-p256"
+version = "0.1.0"
+dependencies = [
+ "defuse-wallet",
+ "defuse-wallet-sui",
+ "defuse-wallet-sui-p256",
+ "near-sdk",
+]
+
+[[package]]
+name = "defuse-wallet-sui-secp256k1"
+version = "0.1.0"
+dependencies = [
+ "defuse-wallet",
+ "defuse-wallet-sui",
+ "defuse-wallet-sui-secp256k1",
+ "near-sdk",
+]
+
+[[package]]
 name = "defuse-wallet-webauthn"
 version = "0.1.0"
 dependencies = [
