@@ -6,7 +6,7 @@ use defuse_nep641::{JsonPayload, resolver::RpcResolver};
 use defuse_wallet::{NearPromise, Request, WalletOp, actions::FunctionCall};
 use defuse_wallet_ed25519::{WalletEd25519, WalletEd25519Signer, crypto::ed25519::ed25519_dalek};
 use defuse_wallet_sdk::{
-    Gas, NearToken, WalletBuilder,
+    Gas, NearToken, WalletBuilder, WalletSigner,
     client::{WExecuteExtensionArgs, WExecuteSignedArgs, WalletContract},
 };
 use futures::{
@@ -23,6 +23,140 @@ use tokio::sync::OnceCell;
 use tracing_subscriber::EnvFilter;
 
 type Wallet = defuse_wallet_sdk::Wallet<WalletEd25519>;
+
+#[rstest]
+#[tokio::test]
+#[awt]
+async fn metadata_weight_overflow_rolls_back_request(#[future] near: Near) {
+    let signer = WalletEd25519Signer(ed25519_dalek::SigningKey::generate(&mut UnwrapErr(SysRng)));
+    let wallet = Wallet::new(*WALLET_ED25519_CODE_HASH, signer.clone())
+        .with_client(near.clone())
+        .with_relayer(near.clone());
+    wallet.initialize().await.unwrap();
+    let token = "missing-metadata.near"
+        .parse::<defuse_wallet::AccountId>()
+        .unwrap();
+    let sibling = "must-not-run.near"
+        .parse::<defuse_wallet::AccountId>()
+        .unwrap();
+    let request = overflowing_checked_request()
+        .internal([WalletOp::add_extension(near.account_id().clone())]);
+    // The digest-signing schema deliberately bypasses the readable renderer,
+    // exercising the shared execution core with a cryptographically valid proof.
+    let (mut msg, proof) = wallet.sign(request).await.unwrap();
+    let before = near
+        .account(wallet.account_id())
+        .await
+        .unwrap()
+        .storage_usage;
+    let contract = near.contract::<WalletContract>(wallet.account_id());
+    let result = contract
+        .w_execute_signed((&msg, proof.as_str()).into())
+        .gas(Gas::from_tgas(80))
+        .await
+        .unwrap();
+    let error = result
+        .result()
+        .expect_err("overflowing aggregate weight must reject");
+    assert!(
+        error
+            .to_string()
+            .contains("total gas weight for checked promise exceeds")
+    );
+    assert!(!result.receipts_outcome.iter().any(|receipt| {
+        receipt.outcome.executor_id == token || receipt.outcome.executor_id == sibling
+    }));
+    assert_eq!(
+        near.account(wallet.account_id())
+            .await
+            .unwrap()
+            .storage_usage,
+        before
+    );
+    assert!(contract.w_extensions().await.unwrap().is_empty());
+
+    // Reusing the exact nonce succeeds: the failed receipt committed no nonce.
+    msg.request = Request::new();
+    let proof = signer.sign_request_msg(&msg).await.unwrap();
+    contract
+        .w_execute_signed((&msg, proof.as_str()).into())
+        .gas(Gas::from_tgas(30))
+        .await
+        .unwrap()
+        .result()
+        .unwrap();
+
+    check_extension_weight_overflow(&near, &wallet).await;
+}
+
+fn overflowing_checked_request() -> Request {
+    Request::new()
+        .internal([WalletOp::require_ft_metadata(
+            "missing-metadata.near"
+                .parse::<defuse_wallet::AccountId>()
+                .unwrap(),
+            6,
+            "TEST",
+        )])
+        .external([
+            NearPromise::new(
+                "must-not-run.near"
+                    .parse::<defuse_wallet::AccountId>()
+                    .unwrap(),
+            )
+            .function_call(
+                FunctionCall::name("submit")
+                    .args(b"{}")
+                    .gas(Gas::from_tgas(1)),
+            ),
+            NearPromise::new(
+                "missing-metadata.near"
+                    .parse::<defuse_wallet::AccountId>()
+                    .unwrap(),
+            )
+            .function_call(
+                FunctionCall::name("first")
+                    .args(b"{}")
+                    .gas(Gas::from_tgas(1))
+                    .unused_gas_weight(u64::MAX),
+            )
+            .function_call(
+                FunctionCall::name("second")
+                    .args(b"{}")
+                    .gas(Gas::from_tgas(1))
+                    .unused_gas_weight(1),
+            ),
+        ])
+}
+
+async fn check_extension_weight_overflow(near: &Near, wallet: &Wallet) {
+    wallet
+        .sign_and_send(WalletOp::add_extension(near.account_id().clone()))
+        .await
+        .unwrap()
+        .status(near)
+        .wait_until::<Final>()
+        .await
+        .unwrap()
+        .result()
+        .unwrap();
+    // Extensions have no readable-message verifier; the core must still reject.
+    let result = near
+        .contract::<WalletContract>(wallet.account_id())
+        .w_execute_extension(overflowing_checked_request().into())
+        .deposit(NearToken::from_yoctonear(1))
+        .gas(Gas::from_tgas(80))
+        .await
+        .unwrap();
+    let error = result
+        .result()
+        .expect_err("extension execution must reject overflowing weights");
+    assert!(
+        error
+            .to_string()
+            .contains("total gas weight for checked promise exceeds")
+    );
+}
 
 #[rstest]
 #[tokio::test]

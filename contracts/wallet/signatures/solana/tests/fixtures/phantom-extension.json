@@ -1,0 +1,241 @@
+{
+  "provenance": {
+    "wallet": "Phantom for Chrome",
+    "account": "software account, the same key as the 2026-11-03 captures",
+    "extension_version": "not recorded",
+    "received_date": "2026-11-12",
+    "private_key_material": "not requested, provided, or required",
+    "source": "signMessage(bytes, \"utf8\") in a local capture tool (not distributed) for a fictional network; no transactions submitted",
+    "prompt_display": "Phantom does not allow copying its prompt, so no text of it is recorded. The user reported every signed message as readable and marked each prompt as complete (an attestation).",
+    "not_signed": "execution-limit (16 KiB): on three attempts Phantom opened no prompt and returned \"You cannot sign solana transactions using sign message\". That message also deserializes as a Solana legacy message and transaction (@solana/web3.js layout, trailing bytes ignored); the signed messages do not.",
+    "final_lf": "Each message ends with the protocol's final LF, which the signature covers."
+  },
+  "vectors": [
+    {
+      "profile": "execution-effects",
+      "kind": "request",
+      "public_key": "4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2",
+      "msg": {
+        "chain_id": "phantom-display-check-only",
+        "signer_id": "display-check.near",
+        "nonce": 42,
+        "created_at": "2026-11-11T22:42:45.478Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "internal": [
+            {
+              "op": "add_extension",
+              "payload": {
+                "account_id": "temporary.display-check.near"
+              }
+            },
+            {
+              "op": "set_signature_mode",
+              "payload": {
+                "enable": false
+              }
+            },
+            {
+              "op": "set_signature_mode",
+              "payload": {
+                "enable": true
+              }
+            },
+            {
+              "op": "remove_extension",
+              "payload": {
+                "account_id": "temporary.display-check.near"
+              }
+            },
+            {
+              "op": "add_extension",
+              "payload": {
+                "account_id": "recovery.display-check.near"
+              }
+            },
+            {
+              "op": "require_ft_metadata",
+              "payload": {
+                "token_id": "usdc.display-check.near",
+                "decimals": 6,
+                "symbol": "USDC"
+              }
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "recipient.display-check.near",
+              "refund_to": "refund.native.display-check.near",
+              "actions": [
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1500000000000000000000000"
+                  }
+                }
+              ]
+            },
+            {
+              "receiver_id": "usdc.display-check.near",
+              "refund_to": "refund.token.display-check.near",
+              "actions": [
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "ft_transfer_call",
+                    "args": "eyJyZWNlaXZlcl9pZCI6ImludGVudHMuZGlzcGxheS1jaGVjay5uZWFyIiwiYW1vdW50IjoiMTUwMDAwMCIsIm1zZyI6IntcInJ1bl9pZFwiOlwiMzg5NjA1MmMtOGVkNC00YWE3LWFiZDItMDE0YzNjMzczNWE1XCIsXCJyb3V0ZVwiOltcImZpcnN0XCIsXCJzZWNvbmRcIl0sXCJub3RpY2VcIjpcIk9wYXF1ZSBhcHBsaWNhdGlvbiBwYXlsb2FkXCJ9In0=",
+                    "deposit": "1",
+                    "gas": "50000000000000",
+                    "gas_weight": "3"
+                  }
+                },
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "ft_transfer",
+                    "args": "eyJyZWNlaXZlcl9pZCI6InJlY2lwaWVudC5kaXNwbGF5LWNoZWNrLm5lYXIiLCJhbW91bnQiOiIxIiwibWVtbyI6IjM4OTYwNTJjLThlZDQtNGFhNy1hYmQyLTAxNGMzYzM3MzVhNSJ9",
+                    "deposit": "1",
+                    "gas": "20000000000000",
+                    "gas_weight": "0"
+                  }
+                }
+              ]
+            },
+            {
+              "receiver_id": "app.display-check.near",
+              "refund_to": null,
+              "actions": [
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "submit_batch",
+                    "args": "eyJydW5faWQiOiIzODk2MDUyYy04ZWQ0LTRhYTctYWJkMi0wMTRjM2MzNzM1YTUiLCJyZWNlaXZlcl9pZCI6ImJlbmVmaWNpYXJ5LmRpc3BsYXktY2hlY2submVhciIsImxpbWl0cyI6eyJtYXhfaXRlbXMiOjMsImVuYWJsZWQiOnRydWUsIm9wdGlvbmFsIjpudWxsfSwiaXRlbXMiOlt7ImlkIjoiYWxwaGEiLCJ1bml0cyI6IjkwMDcxOTkyNTQ3NDA5OTMifSx7ImlkIjoiYmV0YSIsInVuaXRzIjoiMSJ9XSwibGFiZWxzIjpbImZpcnN0Iiwic2Vjb25kIl0sIm1lbW8iOiJEaXNwbGF5IGNoZWNrIG9ubHkifQ==",
+                    "deposit": "1000000000000000000000",
+                    "gas": "30000000000000",
+                    "gas_weight": "2"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "proof": "ed25519:39HKi7DJreLSudyARqbaG3wVFnP8ZtmZ5ohQokRycmNcjceZfxF6urbuNk2oVJyM6gaHbRZkcJ7kHbAufTzbj3T6",
+      "message": "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nGas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\nWARNING: add_extension gives temporary.display-check.near full control of this wallet.\nWARNING: add_extension gives recovery.display-check.near full control of this wallet.\nWARNING: up to 1.5 NEAR sent to recipient.display-check.near can be refunded to refund.native.display-check.near, not to this wallet.\nWARNING: up to 0.000000000000000000000002 NEAR sent to usdc.display-check.near can be refunded to refund.token.display-check.near, not to this wallet.\n\n{\n  \"chain_id\": \"phantom-display-check-only\",\n  \"signer_id\": \"display-check.near\",\n  \"solana_public_key\": \"4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-11T22:42:45.478Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [\n      {\n        \"op\": \"add_extension\",\n        \"payload\": {\n          \"account_id\": \"temporary.display-check.near\"\n        }\n      },\n      {\n        \"op\": \"set_signature_mode\",\n        \"payload\": {\n          \"enable\": false\n        }\n      },\n      {\n        \"op\": \"set_signature_mode\",\n        \"payload\": {\n          \"enable\": true\n        }\n      },\n      {\n        \"op\": \"remove_extension\",\n        \"payload\": {\n          \"account_id\": \"temporary.display-check.near\"\n        }\n      },\n      {\n        \"op\": \"add_extension\",\n        \"payload\": {\n          \"account_id\": \"recovery.display-check.near\"\n        }\n      },\n      {\n        \"op\": \"require_ft_metadata\",\n        \"payload\": {\n          \"token_id\": \"usdc.display-check.near\",\n          \"decimals\": 6,\n          \"symbol\": \"USDC\"\n        }\n      }\n    ],\n    \"external\": [\n      {\n        \"receiver_id\": \"recipient.display-check.near\",\n        \"refund_to\": \"refund.native.display-check.near\",\n        \"actions\": [\n          {\n            \"action\": \"transfer\",\n            \"amount\": \"1.5 NEAR\"\n          }\n        ]\n      },\n      {\n        \"receiver_id\": \"usdc.display-check.near\",\n        \"refund_to\": \"refund.token.display-check.near\",\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"ft_transfer_call\",\n            \"deposit\": \"0.000000000000000000000001 NEAR\",\n            \"gas\": \"50000000000000\",\n            \"gas_weight\": \"3\",\n            \"args\": {\n              \"receiver_id\": \"intents.display-check.near\",\n              \"amount\": \"1.5 USDC\",\n              \"msg\": \"{\\\"run_id\\\":\\\"3896052c-8ed4-4aa7-abd2-014c3c3735a5\\\",\\\"route\\\":[\\\"first\\\",\\\"second\\\"],\\\"notice\\\":\\\"Opaque application payload\\\"}\"\n            }\n          },\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"ft_transfer\",\n            \"deposit\": \"0.000000000000000000000001 NEAR\",\n            \"gas\": \"20000000000000\",\n            \"gas_weight\": \"0\",\n            \"args\": {\n              \"receiver_id\": \"recipient.display-check.near\",\n              \"amount\": \"0.000001 USDC\",\n              \"memo\": \"3896052c-8ed4-4aa7-abd2-014c3c3735a5\"\n            }\n          }\n        ]\n      },\n      {\n        \"receiver_id\": \"app.display-check.near\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"submit_batch\",\n            \"deposit\": \"0.001 NEAR\",\n            \"gas\": \"30000000000000\",\n            \"gas_weight\": \"2\",\n            \"args\": {\n              \"run_id\": \"3896052c-8ed4-4aa7-abd2-014c3c3735a5\",\n              \"receiver_id\": \"beneficiary.display-check.near\",\n              \"limits\": {\n                \"max_items\": 3,\n                \"enabled\": true,\n                \"optional\": null\n              },\n              \"items\": [\n                {\n                  \"id\": \"alpha\",\n                  \"units\": \"9007199254740993\"\n                },\n                {\n                  \"id\": \"beta\",\n                  \"units\": \"1\"\n                }\n              ],\n              \"labels\": [\n                \"first\",\n                \"second\"\n              ],\n              \"memo\": \"Display check only\"\n            }\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+    },
+    {
+      "profile": "execution-deployment",
+      "kind": "request",
+      "public_key": "4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2",
+      "msg": {
+        "chain_id": "phantom-display-check-only",
+        "signer_id": "display-check.near",
+        "nonce": 42,
+        "created_at": "2026-11-11T22:45:22.860Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "internal": [],
+          "external": [
+            {
+              "receiver_id": "0s762910a479b0c04f9725b03cd7931dc5064ab0ab",
+              "refund_to": "refund.deploy.display-check.near",
+              "actions": [
+                {
+                  "action": "deterministic_state_init",
+                  "payload": {
+                    "state_init": {
+                      "V1": {
+                        "code": {
+                          "account_id": "alice.near"
+                        },
+                        "data": {
+                          "1000": "",
+                          "1234": "",
+                          "AAEC": "AwQF"
+                        }
+                      }
+                    },
+                    "deposit": "250000000000000000000000"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "125000000000000000000000"
+                  }
+                },
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "initialize",
+                    "args": "eyJvd25lcl9pZCI6ImRpc3BsYXktY2hlY2submVhciIsInJ1bl9pZCI6ImFjOTAyMmJkLThlYTUtNDcyNC1iZWM2LWEzNWY4OTdlNTQ1NyIsInNldHRpbmdzIjp7ImVuYWJsZWQiOnRydWUsImxpbWl0cyI6WyIxIiwiOTAwNzE5OTI1NDc0MDk5MyJdfX0=",
+                    "deposit": "0",
+                    "gas": "40000000000000",
+                    "gas_weight": "0"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "proof": "ed25519:561dDcCNGrkab7VMjd7idZv9X6bc79qardbCcTwXGWt8iRQrCv3k1KddNb3mYBDHWS6zLTYRuJf85bW8zVu1W22g",
+      "message": "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nGas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\nWARNING: up to 0.375 NEAR sent to 0s762910a479b0c04f9725b03cd7931dc5064ab0ab can be refunded to refund.deploy.display-check.near, not to this wallet.\n\n{\n  \"chain_id\": \"phantom-display-check-only\",\n  \"signer_id\": \"display-check.near\",\n  \"solana_public_key\": \"4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-11T22:45:22.86Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [],\n    \"external\": [\n      {\n        \"receiver_id\": \"0s762910a479b0c04f9725b03cd7931dc5064ab0ab\",\n        \"refund_to\": \"refund.deploy.display-check.near\",\n        \"actions\": [\n          {\n            \"action\": \"deterministic_state_init\",\n            \"deposit\": \"0.25 NEAR\",\n            \"state_init\": {\n              \"V1\": {\n                \"code\": {\n                  \"account_id\": \"alice.near\"\n                },\n                \"data\": {\n                  \"1000\": \"\",\n                  \"1234\": \"\",\n                  \"AAEC\": \"AwQF\"\n                }\n              }\n            }\n          },\n          {\n            \"action\": \"transfer\",\n            \"amount\": \"0.125 NEAR\"\n          },\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"initialize\",\n            \"deposit\": \"0 NEAR\",\n            \"gas\": \"40000000000000\",\n            \"gas_weight\": \"0\",\n            \"args\": {\n              \"owner_id\": \"display-check.near\",\n              \"run_id\": \"ac9022bd-8ea5-4724-bec6-a35f897e5457\",\n              \"settings\": {\n                \"enabled\": true,\n                \"limits\": [\n                  \"1\",\n                  \"9007199254740993\"\n                ]\n              }\n            }\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+    },
+    {
+      "profile": "offchain-extended",
+      "kind": "offchain",
+      "public_key": "4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2",
+      "msg": {
+        "chain_id": "phantom-display-check-only",
+        "signer_id": "display-check.near",
+        "path": [
+          "parent.display-check.near",
+          "app.display-check.near"
+        ],
+        "timestamp": "2026-11-11T22:45:42.578Z",
+        "payload": "{ \"domain\": \"Local wallet display review\", \"run_id\": \"fe2d16b6-5e6d-42e6-93b2-b89cc9b79560\", \"action\": \"display_test\", \"amount_units\": \"9007199254740993\", \"duplicate\":1,\"duplicate\":2, \"notice\": \"Fictional-network display test only.\" }"
+      },
+      "proof": "ed25519:41KPNLZVkaxdfLQ5hqNy9qRsMr5NQH19jhf495hTrjnfTo1bsk7mHmpzk1FVGSdNrwBt9ppSQWerL8Tr1dsMPbZL",
+      "message": "NEAR Wallet Contract: offchain authorization (v1)\nThis signature authorizes the exact payload below, not a NEAR transaction.\nThe consuming application defines expiration and one-time-use requirements.\n\n{\n  \"chain_id\": \"phantom-display-check-only\",\n  \"signer_id\": \"display-check.near\",\n  \"solana_public_key\": \"4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2\",\n  \"path\": [\n    \"parent.display-check.near\",\n    \"app.display-check.near\"\n  ],\n  \"timestamp\": \"2026-11-11T22:45:42.578Z\",\n  \"payload\": \"{ \\\"domain\\\": \\\"Local wallet display review\\\", \\\"run_id\\\": \\\"fe2d16b6-5e6d-42e6-93b2-b89cc9b79560\\\", \\\"action\\\": \\\"display_test\\\", \\\"amount_units\\\": \\\"9007199254740993\\\", \\\"duplicate\\\":1,\\\"duplicate\\\":2, \\\"notice\\\": \\\"Fictional-network display test only.\\\" }\"\n}\n"
+    },
+    {
+      "profile": "execution-extension",
+      "kind": "request",
+      "public_key": "4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2",
+      "msg": {
+        "chain_id": "phantom-display-check-only",
+        "signer_id": "display-check.near",
+        "nonce": 42,
+        "created_at": "2026-11-11T22:46:25.258Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "internal": [],
+          "external": [
+            {
+              "receiver_id": "vault.display-check.near",
+              "refund_to": null,
+              "actions": [
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "w_execute_extension",
+                    "args": "eyJyZXF1ZXN0Ijp7ImludGVybmFsIjpbeyJvcCI6InJlcXVpcmVfZnRfbWV0YWRhdGEiLCJwYXlsb2FkIjp7InRva2VuX2lkIjoidXNkYy5kaXNwbGF5LWNoZWNrLm5lYXIiLCJkZWNpbWFscyI6Niwic3ltYm9sIjoiVVNEQyJ9fSx7Im9wIjoiYWRkX2V4dGVuc2lvbiIsInBheWxvYWQiOnsiYWNjb3VudF9pZCI6ImhlbHBlci5kaXNwbGF5LWNoZWNrLm5lYXIifX1dLCJleHRlcm5hbCI6W3sicmVjZWl2ZXJfaWQiOiJ1c2RjLmRpc3BsYXktY2hlY2submVhciIsImFjdGlvbnMiOlt7ImFjdGlvbiI6ImZ1bmN0aW9uX2NhbGwiLCJwYXlsb2FkIjp7ImZ1bmN0aW9uX25hbWUiOiJmdF90cmFuc2ZlciIsImFyZ3MiOiJleUp5WldObGFYWmxjbDlwWkNJNkluSmxZMmx3YVdWdWRDNWthWE53YkdGNUxXTm9aV05yTG01bFlYSWlMQ0poYlc5MWJuUWlPaUl5TlRBd01EQXdJaXdpYldWdGJ5STZJakJrT0dFellqQmlMVEpsWVRndE5HUTRNUzFpTXprMUxURXhNMkkzTWpSbVkyVmtPU0o5IiwiZGVwb3NpdCI6IjEiLCJnYXMiOiIyMDAwMDAwMDAwMDAwMCIsImdhc193ZWlnaHQiOiIwIn19XX0seyJyZWNlaXZlcl9pZCI6InJlY2lwaWVudC5kaXNwbGF5LWNoZWNrLm5lYXIiLCJhY3Rpb25zIjpbeyJhY3Rpb24iOiJ0cmFuc2ZlciIsInBheWxvYWQiOnsiYW1vdW50IjoiNTAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIn19XX1dfX0=",
+                    "deposit": "1",
+                    "gas": "100000000000000",
+                    "gas_weight": "1"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "proof": "ed25519:67gU7FUCDYZrzeARWdwJtSk2nb2ti5bwMCwHbrrjkqfHgwjoG4T7shFUyjePYjv7BbsKL4ZZaNhvhjxt2QipamkT",
+      "message": "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nGas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\nWARNING: add_extension gives helper.display-check.near full control of wallet vault.display-check.near.\n\n{\n  \"chain_id\": \"phantom-display-check-only\",\n  \"signer_id\": \"display-check.near\",\n  \"solana_public_key\": \"4K3LbDAJPT2Szp3UKXRL1yevwNrAxoYwFEYgaaYjh6P2\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-11T22:46:25.258Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [],\n    \"external\": [\n      {\n        \"receiver_id\": \"vault.display-check.near\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"w_execute_extension\",\n            \"deposit\": \"0.000000000000000000000001 NEAR\",\n            \"gas\": \"100000000000000\",\n            \"gas_weight\": \"1\",\n            \"args\": {\n              \"request\": {\n                \"internal\": [\n                  {\n                    \"op\": \"require_ft_metadata\",\n                    \"payload\": {\n                      \"token_id\": \"usdc.display-check.near\",\n                      \"decimals\": 6,\n                      \"symbol\": \"USDC\"\n                    }\n                  },\n                  {\n                    \"op\": \"add_extension\",\n                    \"payload\": {\n                      \"account_id\": \"helper.display-check.near\"\n                    }\n                  }\n                ],\n                \"external\": [\n                  {\n                    \"receiver_id\": \"usdc.display-check.near\",\n                    \"refund_to\": null,\n                    \"actions\": [\n                      {\n                        \"action\": \"function_call\",\n                        \"function_name\": \"ft_transfer\",\n                        \"deposit\": \"0.000000000000000000000001 NEAR\",\n                        \"gas\": \"20000000000000\",\n                        \"gas_weight\": \"0\",\n                        \"args\": {\n                          \"receiver_id\": \"recipient.display-check.near\",\n                          \"amount\": \"2.5 USDC\",\n                          \"memo\": \"0d8a3b0b-2ea8-4d81-b395-113b724fced9\"\n                        }\n                      }\n                    ]\n                  },\n                  {\n                    \"receiver_id\": \"recipient.display-check.near\",\n                    \"refund_to\": null,\n                    \"actions\": [\n                      {\n                        \"action\": \"transfer\",\n                        \"amount\": \"0.5 NEAR\"\n                      }\n                    ]\n                  }\n                ]\n              }\n            }\n          }\n        ]\n      }\n    ]\n  }\n}\n"
+    }
+  ]
+}
