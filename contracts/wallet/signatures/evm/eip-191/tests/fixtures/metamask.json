@@ -5,7 +5,7 @@
     "received_date": "2026-11-11",
     "private_key_material": "not requested, provided, or required",
     "extension_version": "not recorded (earlier captures from the same account on the same day recorded 13.56.0)",
-    "source": "personal_sign in the local display-check.html harness for a fictional network; no transactions submitted",
+    "source": "personal_sign in a local capture tool (not distributed) for a fictional network; no transactions submitted",
     "prompt_display": "`prompt` is the text the user copied from each MetaMask prompt. Its header names the account, an Ethereum network and the request origin; after the `Message` heading it shows `message` line by line (blank lines and indentation not compared). The user also marked each prompt as complete."
   },
   "vectors": [

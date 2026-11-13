@@ -175,3 +175,29 @@ async fn signer_normalizes_high_s_signatures() {
     ));
     assert_eq!(proof, signer().sign_request_msg(&msg).await.unwrap());
 }
+
+/// Frozen vectors computed outside this repository: `0s` and the last 20
+/// bytes of `keccak256(borsh(StateInit))`. A change of the stored identity or
+/// of the state layout changes every wallet address.
+#[test]
+fn derived_accounts_match_known_answers() {
+    use std::time::Duration;
+    let address: EthAddress = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
+        .parse()
+        .unwrap();
+    for (subwallet_id, timeout, expected) in [
+        (0, 3600, "0s007ef5585c4ebc3d4c9b1a3f5e96c5aab644e13e"),
+        (1, 3600, "0sc5b1f5988d922aa84e66bcd3d1d2b004312e64f7"),
+        (0, 300, "0sfdbe3527cb209ad3ded2f02bc8c866b004e21ae9"),
+    ] {
+        let state = State::new(address)
+            .subwallet_id(subwallet_id)
+            .timeout(Duration::from_secs(timeout));
+        let account = StateInit::V1(StateInitV1 {
+            code: GlobalContractId::CodeHash([0; 32]),
+            data: state.as_storage(),
+        })
+        .derive_account_id();
+        assert_eq!(account.as_str(), expected);
+    }
+}

@@ -83,8 +83,11 @@ impl Request {
             .fold(NearToken::ZERO, NearToken::saturating_add)
     }
 
-    /// Returns an esitmate of mininum gas required to execute all
-    /// promises in this request
+    /// Estimates execution and scheduling gas for this request.
+    ///
+    /// This is not an upper bound: signature verification, serialization and
+    /// runtime costs depend on the message and the signing variant. Relayers
+    /// must leave headroom, particularly for large messages and callback arguments.
     pub fn estimate_gas(&self) -> Gas {
         const BASE: Gas = Gas::from_tgas(5);
         const PER_INTERNAL_OP: Gas = Gas::from_ggas(100);

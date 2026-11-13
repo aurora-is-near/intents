@@ -10,9 +10,10 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 /// Ethereum address: the last 20 bytes of `keccak256` of the uncompressed
 /// public key, stored as the signer identity of EVM wallet variants.
 ///
-/// Wallets expose the address without signing (`eth_requestAccounts`), so a
-/// client knows the NEP-616 account derived from it at once. Verification
-/// recovers the key from the proof and compares its address.
+/// Address derivation is not proof of control. Before offering the derived
+/// NEAR account for funding, verify a fresh signature under the chosen variant
+/// that recovers this exact address. Contract-account (ERC-1271) and watch-only
+/// addresses are not supported.
 #[cfg_attr(
     feature = "abi",
     derive(::borsh::BorshSchema, ::schemars::JsonSchema),

@@ -104,7 +104,7 @@ near-contract = [
 ]
 
 [dev-dependencies]
-defuse-wallet = { path = ".", features = ["abi", "arbitrary", "borsh", "digest", "schemars-v0_8", "serde", "near-contract"] }
+defuse-wallet = { path = ".", features = ["abi", "arbitrary", "borsh", "digest", "schemars-v0_8", "serde", "near-contract", "readable-message"] }
 
 bs58.workspace = true
 hex-literal.workspace = true

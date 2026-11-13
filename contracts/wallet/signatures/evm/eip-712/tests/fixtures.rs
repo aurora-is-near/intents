@@ -112,7 +112,7 @@ fn execution_fields_are_bound() {
         (
             2,
             "/request/external/0/actions/0/payload/args",
-            json!("e30="),
+            json!("eyJyZWNlaXZlcl9pZCI6Im90aGVyLm5lYXIiLCJhbW91bnQiOiIyIn0="),
         ),
         (
             2,
@@ -160,8 +160,13 @@ fn execution_fields_are_bound() {
         let v = &all[index];
         let mut changed = v["msg"].clone();
         set(&mut changed, pointer, value);
+        let changed = request(changed);
+        assert_ne!(
+            hex::encode(request_digest(&changed).expect("mutation must hash")),
+            v["digest"]
+        );
         assert!(
-            !WalletEip712::verify_request_msg(&address(v), &request(changed), proof(v)),
+            !WalletEip712::verify_request_msg(&address(v), &changed, proof(v)),
             "accepted {index} {pointer}"
         );
     }
@@ -180,9 +185,14 @@ fn order_and_absent_refund_are_bound() {
             .as_array_mut()
             .unwrap()
             .reverse();
+        let changed = request(changed);
+        assert_ne!(
+            hex::encode(request_digest(&changed).expect("mutation must hash")),
+            v["digest"]
+        );
         assert!(!WalletEip712::verify_request_msg(
             &address(v),
-            &request(changed),
+            &changed,
             proof(v)
         ));
     }
@@ -193,9 +203,14 @@ fn order_and_absent_refund_are_bound() {
         .as_object_mut()
         .unwrap()
         .remove("refund_to");
+    let changed = request(changed);
+    assert_ne!(
+        hex::encode(request_digest(&changed).expect("mutation must hash")),
+        v["digest"]
+    );
     assert!(!WalletEip712::verify_request_msg(
         &address(v),
-        &request(changed),
+        &changed,
         proof(v)
     ));
 }
@@ -219,6 +234,10 @@ fn offchain_fields_are_bound_without_normalizing_payload() {
         let mut changed = v["msg"].clone();
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: OffchainMessage = serde_json::from_value(changed).unwrap();
+        assert_ne!(
+            hex::encode(offchain_digest(&msg).expect("mutation must hash")),
+            v["digest"]
+        );
         assert!(
             !WalletEip712::verify_offchain_msg(&address(v), &msg, proof(v)),
             "accepted {pointer}"
@@ -308,8 +327,39 @@ fn unsupported_content_is_rejected() {
             "unsupported",
         ),
         (call("ft_transfer\u{7f}", "{}"), "text"),
+        // NEP-141 transfers: only the method's parameters, canonical amount.
+        (
+            call(
+                "ft_transfer",
+                r#"{"receiver_id":"a.near","amount_display":"1.5 USDC","amount":"1"}"#,
+            ),
+            "args",
+        ),
+        (call("ft_transfer", r#"{"receiver_id":"a.near"}"#), "args"),
+        (
+            call("ft_transfer", r#"{"receiver_id":"a.near","amount":"01"}"#),
+            "args",
+        ),
+        (
+            call("ft_transfer", r#"{"receiver_id":"a.near","amount":1}"#),
+            "args",
+        ),
+        (
+            call(
+                "ft_transfer",
+                r#"{"receiver_id":"a.near","amount":"1","msg":""}"#,
+            ),
+            "args",
+        ),
     ] {
         let error = request_digest(&msg).unwrap_err();
+        // What cannot be hashed cannot be authorized.
+        let signed = &vectors()[2];
+        assert!(!WalletEip712::verify_request_msg(
+            &address(signed),
+            &msg,
+            proof(signed)
+        ));
         assert!(
             match expected {
                 "args" => matches!(error, Eip712Error::FunctionArgs),
@@ -319,6 +369,11 @@ fn unsupported_content_is_rejected() {
             "{expected}: {error:?}"
         );
     }
+    request_digest(&call(
+        "ft_transfer_call",
+        r#"{"receiver_id":"a.near","amount":"1","memo":"m","msg":""}"#,
+    ))
+    .unwrap();
     let mut msg = base.clone();
     msg.chain_id = "main\u{202e}net".to_owned();
     assert!(matches!(request_digest(&msg), Err(Eip712Error::Text)));

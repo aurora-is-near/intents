@@ -60,15 +60,16 @@ fn execution_fields_are_bound() {
             json!("other.near"),
         ),
         ("/request/internal/1/op", json!("add_extension")),
-        ("/request/internal/2/payload/token_id", json!("other.near")),
         ("/request/internal/2/payload/decimals", json!(17)),
         ("/request/internal/2/payload/symbol", json!("TKM")),
-        ("/request/external/0/receiver_id", json!("other.near")),
         (
             "/request/external/0/actions/0/payload/function_name",
             json!("other"),
         ),
-        ("/request/external/0/actions/0/payload/args", json!("e30=")),
+        (
+            "/request/external/0/actions/0/payload/args",
+            json!("eyJyZWNlaXZlcl9pZCI6Im90aGVyLm5lYXIiLCJhbW91bnQiOiIyIn0="),
+        ),
         ("/request/external/0/actions/0/payload/deposit", json!("2")),
         ("/request/external/0/actions/0/payload/gas", json!("1")),
         (
@@ -80,6 +81,10 @@ fn execution_fields_are_bound() {
         let mut changed = original.clone();
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
+        assert_ne!(
+            request_signing_message(&address(v), &msg).expect("mutation must render"),
+            v["message"]
+        );
         assert!(
             !WalletEip191::verify_request_msg(&address(v), &msg, v["proof"].as_str().unwrap()),
             "accepted {pointer}"
@@ -94,12 +99,41 @@ fn execution_fields_are_bound() {
             .unwrap()
             .reverse();
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
+        assert_ne!(
+            request_signing_message(&address(v), &msg).expect("mutation must render"),
+            v["message"]
+        );
         assert!(!WalletEip191::verify_request_msg(
             &address(v),
             &msg,
             v["proof"].as_str().unwrap()
         ));
     }
+    // Move the metadata requirement and receiver together; the original proof must fail.
+    let mut moved: RequestMessage = serde_json::from_value(original.clone()).unwrap();
+    let defuse_wallet::WalletOp::RequireFtMetadata { token_id, .. } =
+        &mut moved.request.internal[2]
+    else {
+        unreachable!()
+    };
+    *token_id = "other.near".parse().unwrap();
+    moved.request.external[0].receiver_id = token_id.clone();
+    request_signing_message(&address(v), &moved).unwrap();
+    assert!(!WalletEip191::verify_request_msg(
+        &address(v),
+        &moved,
+        v["proof"].as_str().unwrap()
+    ));
+    // A native transfer has no token-metadata coupling.
+    let transfer = &all[1];
+    let mut msg: RequestMessage = serde_json::from_value(transfer["msg"].clone()).unwrap();
+    msg.request.external[0].receiver_id = "other.near".parse().unwrap();
+    request_signing_message(&address(transfer), &msg).unwrap();
+    assert!(!WalletEip191::verify_request_msg(
+        &address(transfer),
+        &msg,
+        transfer["proof"].as_str().unwrap()
+    ));
 }
 
 #[test]
@@ -132,6 +166,10 @@ fn transfer_refund_and_state_init_are_bound() {
         let mut changed = v["msg"].clone();
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
+        assert_ne!(
+            request_signing_message(&address(v), &msg).expect("mutation must render"),
+            v["message"]
+        );
         assert!(
             !WalletEip191::verify_request_msg(&address(v), &msg, v["proof"].as_str().unwrap()),
             "accepted {pointer}"
@@ -159,6 +197,10 @@ fn offchain_fields_are_bound_without_normalizing_payload() {
         let mut changed = v["msg"].clone();
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: OffchainMessage = serde_json::from_value(changed).unwrap();
+        assert_ne!(
+            offchain_signing_message(&address(v), &msg).expect("mutation must render"),
+            v["message"]
+        );
         assert!(
             !WalletEip191::verify_offchain_msg(&address(v), &msg, v["proof"].as_str().unwrap()),
             "accepted {pointer}"
@@ -248,10 +290,18 @@ fn limits_and_ambiguous_timeout_are_rejected() {
     let all = vectors();
     let v = &all[0];
     let mut msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
-    msg.timeout = Duration::from_nanos(1);
-    assert!(request_signing_message(&address(v), &msg).is_err());
-    msg.timeout = Duration::from_secs(u64::from(u32::MAX) + 1);
-    assert!(request_signing_message(&address(v), &msg).is_err());
+    for timeout in [
+        Duration::from_nanos(1),
+        Duration::from_secs(u64::from(u32::MAX) + 1),
+    ] {
+        msg.timeout = timeout;
+        assert!(request_signing_message(&address(v), &msg).is_err());
+        assert!(!WalletEip191::verify_request_msg(
+            &address(v),
+            &msg,
+            v["proof"].as_str().unwrap()
+        ));
+    }
     let mut auth: OffchainMessage = serde_json::from_value(all[4]["msg"].clone()).unwrap();
     auth.payload = "x".repeat(16 * 1024);
     assert!(offchain_signing_message(&address(v), &auth).is_err());
@@ -277,4 +327,31 @@ fn state_init_fixture_uses_derived_receiver() {
             }
         }
     }
+}
+
+#[tokio::test]
+async fn metadata_token_id_is_bound_without_a_transfer() {
+    use defuse_wallet_evm_eip191::WalletEip191Signer;
+    use defuse_wallet_sdk::WalletSigner;
+    let signer =
+        WalletEip191Signer(k256::ecdsa::SigningKey::from_bytes((&[42; 32]).into()).unwrap());
+    let mut msg: RequestMessage = serde_json::from_value(vectors()[2]["msg"].clone()).unwrap();
+    msg.request.external.clear();
+    let proof = signer.sign_request_msg(&msg).await.unwrap();
+    assert!(WalletEip191::verify_request_msg(
+        &signer.public_key(),
+        &msg,
+        &proof
+    ));
+    let defuse_wallet::WalletOp::RequireFtMetadata { token_id, .. } = &mut msg.request.internal[2]
+    else {
+        unreachable!()
+    };
+    *token_id = "other.near".parse().unwrap();
+    request_signing_message(&signer.public_key(), &msg).unwrap();
+    assert!(!WalletEip191::verify_request_msg(
+        &signer.public_key(),
+        &msg,
+        &proof
+    ));
 }

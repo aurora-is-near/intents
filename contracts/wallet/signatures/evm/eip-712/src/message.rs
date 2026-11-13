@@ -304,17 +304,18 @@ fn action(budget: &mut Budget, action: &NearAction) -> Result<Hash, Eip712Error>
                 return Err(Eip712Error::Unsupported);
             }
             let name = budget.text("function_call")?;
-            let function_name = budget.text(function_name)?;
+            let name_hash = budget.text(function_name)?;
             // Counted before parsing; exact ASCII JSON bytes.
             let args_hash = budget.bytes(args)?;
             if !args.iter().all(|byte| (0x20..=0x7e).contains(byte)) {
                 return Err(Eip712Error::FunctionArgs);
             }
-            json_args(args).map_err(|_| Eip712Error::FunctionArgs)?;
+            let value = json_args(args).map_err(|_| Eip712Error::FunctionArgs)?;
+            token_args(function_name, &value)?;
             [
                 name,
                 uint(deposit.as_yoctonear()),
-                function_name,
+                name_hash,
                 args_hash,
                 uint(gas.as_gas()),
                 uint(*gas_weight),
@@ -336,6 +337,39 @@ fn action(budget: &mut Budget, action: &NearAction) -> Result<Hash, Eip712Error>
         _ => return Err(Eip712Error::Unsupported),
     };
     Ok(hash_struct(ACTION_TYPE, members))
+}
+
+/// NEP-141 transfer methods with their parameters, as in the readable format:
+/// other keys, which the token would ignore, could imitate the amount.
+const FT_TRANSFER_METHODS: [(&str, &[&str]); 2] = [
+    ("ft_transfer", &["receiver_id", "amount", "memo"]),
+    (
+        "ft_transfer_call",
+        &["receiver_id", "amount", "memo", "msg"],
+    ),
+];
+
+/// NEP-141 transfers take only the method's parameters and a canonical
+/// decimal `u128` amount (in base units).
+fn token_args(function_name: &str, args: &serde_json::Value) -> Result<(), Eip712Error> {
+    let Some((_, keys)) = FT_TRANSFER_METHODS
+        .iter()
+        .find(|(method, _)| *method == function_name)
+    else {
+        return Ok(());
+    };
+    let object = args.as_object().ok_or(Eip712Error::FunctionArgs)?;
+    let canonical = object
+        .get("amount")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|text| {
+            text.parse::<u128>()
+                .is_ok_and(|units| units.to_string() == text)
+        });
+    if !canonical || object.keys().any(|key| !keys.contains(&key.as_str())) {
+        return Err(Eip712Error::FunctionArgs);
+    }
+    Ok(())
 }
 
 /// The code is a base58 hash or an account ID; the other one is empty.

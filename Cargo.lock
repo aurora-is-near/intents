@@ -1334,18 +1334,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "defuse-eip712"
-version = "0.1.0"
-dependencies = [
- "defuse-crypto",
- "defuse-digest",
- "hex-literal",
- "k256",
- "rstest",
- "tokio",
-]
-
-[[package]]
 name = "defuse-erc191"
 version = "0.1.0"
 dependencies = [

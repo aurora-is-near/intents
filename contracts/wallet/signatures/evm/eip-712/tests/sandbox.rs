@@ -1,5 +1,8 @@
 #![cfg(feature = "signer")]
 
+#[path = "../../../../test-utils/entrypoints.rs"]
+mod entrypoints;
+
 use std::{env, fs, path::Path};
 
 use defuse_nep641::resolver::RpcResolver;
@@ -57,6 +60,8 @@ async fn wallet_executes_and_resolves_authorization_in_wasm() {
         .unwrap()
         .result()
         .unwrap();
+
+    check_public_entrypoints(&near, &wallet, &key).await;
 
     // A signed NEAR transfer executes.
     let recipient: AccountId = near.account_id().clone();
@@ -162,4 +167,27 @@ async fn largest_arguments_gas(
         "EIP712_RESOURCE_PROFILE {}",
         serde_json::Value::Object(profile)
     );
+}
+
+async fn check_public_entrypoints(
+    near: &near_kit::Near,
+    wallet: &Eip712Wallet,
+    signer: &WalletEip712Signer<SigningKey>,
+) {
+    let (msg, proof) = wallet
+        .sign(defuse_wallet::WalletOp::add_extension(
+            near.account_id().clone(),
+        ))
+        .await
+        .unwrap();
+    entrypoints::check(near, wallet.account_id(), &msg, &proof).await;
+    let ft_wasm = fs::read(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../../releases/fungible-token.wasm"),
+    )
+    .unwrap();
+    let failure = entrypoints::metadata(near, wallet.account_id(), &ft_wasm).await;
+    let (msg, proof) = wallet.sign(failure).await.unwrap();
+    entrypoints::failed_metadata_consumes_nonce(near, wallet.account_id(), &msg, &proof).await;
+    let (msg, _) = wallet.sign(defuse_wallet::Request::new()).await.unwrap();
+    entrypoints::context(near, wallet.account_id(), &msg, signer).await;
 }
