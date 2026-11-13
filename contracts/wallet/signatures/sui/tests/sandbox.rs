@@ -1,5 +1,8 @@
 #![cfg(feature = "signer")]
 
+#[path = "../../../test-utils/entrypoints.rs"]
+mod entrypoints;
+
 use std::{env, fs, path::Path, time::Duration};
 
 use defuse_nep641::resolver::RpcResolver;
@@ -140,6 +143,9 @@ where
         .unwrap()
         .result()
         .unwrap();
+
+    check_public_entrypoints(near, &wallet).await;
+
     let before = near.balance(recipient.account_id()).await.unwrap().total;
     execute(
         near,
@@ -578,7 +584,7 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
     use defuse_wallet_sui::{MAX_SIGNING_MESSAGE_BYTES, request_signing_message};
     let contract = near.contract::<WalletContract>(wallet.account_id());
     let (original, _) = wallet.sign(Request::new()).await.unwrap();
-    check_request_context(near, wallet, &original, signer).await;
+    entrypoints::context(near, wallet.account_id(), &original, signer).await;
     let with_payload = |length| {
         let mut msg = original.clone();
         msg.request = NearPromise::new(recipient.account_id())
@@ -727,43 +733,22 @@ async fn check_sparse_nonce_growth<C: SuiScheme, S: WalletSigner<WalletSui<C>>>(
     );
 }
 
-async fn check_request_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>>(
-    near: &Near,
+async fn check_public_entrypoints<C: SuiScheme>(
+    near: &near_kit::Near,
     wallet: &Wallet<WalletSui<C>>,
-    original: &RequestMessage,
-    signer: &S,
 ) {
-    let contract = near.contract::<WalletContract>(wallet.account_id());
-    for case in [
-        "chain",
-        "account",
-        "future",
-        "expired",
-        "wallet-timeout",
-        "gas-payment",
-    ] {
-        let mut msg = original.clone();
-        match case {
-            "chain" => msg.chain_id = "wrong-chain".into(),
-            "account" => msg.signer_id = "wrong.near".parse().unwrap(),
-            "future" => msg.created_at = Timestamp::now() + Duration::from_mins(10),
-            "expired" => {
-                msg.created_at = Timestamp::now() - Duration::from_mins(10);
-                msg.timeout = Duration::from_secs(1);
-            }
-            "wallet-timeout" => {
-                msg.created_at = Timestamp::now() - Duration::from_secs(4000);
-                msg.timeout = Duration::from_hours(2);
-            }
-            _ => msg.pay_for_gas = true,
-        }
-        let proof = signer.sign_request_msg(&msg).await.unwrap();
-        contract
-            .w_execute_signed((&msg, proof.as_str()).into())
-            .gas(Gas::from_tgas(40))
-            .await
-            .unwrap()
-            .result()
-            .expect_err(case);
-    }
+    let (msg, proof) = wallet
+        .sign(defuse_wallet::WalletOp::add_extension(
+            near.account_id().clone(),
+        ))
+        .await
+        .unwrap();
+    entrypoints::check(near, wallet.account_id(), &msg, &proof).await;
+    let ft_wasm = fs::read(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../releases/fungible-token.wasm"),
+    )
+    .unwrap();
+    let failure = entrypoints::metadata(near, wallet.account_id(), &ft_wasm).await;
+    let (msg, proof) = wallet.sign(failure).await.unwrap();
+    entrypoints::failed_metadata_consumes_nonce(near, wallet.account_id(), &msg, &proof).await;
 }

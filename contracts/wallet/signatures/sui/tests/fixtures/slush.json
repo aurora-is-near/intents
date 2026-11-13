@@ -4,7 +4,7 @@
   "account": "direct Ed25519 account, the same key as the 2026-11-04 captures",
   "received_date": "2026-11-12",
   "private_key_material": "not requested, provided, or required",
-  "source": "Wallet Standard sui:signPersonalMessage in the local display-check.html harness for a fictional network; no transactions submitted",
+  "source": "Wallet Standard sui:signPersonalMessage in a local capture tool (not distributed) for a fictional network; no transactions submitted",
   "prompt_display": "`prompt` is the text the user copied from each Slush prompt. Its header names the page, the origin (localhost) and the shortened signing address; between the `Message` heading and the `Reject` and `Sign` buttons it shows `signingMessage` line by line (blank lines and indentation not compared). The user also marked each prompt as complete.",
   "captures": [
     {

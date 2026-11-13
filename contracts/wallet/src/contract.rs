@@ -754,4 +754,57 @@ mod tests {
         ));
         assert!(get_created_receipts().is_empty());
     }
+    struct RejectSignatures;
+    impl SignatureSchema for RejectSignatures {
+        type PublicKey = ();
+        fn verify_request_msg((): &(), _: &RequestMessage, _: &str) -> bool {
+            false
+        }
+        fn verify_offchain_msg((): &(), _: &defuse_nep641::OffchainMessage, _: &str) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn metadata_result_failures_never_create_the_transfer() {
+        use near_sdk::{PromiseResult, RuntimeFeesConfig, test_vm_config};
+        let promise = NearPromise::new("recipient.near".parse::<AccountId>().unwrap())
+            .transfer(NearToken::from_yoctonear(1));
+        for data in [
+            b"not JSON".to_vec(),
+            br#"{"decimals":6,"symbol":"USDC","symbol":"FAKE"}"#.to_vec(),
+            br#"{"decimals":6,"decimals":24,"symbol":"USDC"}"#.to_vec(),
+            br#"{"decimals":24,"symbol":"USDC"}"#.to_vec(),
+            br#"{"decimals":6,"symbol":"FAKE"}"#.to_vec(),
+            vec![b' '; MAX_FT_METADATA_LEN + 1],
+        ]
+        .into_iter()
+        .map(PromiseResult::Successful)
+        .chain([PromiseResult::Failed])
+        {
+            testing_env!(
+                VMContextBuilder::new().build(),
+                test_vm_config(),
+                RuntimeFeesConfig::test(),
+                std::collections::HashMap::default(),
+                vec![data]
+            );
+            assert!(matches!(
+                WalletImpl::<RejectSignatures>::on_ft_metadata(6, "USDC", promise.clone()),
+                Err(Error::FtMetadataMismatch)
+            ));
+            assert!(get_created_receipts().is_empty());
+        }
+        testing_env!(
+            VMContextBuilder::new().build(),
+            test_vm_config(),
+            RuntimeFeesConfig::test(),
+            std::collections::HashMap::default(),
+            vec![PromiseResult::Successful(
+                br#"{"decimals":6,"symbol":"USDC"}"#.to_vec()
+            )]
+        );
+        WalletImpl::<RejectSignatures>::on_ft_metadata(6, "USDC", promise).unwrap();
+        assert_eq!(get_created_receipts().len(), 1);
+    }
 }

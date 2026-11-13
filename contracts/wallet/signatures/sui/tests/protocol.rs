@@ -53,7 +53,7 @@ fn malformed_native_envelopes_and_cross_purpose_proofs_fail() {
         let mut longer = original.clone();
         longer.push(0);
         bad.push(longer);
-        for flag in 0..=6 {
+        for flag in 0..=7 {
             if flag != key.flag() {
                 let mut bytes = original.clone();
                 bytes[0] = flag;
@@ -70,7 +70,7 @@ fn malformed_native_envelopes_and_cross_purpose_proofs_fail() {
         }
         assert!(!key.verify_personal_message(message, proof.trim_end_matches('=')));
         assert!(!key.verify_personal_message(message, &format!("{proof}\n")));
-        for flag in [3, 4, 5, 6, 255] {
+        for flag in [3, 4, 5, 6, 7, 255] {
             let mut bytes = key.to_sui_bytes();
             bytes[0] = flag;
             assert!(SuiPublicKey::from_sui_bytes(&bytes).is_err());
@@ -96,5 +96,41 @@ fn malformed_native_envelopes_and_cross_purpose_proofs_fail() {
         let mut bytes = vec![0; 34];
         bytes[0] = flag;
         assert!(SuiPublicKey::from_sui_bytes(&bytes).is_err());
+    }
+}
+
+#[test]
+fn ecdsa_keys_require_native_compressed_sec1_tags() {
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    let fixtures = fixtures();
+    for v in fixtures["vectors"].as_array().unwrap() {
+        let key: SuiPublicKey = v["public_key"].as_str().unwrap().parse().unwrap();
+        if key.flag() == 0 {
+            continue;
+        }
+        for tag in 0..=u8::MAX {
+            let mut bytes = key.to_sui_bytes();
+            bytes[1] = tag;
+            if matches!(tag, 2 | 3) {
+                assert!(SuiPublicKey::from_sui_bytes(&bytes).is_ok());
+            } else {
+                assert!(SuiPublicKey::from_sui_bytes(&bytes).is_err(), "tag {tag}");
+                assert!(
+                    format!("sui:{}", STANDARD.encode(&bytes))
+                        .parse::<SuiPublicKey>()
+                        .is_err()
+                );
+                // Borsh state can bypass JSON parsing. Verification must still reject it.
+                let stored: SuiPublicKey = borsh::from_slice(&bytes).unwrap();
+                let mut proof = STANDARD.decode(v["proof"].as_str().unwrap()).unwrap();
+                proof[65] = tag;
+                // The proof embeds exactly the stored key, so only its tag rejects it.
+                assert_eq!(proof[65..], bytes[1..]);
+                assert!(!stored.verify_personal_message(
+                    v["message"].as_str().unwrap().as_bytes(),
+                    &STANDARD.encode(proof)
+                ));
+            }
+        }
     }
 }

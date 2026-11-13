@@ -270,6 +270,9 @@ macro_rules! ecdsa_scheme {
         impl SuiScheme for $curve {
             const FLAG: u8 = $flag;
             fn parse_public_key(bytes: &[u8]) -> Option<Self::PublicKey> {
+                if !matches!(bytes.first(), Some(0x02 | 0x03)) {
+                    return None;
+                }
                 (&$stored(bytes.try_into().ok()?)).try_into().ok()
             }
             fn sui_public_key(key: Self::PublicKey) -> SuiPublicKey {
