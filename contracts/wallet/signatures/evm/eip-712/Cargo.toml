@@ -1,0 +1,66 @@
+lints.workspace = true
+
+[package]
+name = "defuse-wallet-evm-eip712"
+edition.workspace = true
+version = "0.1.0"
+rust-version.workspace = true
+repository.workspace = true
+readme = "README.md"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+defuse-digest = { workspace = true, features = ["sha3"] }
+defuse-wallet = { workspace = true, features = ["borsh", "json", "readable-message", "serde"] }
+defuse-wallet-evm-eip191.workspace = true
+
+bs58.workspace = true
+serde_json = { workspace = true, features = ["preserve_order"] }
+thiserror.workspace = true
+
+defuse-wallet-sdk = { workspace = true, optional = true }
+near-sdk = { workspace = true, optional = true }
+
+[features]
+abi = ["defuse-wallet-evm-eip191/abi", "defuse-wallet/abi", "near-sdk?/abi"]
+
+signer = ["defuse-wallet-evm-eip191/signer", "dep:defuse-wallet-sdk"]
+
+contract = ["defuse-wallet/near-contract", "dep:near-sdk"]
+
+[dev-dependencies]
+defuse-wallet-evm-eip712 = { path = ".", features = ["abi", "signer", "contract"] }
+
+defuse-nep641 = { workspace = true, features = ["resolver"] }
+defuse-wallet-sdk.workspace = true
+hex.workspace = true
+hex-literal.workspace = true
+k256 = { workspace = true, features = ["getrandom"] }
+near-kit.workspace = true
+near-kit-sandbox.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
+
+near-sdk = { workspace = true, features = ["unit-testing"] }
+
+[package.metadata.near.reproducible_build]
+image = "sourcescan/cargo-near:0.22.0-rust-1.97.1"
+image_digest = "sha256:7467038bdddc86484b73b416eeadce926ff59013e128e53dec5a19e1cb4b2234"
+passed_env = []
+container_build_command = [
+  "cargo",
+  "near",
+  "build",
+  "non-reproducible-wasm",
+  "--locked",
+  "--no-default-features",
+  "--features=contract",
+  "--abi-features=abi,contract",
+]
+
+[package.metadata.cargo-machete]
+# needed for `wallet!` macro, since `#[near(...)]` doesn't support re-exports
+ignored = ["near-sdk"]
