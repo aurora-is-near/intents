@@ -4,7 +4,7 @@ use crate::Gas;
 
 /// Gas reserved for each token `ft_metadata()` call made for
 /// [`WalletOp::RequireFtMetadata`].
-pub const FT_METADATA_GAS: Gas = Gas::from_tgas(5);
+pub const FT_METADATA_GAS: Gas = Gas::from_tgas(10);
 
 /// Gas reserved for each wallet callback that checks `ft_metadata()`, in
 /// addition to the gas of the promise it creates.

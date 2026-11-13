@@ -5,7 +5,7 @@
     "extension_version": "not recorded",
     "received_date": "2026-11-12",
     "private_key_material": "not requested, provided, or required",
-    "source": "signMessage(bytes, \"utf8\") in the local display-check.html harness for a fictional network; no transactions submitted",
+    "source": "signMessage(bytes, \"utf8\") in a local capture tool (not distributed) for a fictional network; no transactions submitted",
     "prompt_display": "Phantom does not allow copying its prompt, so no text of it is recorded. The user reported every signed message as readable and marked each prompt as complete (an attestation).",
     "not_signed": "execution-limit (16 KiB): on three attempts Phantom opened no prompt and returned \"You cannot sign solana transactions using sign message\". That message also deserializes as a Solana legacy message and transaction (@solana/web3.js layout, trailing bytes ignored); the signed messages do not.",
     "final_lf": "Each message ends with the protocol's final LF, which the signature covers."

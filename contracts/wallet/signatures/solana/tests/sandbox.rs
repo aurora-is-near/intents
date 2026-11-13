@@ -1,5 +1,8 @@
 #![cfg(feature = "signer")]
 
+#[path = "../../../test-utils/entrypoints.rs"]
+mod entrypoints;
+
 use std::{env, fs, path::Path};
 
 use defuse_nep641::resolver::RpcResolver;
@@ -100,12 +103,14 @@ async fn wallet_executes_and_resolves_authorization_in_wasm() {
         .unwrap()
         .result()
         .unwrap();
-    let wallet = Wallet::<WalletSolana>::new(
-        code_hash,
-        WalletSolanaSigner(SigningKey::generate(&mut UnwrapErr(SysRng))),
-    )
-    .with_client(near.clone())
-    .with_relayer(near.clone());
+    let signer = WalletSolanaSigner(SigningKey::generate(&mut UnwrapErr(SysRng)));
+    let wallet = Wallet::<WalletSolana>::new(code_hash, signer.clone())
+        .with_client(near.clone())
+        .with_relayer(near.clone());
+    let same_key_subwallet = WalletBuilder::new()
+        .subwallet_id(1)
+        .build(code_hash, signer.clone());
+    assert_ne!(wallet.account_id(), same_key_subwallet.account_id());
     let recipient = WalletBuilder::new()
         .subwallet_id(1)
         .build(
@@ -136,6 +141,24 @@ async fn wallet_executes_and_resolves_authorization_in_wasm() {
         .unwrap()
         .result()
         .unwrap();
+
+    let (msg, proof) = wallet
+        .sign(defuse_wallet::WalletOp::add_extension(
+            near.account_id().clone(),
+        ))
+        .await
+        .unwrap();
+    entrypoints::check(&near, wallet.account_id(), &msg, &proof).await;
+    let ft_wasm = fs::read(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../releases/fungible-token.wasm"),
+    )
+    .unwrap();
+    let failure = entrypoints::metadata(&near, wallet.account_id(), &ft_wasm).await;
+    let (msg, proof) = wallet.sign(failure).await.unwrap();
+    entrypoints::failed_metadata_consumes_nonce(&near, wallet.account_id(), &msg, &proof).await;
+    let (msg, _) = wallet.sign(Request::new()).await.unwrap();
+    entrypoints::context(&near, wallet.account_id(), &msg, &signer).await;
+
     let before = near.balance(recipient.account_id()).await.unwrap().total;
     execute(
         &near,
