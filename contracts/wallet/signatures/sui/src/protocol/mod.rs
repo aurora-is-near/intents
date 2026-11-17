@@ -119,6 +119,16 @@ impl SuiPublicKey {
     /// accepted. ECDSA low-S checks and weak-key rejection use shared crypto.
     #[cfg(any(feature = "ed25519", feature = "secp256k1", feature = "p256"))]
     pub fn verify_personal_message(&self, message: &[u8], proof: &str) -> bool {
+        self.verify_personal_message_with(|| Some(message), proof)
+    }
+
+    // Decode and bind the proof once, before paying to render or hash a message.
+    #[cfg(any(feature = "ed25519", feature = "secp256k1", feature = "p256"))]
+    pub(crate) fn verify_personal_message_with<M: AsRef<[u8]>>(
+        &self,
+        message: impl FnOnce() -> Option<M>,
+        proof: &str,
+    ) -> bool {
         if proof.len() != 132 {
             return false;
         }
@@ -132,7 +142,10 @@ impl SuiPublicKey {
         {
             return false;
         }
-        let Some(digest) = personal_message_digest(message) else {
+        let Some(message) = message() else {
+            return false;
+        };
+        let Some(digest) = personal_message_digest(message.as_ref()) else {
             return false;
         };
         match self.flag() {
@@ -150,6 +163,16 @@ impl SuiPublicKey {
     #[cfg(not(any(feature = "ed25519", feature = "secp256k1", feature = "p256")))]
     pub fn from_sui_bytes(_bytes: &[u8]) -> Result<Self, PublicKeyError> {
         Err(PublicKeyError)
+    }
+
+    /// No algorithm is enabled: proofs are never accepted.
+    #[cfg(not(any(feature = "ed25519", feature = "secp256k1", feature = "p256")))]
+    pub(crate) fn verify_personal_message_with<M: AsRef<[u8]>>(
+        &self,
+        _message: impl FnOnce() -> Option<M>,
+        _proof: &str,
+    ) -> bool {
+        false
     }
 
     /// No algorithm is enabled: proofs are never accepted.

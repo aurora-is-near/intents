@@ -11,6 +11,9 @@ pub use protocol::{SuiPublicKey, crypto};
 #[cfg(feature = "signer")]
 pub use signer::*;
 
+#[cfg(test)]
+mod tests;
+
 use core::marker::PhantomData;
 use protocol::SuiScheme;
 
@@ -19,14 +22,27 @@ use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
 /// Sui native personal-message signatures over the full readable NEAR message.
 pub struct WalletSui<C: SuiScheme>(PhantomData<C>);
 
+impl<C: SuiScheme> WalletSui<C> {
+    fn verify(
+        public_key: &SuiPublicKey,
+        message: impl FnOnce() -> Result<String, MessageError>,
+        proof: &str,
+    ) -> bool {
+        // Keep each contract restricted to its scheme before doing message work.
+        public_key.flag() == C::FLAG
+            && public_key.verify_personal_message_with(|| message().ok(), proof)
+    }
+}
+
 impl<C: SuiScheme> SignatureSchema for WalletSui<C> {
     type PublicKey = SuiPublicKey;
 
     fn verify_request_msg(public_key: &Self::PublicKey, msg: &RequestMessage, proof: &str) -> bool {
-        public_key.flag() == C::FLAG
-            && proof.len() == 132
-            && request_signing_message(public_key, msg)
-                .is_ok_and(|message| public_key.verify_personal_message(message.as_bytes(), proof))
+        Self::verify(
+            public_key,
+            || request_signing_message(public_key, msg),
+            proof,
+        )
     }
 
     fn verify_offchain_msg(
@@ -34,9 +50,10 @@ impl<C: SuiScheme> SignatureSchema for WalletSui<C> {
         msg: &OffchainMessage,
         proof: &str,
     ) -> bool {
-        public_key.flag() == C::FLAG
-            && proof.len() == 132
-            && offchain_signing_message(public_key, msg)
-                .is_ok_and(|message| public_key.verify_personal_message(message.as_bytes(), proof))
+        Self::verify(
+            public_key,
+            || offchain_signing_message(public_key, msg),
+            proof,
+        )
     }
 }
