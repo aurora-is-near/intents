@@ -11,6 +11,9 @@ pub use self::message::*;
 pub use self::signer::*;
 pub use defuse_crypto as crypto;
 
+#[cfg(test)]
+mod tests;
+
 use core::str::FromStr;
 
 use defuse_crypto::{
@@ -31,16 +34,21 @@ impl WalletSolana {
         message: impl FnOnce() -> Result<String, MessageError>,
         proof: &str,
     ) -> bool {
+        const PREFIX: &str = "ed25519:";
+        // Base58 of 64 bytes takes at most 88 characters, excluding the prefix.
+        const MAX_PROOF_LEN: usize = PREFIX.len() + 88;
+
+        // Bound decoding before rendering, for both execution and offchain proofs.
+        if proof.len() > MAX_PROOF_LEN || !proof.starts_with(PREFIX) {
+            return false;
+        }
         let (Ok(key), Ok(signature)) = (
             <Ed25519 as Curve>::PublicKey::try_from(public_key),
             Ed25519Signature::from_str(proof),
         ) else {
             return false;
         };
-        let Ok(message) = message() else {
-            return false;
-        };
-        Ed25519::verify(&key, message.as_bytes(), &signature.into())
+        message().is_ok_and(|message| Ed25519::verify(&key, message.as_bytes(), &signature.into()))
     }
 }
 
@@ -48,10 +56,6 @@ impl SignatureSchema for WalletSolana {
     type PublicKey = Ed25519PublicKey;
 
     fn verify_request_msg(public_key: &Self::PublicKey, msg: &RequestMessage, proof: &str) -> bool {
-        // Reject oversized or non-Ed25519 proofs before rendering the message.
-        if proof.len() > 100 || !proof.starts_with("ed25519:") {
-            return false;
-        }
         Self::verify(
             public_key,
             || request_signing_message(public_key, msg),
@@ -64,9 +68,6 @@ impl SignatureSchema for WalletSolana {
         msg: &OffchainMessage,
         proof: &str,
     ) -> bool {
-        if proof.len() > 100 || !proof.starts_with("ed25519:") {
-            return false;
-        }
         Self::verify(
             public_key,
             || offchain_signing_message(public_key, msg),
