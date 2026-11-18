@@ -243,12 +243,13 @@ fn promise_value(
         actions,
     } = promise;
     if let Some(refund_to) = refund_to.as_ref().filter(|account| *account != wallet) {
-        let attached = attached_near(promise);
+        // Transfer amounts and deposits: the most that `refund_to` can receive.
+        let attached = promise.total_deposit();
 
-        if attached != 0 {
+        if !attached.is_zero() {
             warnings.push(format!(
                 "WARNING: up to {} sent to {receiver_id} can be refunded to {refund_to}, not to {name}.",
-                near_amount(attached)
+                near_amount(attached.as_yoctonear())
             ));
         }
     }
@@ -341,7 +342,7 @@ fn args_value(args: &[u8]) -> Result<Value, MessageError> {
 /// the token.
 fn token_args(args: &[u8], keys: &[&str]) -> Result<Value, MessageError> {
     let value = args_value(args)?;
-    let object = value.as_object().ok_or(MessageError::TokenAmount)?;
+    let object = value.as_object().ok_or(MessageError::TokenArgs)?;
 
     if object.keys().any(|key| !keys.contains(&key.as_str())) {
         return Err(MessageError::TokenArgs);
@@ -375,34 +376,9 @@ fn token_args(args: &[u8], keys: &[&str]) -> Result<Value, MessageError> {
     Ok(value)
 }
 
-/// Function arguments that are exactly their compact JSON serialization, also
-/// in JavaScript (the rule for arguments shown in readable messages).
-pub fn json_args(args: &[u8]) -> Result<Value, MessageError> {
-    args_value(args)
-}
-
 /// Exact smallest-unit integer with an explicit unit for refund warnings.
-pub fn near_amount(yocto: u128) -> String {
+fn near_amount(yocto: u128) -> String {
     format!("{yocto} yoctoNEAR")
-}
-
-/// yoctoNEAR attached to a promise (transfer amounts and deposits), saturating
-/// at `u128::MAX`: the most that its `refund_to` can receive.
-pub fn attached_near(promise: &NearPromise) -> u128 {
-    promise
-        .actions
-        .iter()
-        .map(|action| match action {
-            NearAction::Transfer(Transfer { amount })
-            | NearAction::FunctionCall(FunctionCall {
-                deposit: amount, ..
-            })
-            | NearAction::DeterministicStateInit(DeterministicStateInit {
-                deposit: amount, ..
-            }) => amount.as_yoctonear(),
-            _ => 0,
-        })
-        .fold(0, u128::saturating_add)
 }
 
 /// Largest integer that JavaScript numbers represent exactly (2^53 - 1).
@@ -447,10 +423,30 @@ fn object<const N: usize>(fields: [(&str, Value); N]) -> Map<String, Value> {
         .collect()
 }
 
-/// State init with keys sorted at every level.
-fn sorted(mut value: Value) -> Value {
-    value.sort_all_objects();
-    value
+/// State init with the keys of every object in the order of a JavaScript
+/// object built from them: array-index keys first, in ascending order, then
+/// the other keys sorted as strings. `JSON.stringify` gives the same order.
+fn sorted(value: Value) -> Value {
+    match value {
+        Value::Array(items) => Value::Array(items.into_iter().map(sorted).collect()),
+        Value::Object(object) => {
+            let mut entries: Vec<_> = object
+                .into_iter()
+                .map(|(key, value)| (array_index(&key).unwrap_or(u32::MAX), key, sorted(value)))
+                .collect();
+
+            // `array_index` is never `u32::MAX`, so the other keys come last.
+            entries.sort_by(|(a_index, a, _), (b_index, b, _)| (a_index, a).cmp(&(b_index, b)));
+
+            Value::Object(
+                entries
+                    .into_iter()
+                    .map(|(_, key, value)| (key, value))
+                    .collect(),
+            )
+        }
+        scalar => scalar,
+    }
 }
 
 /// Pretty JSON, stopping as soon as it cannot fit the message (escaping only
@@ -797,6 +793,9 @@ mod tests {
                 "ft_transfer_call",
                 r#"{"receiver_id":"bob.near","amount":"1","msg":"","amount_display":"1 USDC"}"#,
             ),
+            ("ft_transfer", "[]"),
+            ("ft_transfer", "null"),
+            ("ft_transfer_call", r#""bob.near""#),
         ] {
             assert!(
                 matches!(transfer(method, args), Err(MessageError::TokenArgs)),
@@ -908,6 +907,45 @@ mod tests {
                 "accepted {data}"
             );
         }
+    }
+
+    #[test]
+    fn state_init_keys_follow_javascript_object_order() {
+        // As `JSON.stringify` orders an object built from these keys: array
+        // indices ascending ("9999" before "10000000"), then the other keys
+        // as strings ("0100" has a leading zero, so it is not an index).
+        let request: Request = serde_json::from_value(json!({
+            "external": [{
+                "receiver_id": "a.near",
+                "actions": [{
+                    "action": "deterministic_state_init",
+                    "payload": {"state_init": {"V1": {
+                        "code": {"account_id": "code.near"},
+                        "data": {
+                            "/w==": "", "0100": "", "1000": "",
+                            "10000000": "", "9999": "", "AAEC": "",
+                        },
+                    }}},
+                }],
+            }],
+        }))
+        .unwrap();
+        let msg = RequestMessage {
+            request,
+            ..call(b"{}")
+        };
+        let message = request_signing_message(IDENTITY, &msg).unwrap();
+        let data =
+            &document(&message)["request"]["external"][0]["actions"][0]["state_init"]["V1"]["data"];
+
+        assert_eq!(
+            data.as_object()
+                .unwrap()
+                .keys()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            ["1000", "9999", "10000000", "/w==", "0100", "AAEC"]
+        );
     }
 
     #[test]
