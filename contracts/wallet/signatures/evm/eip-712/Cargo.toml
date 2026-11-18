@@ -13,8 +13,9 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 defuse-digest = { workspace = true, features = ["sha3"] }
-defuse-wallet = { workspace = true, features = ["borsh", "json", "readable-message", "serde"] }
+defuse-wallet = { workspace = true, features = ["borsh", "json", "serde"] }
 defuse-wallet-evm-eip191.workspace = true
+defuse-wallet-readable.workspace = true
 
 bs58.workspace = true
 serde_json = { workspace = true, features = ["preserve_order"] }

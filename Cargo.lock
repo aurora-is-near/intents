@@ -1918,6 +1918,7 @@ dependencies = [
  "defuse-nep641",
  "defuse-wallet",
  "defuse-wallet-evm-eip191",
+ "defuse-wallet-readable",
  "defuse-wallet-sdk",
  "derive_more",
  "hex",
@@ -1946,6 +1947,7 @@ dependencies = [
  "defuse-wallet",
  "defuse-wallet-evm-eip191",
  "defuse-wallet-evm-eip712",
+ "defuse-wallet-readable",
  "defuse-wallet-sdk",
  "hex",
  "hex-literal",
@@ -1972,6 +1974,16 @@ dependencies = [
  "rstest",
  "schemars 0.8.22",
  "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "defuse-wallet-readable"
+version = "0.1.0"
+dependencies = [
+ "defuse-wallet",
+ "serde",
+ "serde_json",
  "thiserror 2.0.21",
 ]
 

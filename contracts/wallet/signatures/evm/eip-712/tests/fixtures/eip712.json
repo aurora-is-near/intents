@@ -2,7 +2,7 @@
   "generator": "@metamask/eth-sig-util 8.2.0 (TypedDataUtils.eip712Hash, signTypedData V4); public web3.js test key",
   "domain_separator": "9ed0384a9369f42aa89e172b67359e73238fce303b45b92842e471874e2f6d22",
   "encode_type": {
-    "ExecuteRequest": "ExecuteRequest(string[] warnings,string chain_id,string signer_id,uint32 nonce,string created_at,uint32 timeout_secs,bool pay_for_gas,Operation[] internal,Promise[] external)Action(string action,uint128 yocto_near,string function_name,string args,uint64 gas,uint64 gas_weight,StateInit[] state_init)Operation(string op,string account_id,string signature_mode,uint8 decimals,string symbol)Promise(string receiver_id,string refund_to,Action[] actions)StateEntry(bytes key,bytes value)StateInit(string code_hash,string code_account_id,StateEntry[] data)",
+    "ExecuteRequest": "ExecuteRequest(string[] warnings,string chain_id,string signer_id,uint32 nonce,string created_at,uint32 timeout_secs,bool pay_for_gas,Operation[] internal,Promise[] external)Action(string action,uint128 yocto_near,string function_name,string args,uint64 gas,uint64 gas_weight,StateInit[] state_init)Operation(string op,string account_id,string signature_mode)Promise(string receiver_id,string refund_to,Action[] actions)StateEntry(bytes key,bytes value)StateInit(string code_hash,string code_account_id,StateEntry[] data)",
     "OffchainAuthorization": "OffchainAuthorization(string chain_id,string signer_id,string[] path,string timestamp,string payload)"
   },
   "vectors": [
@@ -79,14 +79,6 @@
             },
             {
               "name": "signature_mode",
-              "type": "string"
-            },
-            {
-              "name": "decimals",
-              "type": "uint8"
-            },
-            {
-              "name": "symbol",
               "type": "string"
             }
           ],
@@ -176,8 +168,8 @@
           "external": []
         }
       },
-      "digest": "97a2a30a40726d6718b4d8a7654a06f5008fe4f8bd74bc80baebf41230775b1f",
-      "proof": "secp256k1:LEoDmjNiXUFXAiBtZQPiqsbKLtcHrLsmATJZhpXtu43uoxuM9EMX8fSjSUAqLAGEgXAJxD6Njugj2HLbDvMxdLpKy"
+      "digest": "e607dc5accaff737b2c7f7c4a9f4e535ba01a41d3323be708e9880273d7d34fa",
+      "proof": "secp256k1:NYodhUFPkSSJtfNhao7YW7cYFeprcfKJwsq1nNZuMHX16XEL99ipv9gsP78a3MjhG6ihJhJ4VyQx2WfWQF4oRZuy1"
     },
     {
       "kind": "request",
@@ -276,14 +268,6 @@
             {
               "name": "signature_mode",
               "type": "string"
-            },
-            {
-              "name": "decimals",
-              "type": "uint8"
-            },
-            {
-              "name": "symbol",
-              "type": "string"
             }
           ],
           "Promise": [
@@ -363,7 +347,7 @@
         "message": {
           "warnings": [
             "add_extension gives recovery.near full control of this wallet",
-            "up to 1 NEAR sent to bob.near can be refunded to refund.near, not to this wallet"
+            "up to 1000000000000000000000000 yoctoNEAR sent to bob.near can be refunded to refund.near, not to this wallet"
           ],
           "chain_id": "mainnet",
           "signer_id": "wallet.near",
@@ -375,9 +359,7 @@
             {
               "op": "add_extension",
               "account_id": "recovery.near",
-              "signature_mode": "",
-              "decimals": 0,
-              "symbol": ""
+              "signature_mode": ""
             }
           ],
           "external": [
@@ -399,8 +381,8 @@
           ]
         }
       },
-      "digest": "f123923572379ccec4e9a09098d718322d55b57847e249f9c189d0628382712e",
-      "proof": "secp256k1:31EEdNwAfGzXnpXZrMycha2nAgZFYVCjZJCq2syxgokAMfzWF5afDuKuyzB2moAw175re2kGkAbsGid58VzxQ6VdJ"
+      "digest": "24e7321e20d1a00dbfab0b8396e4bc5e4958d83756cb62d39c82420e27368aab",
+      "proof": "secp256k1:JJHMmVMgYRofPVo95BfajWpcEETgVNe1E9ZVFzycVDuMe8aec8XaTi8fGd61Puqx4tneN9w7V3euDZrNQwQKbW16x"
     },
     {
       "kind": "request",
@@ -423,14 +405,6 @@
               "op": "remove_extension",
               "payload": {
                 "account_id": "old.near"
-              }
-            },
-            {
-              "op": "require_ft_metadata",
-              "payload": {
-                "token_id": "token.near",
-                "decimals": 18,
-                "symbol": "TKN"
               }
             }
           ],
@@ -523,14 +497,6 @@
             {
               "name": "signature_mode",
               "type": "string"
-            },
-            {
-              "name": "decimals",
-              "type": "uint8"
-            },
-            {
-              "name": "symbol",
-              "type": "string"
             }
           ],
           "Promise": [
@@ -619,23 +585,12 @@
             {
               "op": "set_signature_mode",
               "account_id": "",
-              "signature_mode": "disable",
-              "decimals": 0,
-              "symbol": ""
+              "signature_mode": "disable"
             },
             {
               "op": "remove_extension",
               "account_id": "old.near",
-              "signature_mode": "",
-              "decimals": 0,
-              "symbol": ""
-            },
-            {
-              "op": "require_ft_metadata",
-              "account_id": "token.near",
-              "signature_mode": "",
-              "decimals": 18,
-              "symbol": "TKN"
+              "signature_mode": ""
             }
           ],
           "external": [
@@ -666,8 +621,8 @@
           ]
         }
       },
-      "digest": "4375810cf9307942e81842787daedb3f440de9e0aa919633d537e1b98140f25b",
-      "proof": "secp256k1:6PkeYZ68yysUHMRnw3dePQdutpcCmjdmJwPDPTqHxvWa6CqpYwe13ecLNxjFWriB93ZQMTEfJUTL5okGQ3H9otPYC"
+      "digest": "a852c8193ce72f17abc2ae87f9e90007ba22a68648ee1b63c743faa4610f2067",
+      "proof": "secp256k1:5s1WEA5eriWtZnHyrgvmGWCAfw8m1AW2ngztEh5848yrVJ26NDdxMoxjw41LgZQXedDsdYxWqLGM5jVAvK9HJLmyS"
     },
     {
       "kind": "request",
@@ -768,14 +723,6 @@
             },
             {
               "name": "signature_mode",
-              "type": "string"
-            },
-            {
-              "name": "decimals",
-              "type": "uint8"
-            },
-            {
-              "name": "symbol",
               "type": "string"
             }
           ],
@@ -900,8 +847,8 @@
           ]
         }
       },
-      "digest": "9bca61b2eac36ff69bd3e76c3618a0094e7b8a2a632d88f8acb78098dc571718",
-      "proof": "secp256k1:FbhN6RQSP3KEMY9S2EAnDqitLMs72vyrNDi91Fc3DqxhB8GSJXKLidXgLafDiCJJNhGdkM5piNjEv6WtjnxjV9jCT"
+      "digest": "bcdb58e22d37887d20d424581b38c15eb928b1fea42549c8c58b7c97e75dd58a",
+      "proof": "secp256k1:Mm6SCZh7LpE7UoFQiSViibHGuQUJVvPAsNWtMRBzyWqmDcD3K4jauB74wWvUiR8netZBMZF9oSBYMzRhL1BLxycsr"
     },
     {
       "kind": "offchain",
@@ -1046,14 +993,6 @@
               "payload": {
                 "enable": true
               }
-            },
-            {
-              "op": "require_ft_metadata",
-              "payload": {
-                "token_id": "token.near",
-                "decimals": 6,
-                "symbol": "USDC"
-              }
             }
           ],
           "external": [
@@ -1136,14 +1075,6 @@
             },
             {
               "name": "signature_mode",
-              "type": "string"
-            },
-            {
-              "name": "decimals",
-              "type": "uint8"
-            },
-            {
-              "name": "symbol",
               "type": "string"
             }
           ],
@@ -1233,16 +1164,7 @@
             {
               "op": "set_signature_mode",
               "account_id": "",
-              "signature_mode": "enable",
-              "decimals": 0,
-              "symbol": ""
-            },
-            {
-              "op": "require_ft_metadata",
-              "account_id": "token.near",
-              "signature_mode": "",
-              "decimals": 6,
-              "symbol": "USDC"
+              "signature_mode": "enable"
             }
           ],
           "external": [
@@ -1264,8 +1186,8 @@
           ]
         }
       },
-      "digest": "937471d3113bacebfaee0da2ac50f848612cde13ba972a4bf0f9c17c7db0d81d",
-      "proof": "secp256k1:7MHgLUPRbB8U7eDcEAKFU6929GZhqv6cYfm7CpgDTSHJLNDm5edKxCRJoka9ZfuiH1ZsmSy2Jdorh3S3RfAwdMm7M"
+      "digest": "56422079ada918fa9f2240d4925273336dda041001460d4edcae5104f85a1693",
+      "proof": "secp256k1:DgWDuUg13XQsAfrfbMasrN5T5uG2dVaZNGkmmNKeGUupBVhvHTwnnMcs6hv8XFGm6Kjq6sHPUjXvVhJTQCBpuGq6g"
     },
     {
       "kind": "request",
@@ -1361,14 +1283,6 @@
             },
             {
               "name": "signature_mode",
-              "type": "string"
-            },
-            {
-              "name": "decimals",
-              "type": "uint8"
-            },
-            {
-              "name": "symbol",
               "type": "string"
             }
           ],
@@ -1480,8 +1394,8 @@
           ]
         }
       },
-      "digest": "0490d76ed22174fc10b0e9635614e4a3b6479bbb770e5cbbb047ae9529ed9a66",
-      "proof": "secp256k1:3AgiXE13RhDN9ShBFefNLB3TJC73fbpYw2qNttVAi2eixgQceM7YtxoJCJ6411GCRX3BKb45NkMUokNdU1C6gHDLt"
+      "digest": "883c59500e413601673c3acbc84b0dd52fb01e77be02398074fe189c4f34fccc",
+      "proof": "secp256k1:CwLsuoetSozBXYZQiZQ6mpBZv5w6AEEsom5g9CcXsQYMMZAAECJLecZnGttNJEC6D8cDgVQgxjF3gDJ56AjiRc3r8"
     },
     {
       "kind": "request",
@@ -1571,14 +1485,6 @@
             },
             {
               "name": "signature_mode",
-              "type": "string"
-            },
-            {
-              "name": "decimals",
-              "type": "uint8"
-            },
-            {
-              "name": "symbol",
               "type": "string"
             }
           ],
@@ -1684,8 +1590,8 @@
           ]
         }
       },
-      "digest": "b8f5bdde361704d479c077725fa7a4996f8643ff32edd83f00e38e035f7e2d13",
-      "proof": "secp256k1:3xcL3FXtV1Tf4FefDQRXs9PJpg9jRhSv4orFL3UzbMz5x8XLXbcmN8cdEEzbXiHmcRVxwu8RWNRf3i5TUv8hovDq9"
+      "digest": "86274fa2d036df564bc8e6e1b64792f8850b3b4d2d42c6852ee2022ea2bc8da9",
+      "proof": "secp256k1:2ymuvk6DoYBmYXjJ6efW6ZGoxDH2MTD8YkGjf7jMfJwQCw2CRpE74wDK5iXmkswDy5jVQzAsq6oeutcJcXWZe8emm"
     },
     {
       "kind": "request",
@@ -2530,14 +2436,6 @@
             },
             {
               "name": "signature_mode",
-              "type": "string"
-            },
-            {
-              "name": "decimals",
-              "type": "uint8"
-            },
-            {
-              "name": "symbol",
               "type": "string"
             }
           ],
@@ -3777,8 +3675,8 @@
           ]
         }
       },
-      "digest": "702ff9a268b7cd98fe1b38ee246a59ffb42e7022ccf25a90089cc9846d6a8288",
-      "proof": "secp256k1:PYMqyJ178hx5wV1v856ezyxiFkE5kPpZdHPv1LYtDK88Ls6FZr4T13LxMEBPVCLsoZjT8tj772DiAhiWFWM8Xrc3z"
+      "digest": "79e9ae6790b7ed8a20dcfaf495abb8415b6ee458849372adc6fe1054907fa07b",
+      "proof": "secp256k1:DTGRjLwuiZSSrfBnEaCMqhJr6xBUZAvRq72jV6LxvPf9vSzMouUy66uekhc2YFiz5fdWv6ZapoebJdfhL3Bbk3QzU"
     }
   ]
 }

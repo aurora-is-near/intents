@@ -3,11 +3,13 @@
 //! The contract builds the typed data itself; clients only sign it.
 
 use defuse_wallet::{
-    GlobalContractId, NearPromise, RequestMessage, StateInit, StateInitV1, WalletOp,
+    AccountId, GlobalContractId, NearPromise, NearToken, RequestMessage, StateInit, StateInitV1,
+    WalletOp,
     actions::{DeterministicStateInit, FunctionCall, NearAction, Transfer},
     offchain::OffchainMessage,
-    readable_message::{MAX_SIGNING_MESSAGE_BYTES, attached_near, json_args, near_amount},
 };
+use defuse_wallet_readable::{MAX_SIGNING_MESSAGE_BYTES, attached_near, json_args, near_amount};
+use serde_json::Value;
 
 use crate::eip712::{Hash, array, boolean, digest, dynamic, hash_struct, uint};
 
@@ -34,7 +36,7 @@ macro_rules! action {
 }
 macro_rules! operation {
     () => {
-        "Operation(string op,string account_id,string signature_mode,uint8 decimals,string symbol)"
+        "Operation(string op,string account_id,string signature_mode)"
     };
 }
 macro_rules! promise {
@@ -76,6 +78,10 @@ pub enum Eip712Error {
     Text,
     #[error("function call arguments must be compact ASCII JSON")]
     FunctionArgs,
+    #[error("NEP-141 transfer arguments must be valid parameters of the method")]
+    TokenArgs,
+    #[error("NEP-141 transfers require exactly one yoctoNEAR")]
+    TokenDeposit,
     #[error("timestamp must fit unsigned 64-bit Unix nanoseconds")]
     Timestamp,
     #[error("timeout must be a whole number of seconds fitting u32")]
@@ -224,31 +230,16 @@ impl Budget {
 }
 
 /// Operations share one type; fields that an operation does not use are
-/// empty or zero, and `op` tells which apply.
+/// empty, and `op` tells which apply.
 fn operation(budget: &mut Budget, op: &WalletOp) -> Result<Hash, Eip712Error> {
-    let (name, account_id, signature_mode, decimals, symbol) = match op {
+    let (name, account_id, signature_mode) = match op {
         WalletOp::SetSignatureMode { enable } => (
             "set_signature_mode",
             "",
             if *enable { "enable" } else { "disable" },
-            0,
-            "",
         ),
-        WalletOp::AddExtension { account_id } => ("add_extension", account_id.as_str(), "", 0, ""),
-        WalletOp::RemoveExtension { account_id } => {
-            ("remove_extension", account_id.as_str(), "", 0, "")
-        }
-        WalletOp::RequireFtMetadata {
-            token_id,
-            decimals,
-            symbol,
-        } => (
-            "require_ft_metadata",
-            token_id.as_str(),
-            "",
-            *decimals,
-            symbol.as_str(),
-        ),
+        WalletOp::AddExtension { account_id } => ("add_extension", account_id.as_str(), ""),
+        WalletOp::RemoveExtension { account_id } => ("remove_extension", account_id.as_str(), ""),
     };
     Ok(hash_struct(
         OPERATION_TYPE,
@@ -256,8 +247,6 @@ fn operation(budget: &mut Budget, op: &WalletOp) -> Result<Hash, Eip712Error> {
             budget.text(name)?,
             budget.text(account_id)?,
             budget.text(signature_mode)?,
-            uint(decimals),
-            budget.text(symbol)?,
         ],
     ))
 }
@@ -311,7 +300,7 @@ fn action(budget: &mut Budget, action: &NearAction) -> Result<Hash, Eip712Error>
                 return Err(Eip712Error::FunctionArgs);
             }
             let value = json_args(args).map_err(|_| Eip712Error::FunctionArgs)?;
-            token_args(function_name, &value)?;
+            token_args(function_name, &value, *deposit)?;
             [
                 name,
                 uint(deposit.as_yoctonear()),
@@ -349,27 +338,39 @@ const FT_TRANSFER_METHODS: [(&str, &[&str]); 2] = [
     ),
 ];
 
-/// NEP-141 transfers take only the method's parameters and a canonical
-/// decimal `u128` amount (in base units).
-fn token_args(function_name: &str, args: &serde_json::Value) -> Result<(), Eip712Error> {
+/// NEP-141 transfers, as in the readable format: exactly one yoctoNEAR, only
+/// the method's parameters, a valid `receiver_id`, a string `msg` for
+/// `ft_transfer_call`, `memo` absent, `null` or a string, and a canonical
+/// decimal `u128` `amount` (in base units).
+fn token_args(function_name: &str, args: &Value, deposit: NearToken) -> Result<(), Eip712Error> {
     let Some((_, keys)) = FT_TRANSFER_METHODS
         .iter()
         .find(|(method, _)| *method == function_name)
     else {
         return Ok(());
     };
-    let object = args.as_object().ok_or(Eip712Error::FunctionArgs)?;
-    let canonical = object
-        .get("amount")
-        .and_then(serde_json::Value::as_str)
-        .is_some_and(|text| {
-            text.parse::<u128>()
-                .is_ok_and(|units| units.to_string() == text)
-        });
-    if !canonical || object.keys().any(|key| !keys.contains(&key.as_str())) {
-        return Err(Eip712Error::FunctionArgs);
+    // Reject a predictably failing token call before other wallet effects commit.
+    if deposit.as_yoctonear() != 1 {
+        return Err(Eip712Error::TokenDeposit);
     }
-    Ok(())
+    let object = args.as_object().ok_or(Eip712Error::TokenArgs)?;
+    let text = |key: &str| object.get(key).and_then(Value::as_str);
+    let valid = object.keys().all(|key| keys.contains(&key.as_str()))
+        && text("receiver_id").is_some_and(|id| id.parse::<AccountId>().is_ok())
+        && (!keys.contains(&"msg") || text("msg").is_some())
+        && object
+            .get("memo")
+            .is_none_or(|memo| memo.is_null() || memo.is_string())
+        && text("amount").is_some_and(|amount| {
+            amount
+                .parse::<u128>()
+                .is_ok_and(|units| units.to_string() == amount)
+        });
+    if valid {
+        Ok(())
+    } else {
+        Err(Eip712Error::TokenArgs)
+    }
 }
 
 /// The code is a base58 hash or an account ID; the other one is empty.

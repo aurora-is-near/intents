@@ -17,7 +17,7 @@ EIP712Domain(string name,string version)
   name = "NEAR Wallet Contract", version = "1"
 ExecuteRequest(string[] warnings,string chain_id,string signer_id,uint32 nonce,
   string created_at,uint32 timeout_secs,bool pay_for_gas,Operation[] internal,Promise[] external)
-Operation(string op,string account_id,string signature_mode,uint8 decimals,string symbol)
+Operation(string op,string account_id,string signature_mode)
 Promise(string receiver_id,string refund_to,Action[] actions)
 Action(string action,uint128 yocto_near,string function_name,string args,uint64 gas,
   uint64 gas_weight,StateInit[] state_init)
@@ -35,17 +35,16 @@ homogeneous. Members that do not apply are `""`, `0` or an empty array.
 
 | Member | Value |
 | --- | --- |
-| `warnings` | `add_extension gives <account> full control of this wallet` for each `add_extension`, then `up to <amount> sent to <receiver> can be refunded to <refund_to>, not to this wallet` for each promise that attaches NEAR and whose `refund_to` is another account; `<amount>` is like `1.5 NEAR` |
+| `warnings` | `add_extension gives <account> full control of this wallet` for each `add_extension`, then `up to <amount> sent to <receiver> can be refunded to <refund_to>, not to this wallet` for each promise that attaches NEAR and whose `refund_to` is another account; `<amount>` is like `1500000000000000000000000 yoctoNEAR` |
 | `created_at`, `timestamp` | RFC 3339 in UTC with `Z` and up to nine fractional digits without trailing zeros, e.g. `2026-11-03T12:34:56.12Z` |
 | `timeout_secs` | whole seconds |
-| `Operation.op` | `set_signature_mode`, `add_extension`, `remove_extension` or `require_ft_metadata` |
-| `Operation.account_id` | the extension, or the token of `require_ft_metadata` |
+| `Operation.op` | `set_signature_mode`, `add_extension` or `remove_extension` |
+| `Operation.account_id` | the extension |
 | `Operation.signature_mode` | `enable` or `disable` |
-| `Operation.decimals`, `symbol` | of `require_ft_metadata` |
 | `Promise.refund_to` | `""` is this wallet |
 | `Action.action` | `transfer`, `function_call` or `deterministic_state_init` |
 | `Action.yocto_near` | transfer amount or attached deposit, in yoctoNEAR |
-| `Action.args` | the exact argument string: compact JSON that serializes identically in Rust and JavaScript, as in the [readable format](../../../README.md#readable-signing-format-v1) |
+| `Action.args` | the exact argument string: compact JSON that serializes identically in Rust and JavaScript, as in the [readable format](../../readable/README.md#format-v1) |
 | `Action.gas`, `gas_weight` | gas units (default `0`) and weight (default `1`) |
 | `Action.state_init` | one item for `deterministic_state_init` |
 | `StateInit.code_hash`, `code_account_id` | base58 code hash or account ID of the global contract; the other is `""` |
@@ -73,15 +72,17 @@ Only an address whose secp256k1 key signs can control the wallet; see the
 
 ## Clear signing
 
-Wallets show typed data as a tree of member names and values. Compared with
-the readable format, this variant shows less:
+Wallets show typed data as a tree of member names and values. Amounts are in
+base units: NEAR in yoctoNEAR, token amounts inside `args`. Compared with the
+[readable format](../../readable/README.md#format-v1), this variant shows
+less:
 
-- Amounts are in base units: NEAR in yoctoNEAR, token amounts inside `args`.
 - `args` is one string and is not decoded; text inside it comes from the
   dApp and may imitate other members. NEP-141 `ft_transfer` and
-  `ft_transfer_call` accept only the method's parameters and a decimal `u128`
-  `amount` without leading zeros, but `require_ft_metadata` is not required
-  for them.
+  `ft_transfer_call` follow the rules of the readable format: exactly one
+  yoctoNEAR of deposit, only the method's parameters, a valid `receiver_id`,
+  a decimal `u128` `amount` without leading zeros, `memo` `null` or a string,
+  and a string `msg` for `ft_transfer_call`.
 - State data is `bytes`.
 - Strings and the structure are shown as they are hashed. Integers and
   `pay_for_gas` are hashed by value, but a wallet may show them as the dApp
@@ -90,23 +91,13 @@ the readable format, this variant shows less:
   integers and JSON booleans; a prompt that shows anything else is not from an
   honest client. The contract rejects `pay_for_gas` `true`.
 
-`MetaMask` with a software account signed four messages (token transfers,
-state init, a NEP-641 authorization and the whole 16 KiB text budget); they
-are in `tests/fixtures/metamask.json` with the text copied from each prompt.
-After the account, an Ethereum network name (unrelated to `chain_id`) and the
-request origin, the prompt lists the primary type and every member: integers
-in base units, `bytes` as hex. It does not show the domain. Other wallets and
-hardware wallets are unverified.
+The display is confirmed for `MetaMask` with a software account for NEP-641
+authorizations only: it lists the primary type and every member and does not
+show the domain. The display of execution requests is unverified. Other
+wallets and hardware wallets are unverified.
 
-## Build and test
+## Build
 
 ```sh
 make defuse-wallet-evm-eip712
-cargo test -p defuse-wallet-evm-eip712 --all-features
 ```
-
-`WalletEip712Signer` implements both SDK signing paths. The vectors in
-`tests/fixtures/eip712.json` are hashed and signed with
-`@metamask/eth-sig-util` 8.2.0; `tests/typed_data.rs` hashes every fixture's
-typed data with a generic EIP-712 encoder and compares it with the contract's
-digest.

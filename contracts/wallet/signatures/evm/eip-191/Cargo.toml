@@ -15,7 +15,8 @@ crate-type = ["cdylib", "rlib"]
 defuse-crypto = { workspace = true, features = ["borsh", "fmt", "secp256k1"] }
 defuse-digest = { workspace = true, features = ["sha3"] }
 defuse-erc191.workspace = true
-defuse-wallet = { workspace = true, features = ["borsh", "digest", "json", "readable-message", "serde"] }
+defuse-wallet = { workspace = true, features = ["borsh", "digest", "json", "serde"] }
+defuse-wallet-readable.workspace = true
 
 borsh = { workspace = true, features = ["derive"] }
 derive_more = { workspace = true, features = ["as_ref", "from", "into"] }

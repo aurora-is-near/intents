@@ -1,6 +1,6 @@
 #![cfg(feature = "signer")]
 
-#[path = "../../../../test-utils/entrypoints.rs"]
+#[path = "../../../readable/test-utils/entrypoints.rs"]
 mod entrypoints;
 
 use std::{env, fs, path::Path};
@@ -181,13 +181,18 @@ async fn check_public_entrypoints(
         .await
         .unwrap();
     entrypoints::check(near, wallet.account_id(), &msg, &proof).await;
-    let ft_wasm = fs::read(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../../releases/fungible-token.wasm"),
-    )
-    .unwrap();
-    let failure = entrypoints::metadata(near, wallet.account_id(), &ft_wasm).await;
-    let (msg, proof) = wallet.sign(failure).await.unwrap();
-    entrypoints::failed_metadata_consumes_nonce(near, wallet.account_id(), &msg, &proof).await;
+    wallet
+        .sign_and_send(defuse_wallet::WalletOp::remove_extension(
+            near.account_id().clone(),
+        ))
+        .await
+        .unwrap()
+        .status(near)
+        .wait_until::<Final>()
+        .await
+        .unwrap()
+        .result()
+        .unwrap();
     let (msg, _) = wallet.sign(defuse_wallet::Request::new()).await.unwrap();
     entrypoints::context(near, wallet.account_id(), &msg, signer).await;
 }

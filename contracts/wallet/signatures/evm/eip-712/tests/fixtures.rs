@@ -1,7 +1,8 @@
 use std::str::FromStr;
 
 use defuse_wallet::{
-    RequestMessage, SignatureSchema, WalletOp, actions::NearAction, offchain::OffchainMessage,
+    NearToken, RequestMessage, SignatureSchema, WalletOp, actions::NearAction,
+    offchain::OffchainMessage,
 };
 use defuse_wallet_evm_eip191::{WalletEip191, request_signing_message};
 use defuse_wallet_evm_eip712::{
@@ -95,13 +96,6 @@ fn execution_fields_are_bound() {
             json!("other.near"),
         ),
         (2, "/request/internal/1/op", json!("add_extension")),
-        (
-            2,
-            "/request/internal/2/payload/token_id",
-            json!("other.near"),
-        ),
-        (2, "/request/internal/2/payload/decimals", json!(17)),
-        (2, "/request/internal/2/payload/symbol", json!("TKM")),
         (2, "/request/external/0/receiver_id", json!("other.near")),
         (2, "/request/external/0/refund_to", json!("token.near")),
         (
@@ -114,9 +108,10 @@ fn execution_fields_are_bound() {
             "/request/external/0/actions/0/payload/args",
             json!("eyJyZWNlaXZlcl9pZCI6Im90aGVyLm5lYXIiLCJhbW91bnQiOiIyIn0="),
         ),
+        // The generic call: a NEP-141 transfer takes exactly one yoctoNEAR.
         (
             2,
-            "/request/external/0/actions/0/payload/deposit",
+            "/request/external/0/actions/1/payload/deposit",
             json!("2"),
         ),
         (2, "/request/external/0/actions/0/payload/gas", json!("1")),
@@ -327,30 +322,6 @@ fn unsupported_content_is_rejected() {
             "unsupported",
         ),
         (call("ft_transfer\u{7f}", "{}"), "text"),
-        // NEP-141 transfers: only the method's parameters, canonical amount.
-        (
-            call(
-                "ft_transfer",
-                r#"{"receiver_id":"a.near","amount_display":"1.5 USDC","amount":"1"}"#,
-            ),
-            "args",
-        ),
-        (call("ft_transfer", r#"{"receiver_id":"a.near"}"#), "args"),
-        (
-            call("ft_transfer", r#"{"receiver_id":"a.near","amount":"01"}"#),
-            "args",
-        ),
-        (
-            call("ft_transfer", r#"{"receiver_id":"a.near","amount":1}"#),
-            "args",
-        ),
-        (
-            call(
-                "ft_transfer",
-                r#"{"receiver_id":"a.near","amount":"1","msg":""}"#,
-            ),
-            "args",
-        ),
     ] {
         let error = request_digest(&msg).unwrap_err();
         // What cannot be hashed cannot be authorized.
@@ -369,11 +340,6 @@ fn unsupported_content_is_rejected() {
             "{expected}: {error:?}"
         );
     }
-    request_digest(&call(
-        "ft_transfer_call",
-        r#"{"receiver_id":"a.near","amount":"1","memo":"m","msg":""}"#,
-    ))
-    .unwrap();
     let mut msg = base.clone();
     msg.chain_id = "main\u{202e}net".to_owned();
     assert!(matches!(request_digest(&msg), Err(Eip712Error::Text)));
@@ -387,6 +353,164 @@ fn unsupported_content_is_rejected() {
     assert!(matches!(offchain_digest(&auth), Err(Eip712Error::Text)));
     auth.payload = large;
     assert!(matches!(offchain_digest(&auth), Err(Eip712Error::TooLarge)));
+}
+
+/// Vector 2 with its first call replaced.
+fn transfer(method: &str, args: &Value, deposit: u128) -> RequestMessage {
+    let mut msg = request(vectors()[2]["msg"].clone());
+    let NearAction::FunctionCall(call) = &mut msg.request.external[0].actions[0] else {
+        unreachable!()
+    };
+    method.clone_into(&mut call.function_name);
+    call.args = serde_json::to_vec(args).unwrap();
+    call.deposit = NearToken::from_yoctonear(deposit);
+    msg
+}
+
+/// Why `msg` is not hashed. What cannot be hashed cannot be authorized.
+fn rejection(msg: &RequestMessage) -> Eip712Error {
+    let signed = &vectors()[2];
+    assert!(!WalletEip712::verify_request_msg(
+        &address(signed),
+        msg,
+        proof(signed)
+    ));
+    request_digest(msg).unwrap_err()
+}
+
+/// Valid arguments of a NEP-141 transfer `method`.
+fn transfer_args(method: &str) -> Value {
+    let mut args = json!({"receiver_id": "bob.near", "amount": "1"});
+    if method == "ft_transfer_call" {
+        args["msg"] = json!("");
+    }
+    args
+}
+
+/// `args` with `field` set, or removed for `None`.
+fn with(args: &Value, field: &str, value: Option<Value>) -> Value {
+    let mut args = args.clone();
+    let object = args.as_object_mut().unwrap();
+    match value {
+        Some(value) => object.insert(field.to_owned(), value),
+        None => object.remove(field),
+    };
+    args
+}
+
+/// NEP-141 `ft_transfer` and `ft_transfer_call` take a valid `receiver_id`,
+/// a canonical decimal `u128` `amount`, `memo` absent, `null` or a string,
+/// and a string `msg` for `ft_transfer_call`.
+#[test]
+fn token_transfer_parameters_are_validated() {
+    type Values = Vec<Option<Value>>;
+    let text = |values: &[&str]| -> Values { values.iter().map(|v| Some(json!(v))).collect() };
+    for method in ["ft_transfer", "ft_transfer_call"] {
+        let args = transfer_args(method);
+        let mut rules: Vec<(&str, Values, Values)> = vec![
+            (
+                "receiver_id",
+                text(&["a.near", "0s762910a479b0c04f9725b03cd7931dc5064ab0ab"]),
+                [
+                    vec![None, Some(Value::Null), Some(json!(1))],
+                    text(&["Bad.near", "a", "a..near"]),
+                ]
+                .concat(),
+            ),
+            (
+                "amount",
+                text(&[
+                    "0",
+                    "9007199254740993",
+                    "340282366920938463463374607431768211455",
+                ]),
+                [
+                    vec![None, Some(Value::Null), Some(json!(1))],
+                    text(&[
+                        "",
+                        "01",
+                        "+1",
+                        "1.5",
+                        "340282366920938463463374607431768211456",
+                    ]),
+                ]
+                .concat(),
+            ),
+            (
+                "memo",
+                [vec![None, Some(Value::Null)], text(&["", "m"])].concat(),
+                vec![
+                    Some(json!(false)),
+                    Some(json!(1)),
+                    Some(json!([])),
+                    Some(json!({})),
+                ],
+            ),
+        ];
+        if method == "ft_transfer_call" {
+            rules.push((
+                "msg",
+                text(&["", "{\"receiver_id\":\"bob.near\"}"]),
+                vec![None, Some(Value::Null), Some(json!(1)), Some(json!({}))],
+            ));
+        }
+        for (field, accepted, rejected) in rules {
+            for value in accepted {
+                let msg = transfer(method, &with(&args, field, value.clone()), 1);
+                assert!(request_digest(&msg).is_ok(), "{method} {field} {value:?}");
+            }
+            for value in rejected {
+                let error = rejection(&transfer(method, &with(&args, field, value.clone()), 1));
+                assert!(
+                    matches!(error, Eip712Error::TokenArgs),
+                    "{method} {field} {value:?}: {error:?}"
+                );
+            }
+        }
+    }
+}
+
+/// NEP-141 transfers take only the method's parameters (keys the token
+/// ignores could imitate a shown amount) and exactly one yoctoNEAR.
+#[test]
+fn token_transfers_take_only_method_parameters_and_one_yocto() {
+    for method in ["ft_transfer", "ft_transfer_call"] {
+        let args = transfer_args(method);
+        request_digest(&transfer(method, &args, 1)).unwrap();
+        let other = if method == "ft_transfer" {
+            "msg"
+        } else {
+            "message"
+        };
+        for args in [
+            with(&args, "amount_display", Some(json!("1.5 TOKEN"))),
+            with(&args, " amount", Some(json!("5"))),
+            with(&args, other, Some(json!(""))),
+            json!([]),
+            json!("text"),
+            json!(null),
+        ] {
+            let error = rejection(&transfer(method, &args, 1));
+            assert!(
+                matches!(error, Eip712Error::TokenArgs),
+                "{method} {args}: {error:?}"
+            );
+        }
+        for deposit in [0, 2, u128::MAX] {
+            let msg = transfer(method, &args, deposit);
+            // Serde omits a zero deposit; the decoded default is rejected, too.
+            let decoded = request(serde_json::to_value(&msg).unwrap());
+            for msg in [msg, decoded] {
+                let error = rejection(&msg);
+                assert!(
+                    matches!(error, Eip712Error::TokenDeposit),
+                    "{method} {deposit}: {error:?}"
+                );
+            }
+        }
+    }
+    // Other methods are not restricted.
+    request_digest(&transfer("submit", &json!({"amount": "01", "x": 1}), 0)).unwrap();
 }
 
 /// Vectors 8 and 9 sit exactly at the text and item limits; one more is rejected.
@@ -412,10 +536,10 @@ fn text_and_item_budget_is_enforced() {
     auth.path.push("a.near".parse().unwrap());
     assert!(matches!(offchain_digest(&auth), Err(Eip712Error::TooLarge)));
     let mut msg = request(all[2]["msg"].clone());
-    let WalletOp::RequireFtMetadata { symbol, .. } = &mut msg.request.internal[2] else {
+    let NearAction::FunctionCall(call) = &mut msg.request.external[0].actions[1] else {
         unreachable!()
     };
-    *symbol = "X".repeat(100 * 1024);
+    call.function_name = "X".repeat(100 * 1024);
     assert!(matches!(request_digest(&msg), Err(Eip712Error::TooLarge)));
 
     // Each add_extension is an operation and a warning.

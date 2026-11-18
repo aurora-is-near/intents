@@ -81,19 +81,27 @@ async fn signer_refuses_unsupported_requests() {
             .into(),
         ..msg.clone()
     };
-    for (msg, unsupported) in [
-        (call("w_execute_extension", br#"{"request":{}}"#), true),
-        (call("submit", "{\"memo\":\"Привет\"}".as_bytes()), false),
-        (call("submit", b"\x00\xff"), false),
+    for (msg, expected) in [
+        (
+            call("w_execute_extension", br#"{"request":{}}"#),
+            "unsupported",
+        ),
+        (call("submit", "{\"memo\":\"Привет\"}".as_bytes()), "args"),
+        (call("submit", b"\x00\xff"), "args"),
+        // a NEP-141 transfer without its one yoctoNEAR would fail in the token
+        (
+            call("ft_transfer", br#"{"receiver_id":"bob.near","amount":"1"}"#),
+            "deposit",
+        ),
     ] {
         let error = signer().sign_request_msg(&msg).await.unwrap_err();
         assert!(
-            if unsupported {
-                matches!(error, SignError::Message(Eip712Error::Unsupported))
-            } else {
-                matches!(error, SignError::Message(Eip712Error::FunctionArgs))
+            match expected {
+                "unsupported" => matches!(error, SignError::Message(Eip712Error::Unsupported)),
+                "args" => matches!(error, SignError::Message(Eip712Error::FunctionArgs)),
+                _ => matches!(error, SignError::Message(Eip712Error::TokenDeposit)),
             },
-            "{error:?}"
+            "{expected}: {error:?}"
         );
     }
 }

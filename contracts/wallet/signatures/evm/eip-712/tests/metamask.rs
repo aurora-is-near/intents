@@ -5,7 +5,7 @@
 use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
 use defuse_wallet_evm_eip191::WalletEip191;
 use defuse_wallet_evm_eip712::{
-    Eip712Error, EthAddress, EvmProof, WalletEip712, offchain_digest, request_digest,
+    EthAddress, EvmProof, WalletEip712, offchain_digest, request_digest,
 };
 use serde_json::Value;
 
@@ -41,15 +41,11 @@ fn listed(types: &Value, ty: &str, value: &Value, out: &mut Vec<String>) {
     }
 }
 
-fn vector<'a>(vectors: &'a [Value], profile: &str) -> &'a Value {
-    vectors.iter().find(|v| v["profile"] == profile).unwrap()
-}
-
 #[test]
 fn real_metamask_signatures_verify() {
     let fixture: Value = serde_json::from_str(include_str!("fixtures/metamask.json")).unwrap();
     let vectors = fixture["vectors"].as_array().unwrap();
-    assert_eq!(vectors.len(), 4);
+    assert_eq!(vectors.len(), 1);
     for v in vectors {
         let address: EthAddress = v["address"].as_str().unwrap().parse().unwrap();
         let proof = v["proof"].as_str().unwrap();
@@ -67,10 +63,8 @@ fn real_metamask_signatures_verify() {
             .unwrap()
             .try_into()
             .unwrap();
-        assert_eq!(
-            EvmProof::parse(proof).unwrap().signer(&signed),
-            Some(address)
-        );
+        let signer = |digest: &[u8; 32]| EvmProof::parse(proof).unwrap().signer(digest);
+        assert_eq!(signer(&signed), Some(address));
         // The contract derives that digest from the message alone and accepts
         // the proof; the EIP-191 variant rejects the same proof.
         let (digest, verified) = if v["kind"] == "request" {
@@ -82,6 +76,14 @@ fn real_metamask_signatures_verify() {
             )
         } else {
             let msg: OffchainMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+            // Exercise rejection even when there is only one capture. Payload bytes are opaque.
+            let mut changed = msg.clone();
+            changed.payload.push(' ');
+            let changed_digest = offchain_digest(&changed).unwrap();
+            assert_ne!(changed_digest, signed);
+            assert!(!WalletEip712::verify_offchain_msg(
+                &address, &changed, proof
+            ));
             assert!(!WalletEip191::verify_offchain_msg(&address, &msg, proof));
             (
                 offchain_digest(&msg).unwrap(),
@@ -91,29 +93,4 @@ fn real_metamask_signatures_verify() {
         assert_eq!(digest, signed);
         assert!(verified);
     }
-    // The prompts showed the contract's warnings, including refund targets.
-    let warnings = |profile| &vector(vectors, profile)["typed_data"]["message"]["warnings"];
-    assert_eq!(
-        *warnings("execution-effects"),
-        serde_json::json!([
-            "add_extension gives temporary.display-check.near full control of this wallet",
-            "add_extension gives recovery.display-check.near full control of this wallet",
-            "up to 1.5 NEAR sent to recipient.display-check.near can be refunded to refund.native.display-check.near, not to this wallet",
-            "up to 0.000000000000000000000002 NEAR sent to usdc.display-check.near can be refunded to refund.token.display-check.near, not to this wallet",
-        ])
-    );
-    assert_eq!(
-        *warnings("execution-deployment"),
-        serde_json::json!([
-            "up to 0.375 NEAR sent to 0s762910a479b0c04f9725b03cd7931dc5064ab0ab can be refunded to refund.deploy.display-check.near, not to this wallet",
-        ])
-    );
-    // The limit prompt holds the whole text budget: one more byte is rejected.
-    let mut longer = vector(vectors, "execution-limit")["msg"].clone();
-    longer["chain_id"] = format!("{}x", longer["chain_id"].as_str().unwrap()).into();
-    let longer: RequestMessage = serde_json::from_value(longer).unwrap();
-    assert!(matches!(
-        request_digest(&longer),
-        Err(Eip712Error::TooLarge)
-    ));
 }

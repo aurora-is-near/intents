@@ -89,8 +89,8 @@ async fn signer_refuses_unreadable_requests() {
         )
     };
     let (msg, _) = wallet.sign(Request::new()).await.unwrap();
-    for (request, token_metadata) in [
-        // a NEP-141 amount cannot be shown without the token's metadata
+    for (request, token_deposit) in [
+        // a NEP-141 transfer without its one yoctoNEAR would fail in the token
         (
             call("ft_transfer", br#"{"receiver_id":"bob.near","amount":"1"}"#),
             true,
@@ -105,8 +105,8 @@ async fn signer_refuses_unreadable_requests() {
         };
         let error = signer().sign_request_msg(&msg).await.unwrap_err();
         assert!(
-            if token_metadata {
-                matches!(error, SignError::Message(MessageError::TokenMetadata))
+            if token_deposit {
+                matches!(error, SignError::Message(MessageError::TokenDeposit))
             } else {
                 matches!(error, SignError::Message(MessageError::FunctionArgs))
             },
