@@ -14,7 +14,8 @@ blake2.workspace = true
 borsh = { workspace = true, features = ["derive"] }
 defuse-crypto.workspace = true
 defuse-digest = { workspace = true, optional = true }
-defuse-wallet = { workspace = true, features = ["borsh", "digest", "json", "readable-message", "serde"] }
+defuse-wallet = { workspace = true, features = ["borsh", "digest", "json", "serde"] }
+defuse-wallet-readable.workspace = true
 hex.workspace = true
 schemars = { workspace = true, features = ["derive"], optional = true }
 serde_with.workspace = true

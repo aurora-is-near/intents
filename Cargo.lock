@@ -1924,6 +1924,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "defuse-wallet-readable"
+version = "0.1.0"
+dependencies = [
+ "defuse-wallet",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "defuse-wallet-sdk"
 version = "0.1.0"
 dependencies = [
@@ -1965,6 +1975,7 @@ dependencies = [
  "defuse-digest",
  "defuse-nep641",
  "defuse-wallet",
+ "defuse-wallet-readable",
  "defuse-wallet-sdk",
  "defuse-wallet-sui",
  "hex",
@@ -1988,6 +1999,18 @@ dependencies = [
  "defuse-wallet-sui",
  "defuse-wallet-sui-ed25519",
  "near-sdk",
+]
+
+[[package]]
+name = "defuse-wallet-sui-feature-tests"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "borsh",
+ "defuse-wallet",
+ "defuse-wallet-sui",
+ "near-sdk",
+ "serde_json",
 ]
 
 [[package]]

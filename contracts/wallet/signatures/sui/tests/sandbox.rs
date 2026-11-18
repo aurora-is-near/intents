@@ -1,6 +1,6 @@
 #![cfg(feature = "signer")]
 
-#[path = "../../../test-utils/entrypoints.rs"]
+#[path = "../../readable/test-utils/entrypoints.rs"]
 mod entrypoints;
 
 use std::{env, fs, path::Path, time::Duration};
@@ -159,7 +159,7 @@ where
     );
 
     if C::FLAG == 0 {
-        check_ft_metadata(near, &wallet, &recipient).await;
+        check_ft_transfer(near, &wallet, &recipient).await;
     }
     check_resources_and_context(near, &wallet, &recipient, scheme, &signer).await;
     check_nonce_rollback_and_replay(near, &wallet).await;
@@ -179,9 +179,8 @@ where
     check_lockout_and_rotation(near, wallet, recipient, payload, resolver).await;
 }
 
-/// A NEP-141 transfer is shown with the required decimals and symbol and runs
-/// only if the token's `ft_metadata()` has exactly these values.
-async fn check_ft_metadata<C: SuiScheme>(
+/// A NEP-141 transfer is signed and executed with its exact base-unit amount.
+async fn check_ft_transfer<C: SuiScheme>(
     near: &Near,
     wallet: &Wallet<WalletSui<C>>,
     recipient: &Wallet<WalletSui<C>>,
@@ -216,45 +215,44 @@ async fn check_ft_metadata<C: SuiScheme>(
         .result()
         .unwrap();
     let transfer =
-        |decimals, symbol| checked_ft_transfer(&token, recipient.account_id(), decimals, symbol);
-
-    // Without the requirement, the amount cannot be shown and nothing is signed.
-    let unchecked = NearPromise::new(token.clone()).function_call(
-        FunctionCall::name("ft_transfer")
-            .args(r#"{"receiver_id":"bob.near","amount":"1"}"#)
-            .attach_deposit(NearToken::from_yoctonear(1)),
-    );
-    assert!(wallet.sign(unchecked).await.is_err());
-
-    let (msg, _) = wallet.sign(transfer(24, "EXAMPLE")).await.unwrap();
+        NearPromise::new(token.clone()).function_call(ft_transfer(recipient.account_id()));
+    let (msg, proof) = wallet.sign(transfer.clone()).await.unwrap();
     let message = request_signing_message(&wallet.public_key(), &msg).unwrap();
-    assert!(message.contains(r#""amount": "1.5 EXAMPLE""#), "{message}");
-    assert!(message.contains(r#""symbol": "EXAMPLE""#), "{message}");
+    assert!(
+        message.contains(r#""amount": "1500000000000000000000000""#),
+        "{message}"
+    );
 
-    // A mismatch fails only the callback: the transfer is never created.
-    for (decimals, symbol) in [(24, "EXAMPLE2"), (6, "EXAMPLE")] {
-        let outcome = execute(near, wallet, transfer(decimals, symbol)).await;
-        assert!(metadata_mismatch(&outcome), "{outcome:?}");
-        assert_eq!(ft_balance(near, &token, recipient.account_id()).await, "0");
-    }
-
-    let outcome = execute(near, wallet, transfer(24, "EXAMPLE")).await;
+    let storage_before = near
+        .account(wallet.account_id())
+        .await
+        .unwrap()
+        .storage_usage;
+    let outcome = execute(near, wallet, transfer).await;
+    outcome.result().unwrap();
     assert_eq!(
         ft_balance(near, &token, recipient.account_id()).await,
         NearToken::from_millinear(1500).as_yoctonear().to_string()
     );
-    for receipt in &outcome.receipts_outcome {
-        eprintln!(
-            "ft_metadata check: {} burnt {}",
-            receipt.outcome.executor_id, receipt.outcome.gas_burnt,
-        );
-    }
-
+    let gas = outcome
+        .receipts_outcome
+        .iter()
+        .map(|r| r.outcome.gas_burnt.as_gas())
+        .fold(0_u64, u64::saturating_add);
+    let storage_after = near
+        .account(wallet.account_id())
+        .await
+        .unwrap()
+        .storage_usage;
+    eprintln!(
+        "direct FT: message={} bytes, proof={} bytes, receipt gas={gas}, storage={storage_before}->{storage_after}",
+        message.len(),
+        proof.len()
+    );
     check_ft_bootstrap(near, wallet, recipient, wasm).await;
 }
 
-/// A token that the checked promise itself creates with `StateInit` has no
-/// metadata yet: nothing is created. It must be created in an earlier request.
+/// A token is created, initialized and transferred in one promise.
 async fn check_ft_bootstrap<C: SuiScheme>(
     near: &Near,
     wallet: &Wallet<WalletSui<C>>,
@@ -294,20 +292,9 @@ async fn check_ft_bootstrap<C: SuiScheme>(
                 .attach_deposit(NearToken::from_millinear(10))
                 .gas(Gas::from_tgas(30)),
         );
-    let bootstrap = Request::new()
-        .internal([WalletOp::require_ft_metadata(token.clone(), 24, "EXAMPLE")])
-        .external([create
-            .clone()
-            .function_call(ft_transfer(recipient.account_id()))]);
-    let outcome = execute(near, wallet, bootstrap).await;
-    assert!(metadata_mismatch(&outcome), "{outcome:?}");
-    assert!(near.account(&token).await.is_err());
-
     check_state_init_deposit(near, wallet, &init, recipient.account_id()).await;
-
-    execute(near, wallet, create).await;
-    let transfer = checked_ft_transfer(&token, recipient.account_id(), 24, "EXAMPLE");
-    execute(near, wallet, transfer).await;
+    let bootstrap = create.function_call(ft_transfer(recipient.account_id()));
+    execute(near, wallet, bootstrap).await.result().unwrap();
     assert_eq!(
         ft_balance(near, &token, recipient.account_id()).await,
         NearToken::from_millinear(1500).as_yoctonear().to_string()
@@ -384,33 +371,11 @@ fn ft_transfer(receiver_id: &AccountId) -> FunctionCall {
         .gas(Gas::from_tgas(10))
 }
 
-/// [`ft_transfer`] that requires these token `decimals` and `symbol`.
-fn checked_ft_transfer(
-    token: &AccountId,
-    receiver_id: &AccountId,
-    decimals: u8,
-    symbol: &str,
-) -> Request {
-    Request::new()
-        .internal([WalletOp::require_ft_metadata(
-            token.clone(),
-            decimals,
-            symbol,
-        )])
-        .external([NearPromise::new(token.clone()).function_call(ft_transfer(receiver_id))])
-}
-
 async fn ft_balance(near: &Near, token: &AccountId, account_id: &AccountId) -> String {
     near.view::<String>(token, "ft_balance_of")
         .args(serde_json::json!({ "account_id": account_id }))
         .await
         .unwrap()
-}
-
-fn metadata_mismatch(outcome: &FinalExecutionOutcome) -> bool {
-    outcome.receipts_outcome.iter().any(|r| {
-        format!("{:?}", r.outcome.status).contains("fungible token metadata does not match")
-    })
 }
 
 async fn check_wrong_global_scheme<C, S>(near: &Near, code_hash: [u8; 32], signer: S)
@@ -744,11 +709,11 @@ async fn check_public_entrypoints<C: SuiScheme>(
         .await
         .unwrap();
     entrypoints::check(near, wallet.account_id(), &msg, &proof).await;
-    let ft_wasm = fs::read(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../releases/fungible-token.wasm"),
+    // The later lockout check needs a wallet without extensions.
+    execute(
+        near,
+        wallet,
+        WalletOp::remove_extension(near.account_id().clone()),
     )
-    .unwrap();
-    let failure = entrypoints::metadata(near, wallet.account_id(), &ft_wasm).await;
-    let (msg, proof) = wallet.sign(failure).await.unwrap();
-    entrypoints::failed_metadata_consumes_nonce(near, wallet.account_id(), &msg, &proof).await;
+    .await;
 }

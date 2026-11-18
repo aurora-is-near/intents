@@ -37,8 +37,15 @@ test:
 	cargo test --all --all-features
 
 .PHONY: check
-check: check-contracts
+check: check-contracts check-wallet-sui-features
 	cargo clippy --workspace --all-targets --all-features
+
+# Run only the consumer so the Sui crate's dev-dependencies cannot enable schemes.
+.PHONY: check-wallet-sui-features
+check-wallet-sui-features:
+	@set -eu; for schemes in "" ed25519 secp256k1 p256 ed25519,secp256k1,p256; do \
+	  cargo test --locked -p defuse-wallet-sui-feature-tests --no-default-features --features "matrix$${schemes:+,$$schemes}"; \
+	done
 
 .PHONY: check-contracts
 

@@ -1,9 +1,10 @@
 # Sui wallet contract
 
 NEAR wallet contracts controlled by a **Sui account**. The account signs the
-[readable signing format](../../README.md#readable-signing-format-v1) as a
-native Sui personal message (Wallet Standard `sui:signPersonalMessage`), which
-wallets show as text. The signature authorizes NEAR wallet operations, not Sui
+[readable signing format](../readable/README.md#format-v1) as a native Sui
+personal message (Wallet Standard `sui:signPersonalMessage`), which wallets
+show as text, so the user reads the same text that the contract rebuilds and
+verifies. The signature authorizes NEAR wallet operations, not Sui
 transactions.
 
 There are three contract variants, one per signature scheme: `ed25519/`,
@@ -26,7 +27,8 @@ contract, so the same key has a different wallet account in each.
   hex BLAKE2b-256 of `flag || public_key`).
 
 Before showing the derived account as a deposit destination,
-[verify control](../../README.md#verify-control-before-funding) of the key.
+[verify control](../readable/README.md#verify-control-before-funding) of the
+key.
 
 ## Signature and proof
 
@@ -46,36 +48,24 @@ Before showing the derived account as a deposit destination,
 The two text prefixes separate execution requests from NEP-641 authorizations,
 and the `PersonalMessage` intent separates both from Sui transactions.
 
-## Clear signing
+## Limitations
 
-The user reads in the wallet prompt the same text that the contract rebuilds
-and verifies. What that text does not decode is listed with the
-[format](../../README.md#readable-signing-format-v1).
+- The limits of the text are listed with the
+  [format](../readable/README.md#format-v1).
+- The display is confirmed for Slush with a direct Ed25519 account, for
+  NEP-641 authorizations only. Execution requests, secp256k1 and secp256r1
+  accounts, other wallets, mobile and hardware wallets are not yet verified.
 
-Slush with a direct Ed25519 account signed five messages of this format (token
-transfers, state init, a NEP-641 authorization, a nested `w_execute_extension`
-request and a 16 KiB message); they are in `tests/fixtures/slush.json` with
-the text copied from each prompt. The prompt shows the whole text, warnings
-first. secp256k1 and secp256r1 accounts, other wallets, mobile and hardware
-wallets are unverified.
-
-## Build and test
+## Build
 
 ```sh
 make defuse-wallet-sui-ed25519 defuse-wallet-sui-secp256k1 defuse-wallet-sui-p256
-cargo test -p defuse-wallet-sui --all-features
 ```
 
 Build each variant on its own, as the `make` targets do: one `cargo build` of
 several variants links all their verifiers into each WASM, which changes the
 code hash and therefore every derived wallet account. The P-256 variant needs
 the `p256_verify` host function.
-
-`WalletSuiSigner::<Ed25519, _>::new(signer)` implements both SDK signing
-paths; use `Secp256k1` or `P256` for the other schemes. The vectors in
-`tests/fixtures/sui.json` are signed with the official `@mysten/sui` 2.39.0
-SDK from a public test seed stored in the fixture; the Rust signers reproduce
-its proofs byte for byte.
 
 ## References
 
