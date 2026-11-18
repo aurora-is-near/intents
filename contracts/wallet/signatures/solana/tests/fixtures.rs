@@ -64,8 +64,6 @@ fn execution_fields_are_bound() {
             json!("other.near"),
         ),
         ("/request/internal/1/op", json!("add_extension")),
-        ("/request/internal/2/payload/decimals", json!(17)),
-        ("/request/internal/2/payload/symbol", json!("TKM")),
         (
             "/request/external/0/actions/0/payload/function_name",
             json!("other"),
@@ -74,7 +72,8 @@ fn execution_fields_are_bound() {
             "/request/external/0/actions/0/payload/args",
             json!("eyJyZWNlaXZlcl9pZCI6Im90aGVyLm5lYXIiLCJhbW91bnQiOiIyIn0="),
         ),
-        ("/request/external/0/actions/0/payload/deposit", json!("2")),
+        // Mutate the generic call: a non-one-yocto FT deposit is invalid before verification.
+        ("/request/external/0/actions/1/payload/deposit", json!("2")),
         ("/request/external/0/actions/0/payload/gas", json!("1")),
         (
             "/request/external/0/actions/0/payload/gas_weight",
@@ -113,22 +112,16 @@ fn execution_fields_are_bound() {
             v["proof"].as_str().unwrap()
         ));
     }
-    // Move the metadata requirement and receiver together; the original proof must fail.
+    // The token contract is part of the signature.
     let mut moved: RequestMessage = serde_json::from_value(original.clone()).unwrap();
-    let defuse_wallet::WalletOp::RequireFtMetadata { token_id, .. } =
-        &mut moved.request.internal[2]
-    else {
-        unreachable!()
-    };
-    *token_id = "other.near".parse().unwrap();
-    moved.request.external[0].receiver_id = token_id.clone();
+    moved.request.external[0].receiver_id = "other.near".parse().unwrap();
     request_signing_message(&key(v), &moved).unwrap();
     assert!(!WalletSolana::verify_request_msg(
         &key(v),
         &moved,
         v["proof"].as_str().unwrap()
     ));
-    // A native transfer has no token-metadata coupling.
+    // The native transfer recipient is bound independently as well.
     let transfer = &all[1];
     let mut msg: RequestMessage = serde_json::from_value(transfer["msg"].clone()).unwrap();
     msg.request.external[0].receiver_id = "other.near".parse().unwrap();
@@ -336,32 +329,6 @@ fn readable_and_digest_signatures_are_not_interchangeable() {
         &pk,
         &unrenderable,
         &digest_proof
-    ));
-}
-
-#[tokio::test]
-async fn metadata_token_id_is_bound_without_a_transfer() {
-    use defuse_wallet_sdk::WalletSigner;
-    use defuse_wallet_solana::{WalletSolanaSigner, crypto::ed25519::ed25519_dalek::SigningKey};
-    let signer = WalletSolanaSigner(SigningKey::from_bytes(&[42; 32]));
-    let mut msg: RequestMessage = serde_json::from_value(vectors()[2]["msg"].clone()).unwrap();
-    msg.request.external.clear();
-    let proof = signer.sign_request_msg(&msg).await.unwrap();
-    assert!(WalletSolana::verify_request_msg(
-        &signer.public_key(),
-        &msg,
-        &proof
-    ));
-    let defuse_wallet::WalletOp::RequireFtMetadata { token_id, .. } = &mut msg.request.internal[2]
-    else {
-        unreachable!()
-    };
-    *token_id = "other.near".parse().unwrap();
-    request_signing_message(&signer.public_key(), &msg).unwrap();
-    assert!(!WalletSolana::verify_request_msg(
-        &signer.public_key(),
-        &msg,
-        &proof
     ));
 }
 

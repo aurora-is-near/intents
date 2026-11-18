@@ -14,7 +14,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 bs58.workspace = true
 defuse-crypto = { workspace = true, features = ["borsh", "ed25519", "fmt"] }
-defuse-wallet = { workspace = true, features = ["borsh", "digest", "json", "readable-message", "serde"] }
+defuse-wallet = { workspace = true, features = ["borsh", "digest", "json", "serde"] }
+defuse-wallet-readable.workspace = true
 thiserror = { workspace = true, optional = true }
 
 defuse-wallet-sdk = { workspace = true, optional = true }

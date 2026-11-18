@@ -1,7 +1,7 @@
 use defuse_crypto::ed25519::Ed25519PublicKey;
 use defuse_wallet::{RequestMessage, offchain::OffchainMessage};
 
-pub use defuse_wallet::readable_message::{
+pub use defuse_wallet_readable::{
     MAX_SIGNING_MESSAGE_BYTES, MessageError, OFFCHAIN_PREFIX, REQUEST_PREFIX,
 };
 
@@ -11,10 +11,7 @@ pub fn request_signing_message(
     msg: &RequestMessage,
 ) -> Result<String, MessageError> {
     let public_key = bs58::encode(public_key.0).into_string();
-    defuse_wallet::readable_message::request_signing_message(
-        &[("solana_public_key", &public_key)],
-        msg,
-    )
+    defuse_wallet_readable::request_signing_message(&[("solana_public_key", &public_key)], msg)
 }
 
 /// Reconstruct all five NEP-641 fields, preserving the exact payload string.
@@ -23,8 +20,5 @@ pub fn offchain_signing_message(
     msg: &OffchainMessage,
 ) -> Result<String, MessageError> {
     let public_key = bs58::encode(public_key.0).into_string();
-    defuse_wallet::readable_message::offchain_signing_message(
-        &[("solana_public_key", &public_key)],
-        msg,
-    )
+    defuse_wallet_readable::offchain_signing_message(&[("solana_public_key", &public_key)], msg)
 }

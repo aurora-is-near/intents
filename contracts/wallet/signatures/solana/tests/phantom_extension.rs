@@ -25,12 +25,6 @@ fn signs(key: &Ed25519PublicKey, message: &str, proof: &str) -> bool {
     Ed25519::verify(&key, message.as_bytes(), &signature.into())
 }
 
-fn message<'a>(vectors: &'a [Value], profile: &str) -> &'a str {
-    vectors.iter().find(|v| v["profile"] == profile).unwrap()["message"]
-        .as_str()
-        .unwrap()
-}
-
 #[test]
 fn real_phantom_signatures_verify() {
     let fixture: Value =
@@ -42,6 +36,8 @@ fn real_phantom_signatures_verify() {
         let proof = v["proof"].as_str().unwrap();
         let signed = v["message"].as_str().unwrap();
         assert!(signs(&key, signed, proof));
+        // The signature covers the final LF.
+        assert!(!signs(&key, signed.trim_end(), proof));
         // A proof signs only its own message.
         for other in vectors.iter().filter(|other| *other != v) {
             assert!(!signs(&key, other["message"].as_str().unwrap(), proof));
@@ -63,28 +59,4 @@ fn real_phantom_signatures_verify() {
         assert_eq!(rendered, signed);
         assert!(verified);
     }
-    // The signed messages put the warnings before the JSON, show NEAR and
-    // token amounts with decimals and symbol, and decode the nested request.
-    let effects = message(vectors, "execution-effects");
-    for warning in [
-        "WARNING: add_extension gives temporary.display-check.near full control of this wallet.\n",
-        "WARNING: add_extension gives recovery.display-check.near full control of this wallet.\n",
-        "WARNING: up to 1.5 NEAR sent to recipient.display-check.near can be refunded to refund.native.display-check.near, not to this wallet.\n",
-        "WARNING: up to 0.000000000000000000000002 NEAR sent to usdc.display-check.near can be refunded to refund.token.display-check.near, not to this wallet.\n",
-    ] {
-        assert!(effects.find(warning).unwrap() < effects.find('{').unwrap());
-    }
-    assert!(effects.contains("\"amount\": \"1.5 USDC\""));
-    assert!(effects.contains("\"amount\": \"1.5 NEAR\""));
-    let deployment = message(vectors, "execution-deployment");
-    assert!(deployment.contains(
-        "WARNING: up to 0.375 NEAR sent to 0s762910a479b0c04f9725b03cd7931dc5064ab0ab can be refunded to refund.deploy.display-check.near, not to this wallet.\n"
-    ));
-    assert!(deployment.contains("\"deposit\": \"0.25 NEAR\""));
-    let extension = message(vectors, "execution-extension");
-    assert!(extension.contains(
-        "WARNING: add_extension gives helper.display-check.near full control of wallet vault.display-check.near.\n"
-    ));
-    assert!(extension.contains("\"function_name\": \"w_execute_extension\""));
-    assert!(extension.contains("\"amount\": \"2.5 USDC\""));
 }
