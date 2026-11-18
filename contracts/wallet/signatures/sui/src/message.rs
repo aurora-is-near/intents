@@ -12,6 +12,7 @@ pub fn request_signing_message(
 ) -> Result<String, MessageError> {
     // Sui native base64 (flag plus key) and its directly derived address.
     let (key, address) = (public_key.to_base64(), public_key.address());
+
     defuse_wallet_readable::request_signing_message(
         &[("sui_public_key", key.as_str()), ("sui_address", &address)],
         msg,
@@ -24,6 +25,7 @@ pub fn offchain_signing_message(
     msg: &OffchainMessage,
 ) -> Result<String, MessageError> {
     let (key, address) = (public_key.to_base64(), public_key.address());
+
     defuse_wallet_readable::offchain_signing_message(
         &[("sui_public_key", key.as_str()), ("sui_address", &address)],
         msg,

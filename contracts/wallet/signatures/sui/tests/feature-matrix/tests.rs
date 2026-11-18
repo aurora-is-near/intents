@@ -24,6 +24,7 @@ fn key(vector: &Value) -> (SuiPublicKey, Vec<u8>) {
                 .unwrap(),
         )
         .unwrap();
+
     // StateInit can supply Borsh state directly, bypassing public-key parsing.
     (borsh::from_slice(&bytes).unwrap(), bytes)
 }
@@ -38,6 +39,7 @@ fn only_enabled_schemes_parse_and_verify() {
             2 => cfg!(feature = "p256"),
             _ => unreachable!(),
         };
+
         assert_eq!(SuiPublicKey::from_sui_bytes(&bytes).is_ok(), enabled);
         assert_eq!(
             key.verify_personal_message(
@@ -46,6 +48,7 @@ fn only_enabled_schemes_parse_and_verify() {
             ),
             enabled
         );
+
         #[cfg(feature = "ed25519")]
         check_schema::<defuse_wallet_sui::crypto::ed25519::Ed25519>(&key, &vector);
         #[cfg(feature = "secp256k1")]
@@ -74,6 +77,7 @@ fn check_schema<C: defuse_wallet_sui::protocol::SuiScheme>(key: &SuiPublicKey, v
         ),
         kind => panic!("unexpected fixture kind: {kind}"),
     };
+
     assert_eq!(verified, key.flag() == C::FLAG);
 }
 
@@ -82,10 +86,13 @@ fn malformed_proofs_never_authorize() {
     for vector in vectors() {
         let (key, _) = key(&vector);
         let message = vector["message"].as_str().unwrap().as_bytes();
+
         for size in 0..220 {
             assert!(!key.verify_personal_message(message, &STANDARD.encode(vec![0; size])));
         }
+
         let original = STANDARD.decode(vector["proof"].as_str().unwrap()).unwrap();
+
         for index in 0..original.len() {
             let mut mutated = original.clone();
             mutated[index] ^= 1;

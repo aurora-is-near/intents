@@ -45,6 +45,7 @@ impl<C: SuiScheme, S: Signer<C>> WalletSuiSigner<C, S> {
             .sign(&C::signing_digest(digest))
             .await
             .map_err(SignError::Signer)?;
+
         Ok(public_key.encode_signature(&C::signature_bytes(signature)))
     }
 }
