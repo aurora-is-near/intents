@@ -82,7 +82,14 @@ fn execution_fields_are_bound() {
     ];
     for (pointer, value) in mutations {
         let mut changed = original.clone();
-        *changed.pointer_mut(pointer).unwrap() = value;
+        // Optional fields may be absent in the wire input, but their defaults are signed.
+        let (parent, field) = pointer.rsplit_once('/').unwrap();
+        changed
+            .pointer_mut(parent)
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .insert(field.to_owned(), value);
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
         assert_ne!(
             request_signing_message(&key(v), &msg).expect("mutation must render"),

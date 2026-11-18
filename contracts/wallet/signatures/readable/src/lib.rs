@@ -637,6 +637,7 @@ mod tests {
             external: vec![
                 NearPromise::new("usdc.near".parse::<AccountId>().unwrap()).function_call(
                     FunctionCall::name("ft_transfer")
+                        .attach_deposit(NearToken::from_yoctonear(1))
                         .args(br#"{"receiver_id":"bob.near","amount":"1500000"}"#.to_vec()),
                 ),
             ],
@@ -1030,6 +1031,11 @@ mod tests {
                             .args(format!(
                                 r#"{{"receiver_id":"bob.near","amount":"{units}"}}"#
                             ))
+                            .attach_deposit(NearToken::from_yoctonear(1)),
+                    )
+                    .function_call(
+                        FunctionCall::name("submit")
+                            .args(b"{}")
                             .attach_deposit(NearToken::from_yoctonear(units)),
                     )
                     .into(),
@@ -1039,7 +1045,8 @@ mod tests {
             let doc = document(&message);
             let actions = &doc["request"]["external"][0]["actions"];
             assert_eq!(actions[0]["amount"], units.to_string());
-            assert_eq!(actions[1]["deposit"], units.to_string());
+            assert_eq!(actions[1]["deposit"], "1");
+            assert_eq!(actions[2]["deposit"], units.to_string());
             assert_eq!(actions[1]["args"]["amount"], units.to_string());
             assert_eq!(doc["request"]["external"][0]["receiver_id"], "token.near");
             assert!(message.contains("in yoctoNEAR; FT amounts are in token base units"));

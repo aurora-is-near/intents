@@ -1,8 +1,8 @@
 # Readable signing format
 
 Library shared by the wallet-contract variants whose wallets sign
-human-readable text (e.g. the [Solana variant](../solana/README.md)). It
-renders an execution request or a NEP-641 authorization as text. A variant
+human-readable text. It renders an execution request or a NEP-641
+authorization as text. A variant
 rebuilds the text from the parsed message and its stored identity and verifies
 the signature over exactly these bytes, so no text, summary or digest supplied
 by a dApp is trusted. Each variant defines its identity fields and signature
