@@ -14,9 +14,9 @@
         "request": {}
       },
       "address": "GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR",
-      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [],\n    \"external\": []\n  }\n}\n",
-      "sep53_hash": "752a264d1a84b85de6ae3e887c4abd0a6b9fba6d3241e80b2b0dc6e0a3b12fdb",
-      "proof": "7ZQyhKrgBNIH+aApH3zTQNteIbIs8PVgWqvoyCquG6sReymFVpAx3KWD37J9fc5mh3Q+R3sZi86RhVotLEYwCw=="
+      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"NEAR amounts and deposits are in yoctoNEAR; FT amounts are in token base units.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [],\n    \"external\": []\n  }\n}\n",
+      "sep53_hash": "7116d2a31d2c3b10e66a558d2c3d32c43b1850a0ae9793c30f3c24da45456dc9",
+      "proof": "B90Sp89Mm9ikEZ6GVB6sMbNNhNDsZBeGt2FYOJPNoT1wP1NHIN8uu6Wan5VXaoyN7cvxDyTWGhgHMozfAExbAw=="
     },
     {
       "kind": "request",
@@ -53,9 +53,9 @@
         }
       },
       "address": "GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR",
-      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [\n    \"WARNING: add_extension gives recovery.near full control of this wallet.\",\n    \"WARNING: up to 1 NEAR sent to bob.near can be refunded to refund.near, not to this wallet.\"\n  ],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [\n      {\n        \"op\": \"add_extension\",\n        \"payload\": {\n          \"account_id\": \"recovery.near\"\n        }\n      }\n    ],\n    \"external\": [\n      {\n        \"receiver_id\": \"bob.near\",\n        \"refund_to\": \"refund.near\",\n        \"actions\": [\n          {\n            \"action\": \"transfer\",\n            \"amount\": \"1 NEAR\"\n          }\n        ]\n      }\n    ]\n  }\n}\n",
-      "sep53_hash": "6beb3ccbab5f91af97ba1ef6cc68d692c185e1ea7df0297c25985936bdcba3d5",
-      "proof": "NnfO/yThkVQkd8gkQd86j/mGMnf5vxjLUQgqiKoWzbtvOHE6j5FAiGNl374jtMj53QIFj4vd2alK6CoDwLJ3Dg=="
+      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"NEAR amounts and deposits are in yoctoNEAR; FT amounts are in token base units.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [\n    \"WARNING: add_extension gives recovery.near full control of this wallet.\",\n    \"WARNING: up to 1000000000000000000000000 yoctoNEAR sent to bob.near can be refunded to refund.near, not to this wallet.\"\n  ],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [\n      {\n        \"op\": \"add_extension\",\n        \"payload\": {\n          \"account_id\": \"recovery.near\"\n        }\n      }\n    ],\n    \"external\": [\n      {\n        \"receiver_id\": \"bob.near\",\n        \"refund_to\": \"refund.near\",\n        \"actions\": [\n          {\n            \"action\": \"transfer\",\n            \"amount\": \"1000000000000000000000000\"\n          }\n        ]\n      }\n    ]\n  }\n}\n",
+      "sep53_hash": "b06fd56fc736dfd487629e70137404b999df9388ce5728eb9b21f21bd555e69d",
+      "proof": "cyNKuUCj+0yWTaCKhhDbh++k0BKDlSsrpQQ7pI3ksJDRHn0kBSXCl4KNM0gq667+o84ulKKikHGRb40YoTS4Bg=="
     },
     {
       "kind": "request",
@@ -78,14 +78,6 @@
               "op": "remove_extension",
               "payload": {
                 "account_id": "old.near"
-              }
-            },
-            {
-              "op": "require_ft_metadata",
-              "payload": {
-                "token_id": "token.near",
-                "decimals": 18,
-                "symbol": "TKN"
               }
             }
           ],
@@ -116,9 +108,9 @@
         }
       },
       "address": "GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR",
-      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": true,\n  \"request\": {\n    \"internal\": [\n      {\n        \"op\": \"set_signature_mode\",\n        \"payload\": {\n          \"enable\": false\n        }\n      },\n      {\n        \"op\": \"remove_extension\",\n        \"payload\": {\n          \"account_id\": \"old.near\"\n        }\n      },\n      {\n        \"op\": \"require_ft_metadata\",\n        \"payload\": {\n          \"token_id\": \"token.near\",\n          \"decimals\": 18,\n          \"symbol\": \"TKN\"\n        }\n      }\n    ],\n    \"external\": [\n      {\n        \"receiver_id\": \"token.near\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"ft_transfer\",\n            \"deposit\": \"0.000000000000000000000001 NEAR\",\n            \"gas\": \"50000000000000\",\n            \"gas_weight\": \"18446744073709551614\",\n            \"args\": {\n              \"receiver_id\": \"bob.near\",\n              \"amount\": \"0.009007199254740993 TKN\",\n              \"memo\": \"invoice 42\"\n            }\n          },\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"near_deposit\",\n            \"deposit\": \"0 NEAR\",\n            \"gas\": \"0\",\n            \"gas_weight\": \"1\",\n            \"args\": {}\n          }\n        ]\n      }\n    ]\n  }\n}\n",
-      "sep53_hash": "44da89baece2f1ff50ae0dce5cd9b850c2328a2b9982ea7857cf783e1a39360f",
-      "proof": "BkXrXGNKEz2Bo/dVrsVQwRHf15ezaXptFBeFA1Y1UPwkeFQmt3PhtAVdnDyVlHf55KY4B2dGQx04QpbCpNvkDQ=="
+      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"NEAR amounts and deposits are in yoctoNEAR; FT amounts are in token base units.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": true,\n  \"request\": {\n    \"internal\": [\n      {\n        \"op\": \"set_signature_mode\",\n        \"payload\": {\n          \"enable\": false\n        }\n      },\n      {\n        \"op\": \"remove_extension\",\n        \"payload\": {\n          \"account_id\": \"old.near\"\n        }\n      }\n    ],\n    \"external\": [\n      {\n        \"receiver_id\": \"token.near\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"ft_transfer\",\n            \"deposit\": \"1\",\n            \"gas\": \"50000000000000\",\n            \"gas_weight\": \"18446744073709551614\",\n            \"args\": {\n              \"receiver_id\": \"bob.near\",\n              \"amount\": \"9007199254740993\",\n              \"memo\": \"invoice 42\"\n            }\n          },\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"near_deposit\",\n            \"deposit\": \"0\",\n            \"gas\": \"0\",\n            \"gas_weight\": \"1\",\n            \"args\": {}\n          }\n        ]\n      }\n    ]\n  }\n}\n",
+      "sep53_hash": "f5ebdedb567a31a1e80bd017abdafbbc7ecb22dd9bbb419717c868e1d8e32723",
+      "proof": "BEtfaXyRqMnAqYSVJyZF8PUXpwvRShVvU+4xhEg7jwQOF97GRK8YE3maRXPHukCCSyHvG2w9MdUb8nUeS4/5CQ=="
     },
     {
       "kind": "request",
@@ -158,9 +150,9 @@
         }
       },
       "address": "GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR",
-      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [],\n    \"external\": [\n      {\n        \"receiver_id\": \"0s762910a479b0c04f9725b03cd7931dc5064ab0ab\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"deterministic_state_init\",\n            \"deposit\": \"0.000000000000000000000009 NEAR\",\n            \"state_init\": {\n              \"V1\": {\n                \"code\": {\n                  \"account_id\": \"alice.near\"\n                },\n                \"data\": {\n                  \"1000\": \"\",\n                  \"1234\": \"\",\n                  \"AAEC\": \"AwQF\"\n                }\n              }\n            }\n          }\n        ]\n      }\n    ]\n  }\n}\n",
-      "sep53_hash": "0f6c929cb60cfaefd4b74bb9baa5bc54f03abe68a349210d2cb2c61b6833a5cb",
-      "proof": "2CthhZINnR3muuLFOfzGP7C/xUOfd/HZeuNd+MPn82aQok5woOTmqu8nb0xf2pGzy02VWY6fR/wq379dHOsfAg=="
+      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"NEAR amounts and deposits are in yoctoNEAR; FT amounts are in token base units.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [],\n    \"external\": [\n      {\n        \"receiver_id\": \"0s762910a479b0c04f9725b03cd7931dc5064ab0ab\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"deterministic_state_init\",\n            \"deposit\": \"9\",\n            \"state_init\": {\n              \"V1\": {\n                \"code\": {\n                  \"account_id\": \"alice.near\"\n                },\n                \"data\": {\n                  \"1000\": \"\",\n                  \"1234\": \"\",\n                  \"AAEC\": \"AwQF\"\n                }\n              }\n            }\n          }\n        ]\n      }\n    ]\n  }\n}\n",
+      "sep53_hash": "0c00fc912c1e46a2a93e6372ad274b57c808ba6e317958d282435776c7c7dd24",
+      "proof": "G63VVVMKwZODZC//5P6gtvXag7VsOISMqqcSQqs4Hr+O+68sVqELFWmIdLttB9w2fKdHRvo7642vCzx7L8FxAQ=="
     },
     {
       "kind": "offchain",
@@ -215,16 +207,7 @@
         "timeout_secs": 300,
         "pay_for_gas": false,
         "request": {
-          "internal": [
-            {
-              "op": "require_ft_metadata",
-              "payload": {
-                "token_id": "token.near",
-                "decimals": 6,
-                "symbol": "USDC"
-              }
-            }
-          ],
+          "internal": [],
           "external": [
             {
               "receiver_id": "token.near",
@@ -244,9 +227,9 @@
         }
       },
       "address": "GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR",
-      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [\n      {\n        \"op\": \"require_ft_metadata\",\n        \"payload\": {\n          \"token_id\": \"token.near\",\n          \"decimals\": 6,\n          \"symbol\": \"USDC\"\n        }\n      }\n    ],\n    \"external\": [\n      {\n        \"receiver_id\": \"token.near\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"ft_transfer_call\",\n            \"deposit\": \"0.000000000000000000000001 NEAR\",\n            \"gas\": \"50000000000000\",\n            \"gas_weight\": \"1\",\n            \"args\": {\n              \"receiver_id\": \"intents.near\",\n              \"amount\": \"1.5 USDC\",\n              \"msg\": \"{\\\"receiver_id\\\":\\\"bob.near\\\"}\"\n            }\n          }\n        ]\n      }\n    ]\n  }\n}\n",
-      "sep53_hash": "b9af02b7ad11162a6d1754684e31eb4006651d2f241c2f63db8706d5930156d1",
-      "proof": "m2zHA8/CdpMxkMdUH4JSUcGA/zRYRnT+OCC9OtJeNzhQPLZNXub/59IP4As8eHmSh6NZfyb6KF2KslHgMhE/AQ=="
+      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"NEAR amounts and deposits are in yoctoNEAR; FT amounts are in token base units.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [],\n    \"external\": [\n      {\n        \"receiver_id\": \"token.near\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"ft_transfer_call\",\n            \"deposit\": \"1\",\n            \"gas\": \"50000000000000\",\n            \"gas_weight\": \"1\",\n            \"args\": {\n              \"receiver_id\": \"intents.near\",\n              \"amount\": \"1500000\",\n              \"msg\": \"{\\\"receiver_id\\\":\\\"bob.near\\\"}\"\n            }\n          }\n        ]\n      }\n    ]\n  }\n}\n",
+      "sep53_hash": "f9b4d92cc6a19cd6aa81e0f877d0951b867604221816e58094301a9e0def366c",
+      "proof": "fdY+Z0NXfnBmvJcTvgkZzWdcD50yVS1Kqc64ptg/v1yFIpRblhNlBk/ZfQFZFIOFh4JBIWBkqvJ26u+pDL0SBQ=="
     },
     {
       "kind": "request",
@@ -266,7 +249,7 @@
                   "action": "function_call",
                   "payload": {
                     "function_name": "w_execute_extension",
-                    "args": "eyJyZXF1ZXN0Ijp7ImludGVybmFsIjpbeyJvcCI6InJlcXVpcmVfZnRfbWV0YWRhdGEiLCJwYXlsb2FkIjp7InRva2VuX2lkIjoidG9rZW4ubmVhciIsImRlY2ltYWxzIjo2LCJzeW1ib2wiOiJVU0RDIn19LHsib3AiOiJhZGRfZXh0ZW5zaW9uIiwicGF5bG9hZCI6eyJhY2NvdW50X2lkIjoiaGVscGVyLm5lYXIifX1dLCJleHRlcm5hbCI6W3sicmVjZWl2ZXJfaWQiOiJ0b2tlbi5uZWFyIiwiYWN0aW9ucyI6W3siYWN0aW9uIjoiZnVuY3Rpb25fY2FsbCIsInBheWxvYWQiOnsiZnVuY3Rpb25fbmFtZSI6ImZ0X3RyYW5zZmVyIiwiYXJncyI6ImV5SnlaV05sYVhabGNsOXBaQ0k2SW1KdllpNXVaV0Z5SWl3aVlXMXZkVzUwSWpvaU1qVXdNREF3TUNKOSIsImRlcG9zaXQiOiIxIiwiZ2FzIjoiMjAwMDAwMDAwMDAwMDAiLCJnYXNfd2VpZ2h0IjoiMCJ9fV19XX19",
+                    "args": "eyJyZXF1ZXN0Ijp7ImludGVybmFsIjpbeyJvcCI6ImFkZF9leHRlbnNpb24iLCJwYXlsb2FkIjp7ImFjY291bnRfaWQiOiJoZWxwZXIubmVhciJ9fV0sImV4dGVybmFsIjpbeyJyZWNlaXZlcl9pZCI6InRva2VuLm5lYXIiLCJhY3Rpb25zIjpbeyJhY3Rpb24iOiJmdW5jdGlvbl9jYWxsIiwicGF5bG9hZCI6eyJmdW5jdGlvbl9uYW1lIjoiZnRfdHJhbnNmZXIiLCJhcmdzIjoiZXlKeVpXTmxhWFpsY2w5cFpDSTZJbUp2WWk1dVpXRnlJaXdpWVcxdmRXNTBJam9pTWpVd01EQXdNQ0o5IiwiZGVwb3NpdCI6IjEiLCJnYXMiOiIyMDAwMDAwMDAwMDAwMCIsImdhc193ZWlnaHQiOiIwIn19XX1dfX0=",
                     "deposit": "1",
                     "gas": "100000000000000"
                   }
@@ -277,9 +260,9 @@
         }
       },
       "address": "GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR",
-      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [\n    \"WARNING: add_extension gives helper.near full control of wallet vault.near.\"\n  ],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [],\n    \"external\": [\n      {\n        \"receiver_id\": \"vault.near\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"w_execute_extension\",\n            \"deposit\": \"0.000000000000000000000001 NEAR\",\n            \"gas\": \"100000000000000\",\n            \"gas_weight\": \"1\",\n            \"args\": {\n              \"request\": {\n                \"internal\": [\n                  {\n                    \"op\": \"require_ft_metadata\",\n                    \"payload\": {\n                      \"token_id\": \"token.near\",\n                      \"decimals\": 6,\n                      \"symbol\": \"USDC\"\n                    }\n                  },\n                  {\n                    \"op\": \"add_extension\",\n                    \"payload\": {\n                      \"account_id\": \"helper.near\"\n                    }\n                  }\n                ],\n                \"external\": [\n                  {\n                    \"receiver_id\": \"token.near\",\n                    \"refund_to\": null,\n                    \"actions\": [\n                      {\n                        \"action\": \"function_call\",\n                        \"function_name\": \"ft_transfer\",\n                        \"deposit\": \"0.000000000000000000000001 NEAR\",\n                        \"gas\": \"20000000000000\",\n                        \"gas_weight\": \"0\",\n                        \"args\": {\n                          \"receiver_id\": \"bob.near\",\n                          \"amount\": \"2.5 USDC\"\n                        }\n                      }\n                    ]\n                  }\n                ]\n              }\n            }\n          }\n        ]\n      }\n    ]\n  }\n}\n",
-      "sep53_hash": "1edc220db1c00f5524703eb9afc57e9a685949fa0a2dab33b00c88ec8192f013",
-      "proof": "Ha8Y3w+HL5dadEeDYzoJzAyl5Ino3Wdnurqghti/U29+6Qze2vE7Qum00Y8IeazFLaQReyuU1d89KcDGUh3FDQ=="
+      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"NEAR amounts and deposits are in yoctoNEAR; FT amounts are in token base units.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [\n    \"WARNING: add_extension gives helper.near full control of wallet vault.near.\"\n  ],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [],\n    \"external\": [\n      {\n        \"receiver_id\": \"vault.near\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"w_execute_extension\",\n            \"deposit\": \"1\",\n            \"gas\": \"100000000000000\",\n            \"gas_weight\": \"1\",\n            \"args\": {\n              \"request\": {\n                \"internal\": [\n                  {\n                    \"op\": \"add_extension\",\n                    \"payload\": {\n                      \"account_id\": \"helper.near\"\n                    }\n                  }\n                ],\n                \"external\": [\n                  {\n                    \"receiver_id\": \"token.near\",\n                    \"refund_to\": null,\n                    \"actions\": [\n                      {\n                        \"action\": \"function_call\",\n                        \"function_name\": \"ft_transfer\",\n                        \"deposit\": \"1\",\n                        \"gas\": \"20000000000000\",\n                        \"gas_weight\": \"0\",\n                        \"args\": {\n                          \"receiver_id\": \"bob.near\",\n                          \"amount\": \"2500000\"\n                        }\n                      }\n                    ]\n                  }\n                ]\n              }\n            }\n          }\n        ]\n      }\n    ]\n  }\n}\n",
+      "sep53_hash": "63f8af473311ca1343e3921ebcf73d347e95a68c34795d6f7e444c902034f8e7",
+      "proof": "O+k/39XZ/epDa3CB+Rx+2Y6cUPnRg6D1qkbUkG0imVvHR+JdiWn4bRUnQF+ReYVg7wQxH5NFXF92+rDcpVV5Ag=="
     },
     {
       "kind": "request",
@@ -309,9 +292,9 @@
         }
       },
       "address": "GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR",
-      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [],\n    \"external\": [\n      {\n        \"receiver_id\": \"app.near\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"submit\",\n            \"deposit\": \"0 NEAR\",\n            \"gas\": \"30000000000000\",\n            \"gas_weight\": \"1\",\n            \"args\": {\n              \"0\": \"zero\",\n              \"7\": \"seven\",\n              \"items\": [\n                {\n                  \"id\": \"a\",\n                  \"n\": -9007199254740991\n                },\n                [],\n                {}\n              ],\n              \"flag\": true,\n              \"none\": null,\n              \"n\": 9007199254740991\n            }\n          }\n        ]\n      }\n    ]\n  }\n}\n",
-      "sep53_hash": "2feb2743ca8273631aa9bbbc04b7bff62e4fc4bb50a02c79930a8c94b5cff1a3",
-      "proof": "/Ymnrs+5bS2HPPSLIXw718uaZYiKxF0CpGQWrqCGGv34yQQgVxOTe+V4TudHoDbPZIXYgbKehR589SY+BxbYAA=="
+      "message": "{\n  \"about\": [\n    \"NEAR Wallet Contract: execute request (v1)\",\n    \"This signature authorizes NEAR wallet operations, not a login.\",\n    \"NEAR amounts and deposits are in yoctoNEAR; FT amounts are in token base units.\",\n    \"Gas is in gas units.\",\n    \"Function arguments and deployment state may be opaque: verify them before signing.\"\n  ],\n  \"warnings\": [],\n  \"chain_id\": \"mainnet\",\n  \"signer_id\": \"wallet.near\",\n  \"stellar_address\": \"GDLVVGABQKYQVN6VJP7NHSLEA45A5YLS6PNKMIZFV4BBU2HXA5IRVHUR\",\n  \"nonce\": 42,\n  \"created_at\": \"2026-11-03T12:34:56.123456789Z\",\n  \"timeout_secs\": 300,\n  \"pay_for_gas\": false,\n  \"request\": {\n    \"internal\": [],\n    \"external\": [\n      {\n        \"receiver_id\": \"app.near\",\n        \"refund_to\": null,\n        \"actions\": [\n          {\n            \"action\": \"function_call\",\n            \"function_name\": \"submit\",\n            \"deposit\": \"0\",\n            \"gas\": \"30000000000000\",\n            \"gas_weight\": \"1\",\n            \"args\": {\n              \"0\": \"zero\",\n              \"7\": \"seven\",\n              \"items\": [\n                {\n                  \"id\": \"a\",\n                  \"n\": -9007199254740991\n                },\n                [],\n                {}\n              ],\n              \"flag\": true,\n              \"none\": null,\n              \"n\": 9007199254740991\n            }\n          }\n        ]\n      }\n    ]\n  }\n}\n",
+      "sep53_hash": "3245a590455d4794562d0b5c60e353cf030380d3a025f22309aaa630c04216fc",
+      "proof": "0TqzSYdoZyBeRxVVEUskoubCN5zrzv6rF1DBp12mZgvZZxaZH6sO1dAIHlsPu8axRv/88/LC/iRlRnTEP36bCw=="
     }
   ],
   "rejected": [
@@ -337,14 +320,6 @@
               "op": "remove_extension",
               "payload": {
                 "account_id": "old.near"
-              }
-            },
-            {
-              "op": "require_ft_metadata",
-              "payload": {
-                "token_id": "token.near",
-                "decimals": 18,
-                "symbol": "TKN"
               }
             }
           ],
@@ -398,14 +373,6 @@
               "payload": {
                 "account_id": "old.near"
               }
-            },
-            {
-              "op": "require_ft_metadata",
-              "payload": {
-                "token_id": "token.near",
-                "decimals": 18,
-                "symbol": "TKN"
-              }
             }
           ],
           "external": [
@@ -437,7 +404,7 @@
     },
     {
       "kind": "request",
-      "reason": "non-ASCII token symbol",
+      "reason": "non-ASCII method name",
       "msg": {
         "chain_id": "mainnet",
         "signer_id": "wallet.near",
@@ -458,14 +425,6 @@
               "payload": {
                 "account_id": "old.near"
               }
-            },
-            {
-              "op": "require_ft_metadata",
-              "payload": {
-                "token_id": "token.near",
-                "decimals": 18,
-                "symbol": "TΚN"
-              }
             }
           ],
           "external": [
@@ -485,7 +444,7 @@
                 {
                   "action": "function_call",
                   "payload": {
-                    "function_name": "near_deposit",
+                    "function_name": "near_depоsit",
                     "args": "e30="
                   }
                 }

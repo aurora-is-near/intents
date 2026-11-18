@@ -15,7 +15,8 @@ crate-type = ["cdylib", "rlib"]
 base64.workspace = true
 defuse-crypto = { workspace = true, features = ["borsh", "ed25519", "fmt"] }
 defuse-sep53.workspace = true
-defuse-wallet = { workspace = true, features = ["borsh", "digest", "json", "readable-message", "serde"] }
+defuse-wallet = { workspace = true, features = ["borsh", "digest", "json", "serde"] }
+defuse-wallet-readable.workspace = true
 serde_json = { workspace = true, features = ["preserve_order"] }
 stellar-strkey.workspace = true
 thiserror.workspace = true

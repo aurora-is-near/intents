@@ -1,8 +1,8 @@
-//! Deterministic readable v1 messages shared by wallet signing schemas.
+#![doc = include_str!("../README.md")]
 
 use std::fmt::Write;
 
-use crate::{
+use defuse_wallet::{
     AccountId, NearPromise, NearToken, Request, RequestMessage, StateInit, StateInitV1, WalletOp,
     actions::{DeterministicStateInit, FunctionCall, NearAction, Transfer},
     offchain::OffchainMessage,
@@ -12,7 +12,7 @@ use serde_json::{Map, Value, json};
 /// Maximum UTF-8 message size accepted by this schema (16 KiB).
 pub const MAX_SIGNING_MESSAGE_BYTES: usize = 16 * 1024;
 /// Domain and purpose separator for execution requests.
-pub const REQUEST_PREFIX: &str = "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nGas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\n";
+pub const REQUEST_PREFIX: &str = "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nNEAR amounts and deposits are in yoctoNEAR; FT amounts are in token base units.\nGas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\n";
 /// Domain and purpose separator for NEP-641 authorizations.
 pub const OFFCHAIN_PREFIX: &str = "NEAR Wallet Contract: offchain authorization (v1)\nThis signature authorizes the exact payload below, not a NEAR transaction.\nThe consuming application defines expiration and one-time-use requirements.\n\n";
 
@@ -23,12 +23,12 @@ pub enum MessageError {
     UnsupportedAction,
     #[error("function call arguments must be compact JSON")]
     FunctionArgs,
-    #[error("NEP-141 transfers need one require_ft_metadata operation for their token")]
-    TokenMetadata,
     #[error("NEP-141 transfer amount must be a decimal u128 string")]
     TokenAmount,
     #[error("NEP-141 transfer arguments must be parameters of the method")]
     TokenArgs,
+    #[error("NEP-141 transfers require exactly one yoctoNEAR")]
+    TokenDeposit,
     #[error("timestamp must fit unsigned 64-bit Unix nanoseconds")]
     Timestamp,
     #[error("timeout must be a whole number of seconds fitting u32")]
@@ -140,17 +140,12 @@ pub fn offchain_signing_message(
 const MIN_ITEM_BYTES: usize = 64;
 
 /// Size checked before rendering: raw function-call arguments, state-init data,
-/// token symbols and [`MIN_ITEM_BYTES`] per operation, promise and action. It is
+/// and [`MIN_ITEM_BYTES`] per operation, promise and action. It is
 /// at most the rendered size, except that a nested request counts with its
 /// base64 encoding, so some nested requests that would fit are rejected.
 fn input_bytes(request: &Request) -> usize {
     let actions = request.external.iter().flat_map(|promise| &promise.actions);
     let items = request.internal.len() + request.external.len() + actions.clone().count();
-    // Also repeated in each transfer amount of the token.
-    let symbols = request.internal.iter().map(|op| match op {
-        WalletOp::RequireFtMetadata { symbol, .. } => symbol.len(),
-        _ => 0,
-    });
     actions
         .map(|action| match action {
             NearAction::FunctionCall(FunctionCall { args, .. }) => args.len(),
@@ -163,7 +158,6 @@ fn input_bytes(request: &Request) -> usize {
                 .sum(),
             _ => 0,
         })
-        .chain(symbols)
         .fold(items.saturating_mul(MIN_ITEM_BYTES), usize::saturating_add)
 }
 
@@ -198,7 +192,6 @@ fn request_value(
     warnings: &mut Vec<String>,
 ) -> Result<Value, MessageError> {
     let Request { internal, external } = request;
-    let tokens = tokens(internal)?;
     for op in internal {
         if let WalletOp::AddExtension { account_id } = op {
             warnings.push(format!(
@@ -208,7 +201,7 @@ fn request_value(
     }
     let external = external
         .iter()
-        .map(|promise| promise_value(promise, (wallet, name), &tokens, warnings))
+        .map(|promise| promise_value(promise, (wallet, name), warnings))
         .collect::<Result<_, _>>()?;
     Ok(Value::Object(object([
         ("internal", json!(internal)),
@@ -216,8 +209,7 @@ fn request_value(
     ])))
 }
 
-/// NEP-141 methods whose `amount` argument is shown with the token's decimals
-/// and symbol, with their parameters: other arguments, which the token would
+/// NEP-141 methods and their parameters: other arguments, which the token would
 /// ignore, could imitate a shown amount and are rejected.
 const FT_TRANSFER_METHODS: [(&str, &[&str]); 2] = [
     ("ft_transfer", &["receiver_id", "amount", "memo"]),
@@ -227,34 +219,11 @@ const FT_TRANSFER_METHODS: [(&str, &[&str]); 2] = [
     ),
 ];
 
-/// Decimals and symbol of each token from `require_ft_metadata` operations,
-/// which the contract checks against `ft_metadata()` before the transfer.
-type Tokens<'a> = Vec<(&'a AccountId, u8, &'a str)>;
-
-fn tokens(internal: &[WalletOp]) -> Result<Tokens<'_>, MessageError> {
-    let mut tokens = Tokens::new();
-    for op in internal {
-        if let WalletOp::RequireFtMetadata {
-            token_id,
-            decimals,
-            symbol,
-        } = op
-        {
-            if tokens.iter().any(|(other, ..)| *other == token_id) {
-                return Err(MessageError::TokenMetadata);
-            }
-            tokens.push((token_id, *decimals, symbol));
-        }
-    }
-    Ok(tokens)
-}
-
 /// `wallet` executes the promise; `refund_to` (`null` means `wallet`) receives
 /// its failed and unused deposits, e.g. the unused part of a state-init budget.
 fn promise_value(
     promise: &NearPromise,
     (wallet, name): (&AccountId, &str),
-    tokens: &Tokens<'_>,
     warnings: &mut Vec<String>,
 ) -> Result<Value, MessageError> {
     let NearPromise {
@@ -271,13 +240,9 @@ fn promise_value(
             ));
         }
     }
-    let token = tokens
-        .iter()
-        .find(|(token_id, ..)| *token_id == receiver_id)
-        .map(|&(_, decimals, symbol)| (decimals, symbol));
     let actions = actions
         .iter()
-        .map(|action| action_value(action, receiver_id, token, warnings))
+        .map(|action| action_value(action, receiver_id, warnings))
         .collect::<Result<_, _>>()?;
     Ok(Value::Object(object([
         ("receiver_id", json!(receiver_id)),
@@ -289,7 +254,6 @@ fn promise_value(
 fn action_value(
     action: &NearAction,
     receiver_id: &AccountId,
-    token: Option<(u8, &str)>,
     warnings: &mut Vec<String>,
 ) -> Result<Value, MessageError> {
     Ok(Value::Object(match action {
@@ -311,7 +275,11 @@ fn action_value(
                 .iter()
                 .find(|(method, _)| method == function_name)
             {
-                token_args(args, token.ok_or(MessageError::TokenMetadata)?, keys)?
+                // Reject a predictably failing token call before other wallet effects commit.
+                if deposit.as_yoctonear() != 1 {
+                    return Err(MessageError::TokenDeposit);
+                }
+                token_args(args, keys)?
             } else {
                 args_value(args)?
             };
@@ -352,20 +320,29 @@ fn args_value(args: &[u8]) -> Result<Value, MessageError> {
 }
 
 /// NEP-141 transfer arguments: only the method's `keys`, with the `amount`
-/// shown with the token's decimals and symbol. It must be a canonical decimal
-/// string, so the shown amount and decimals determine it.
-fn token_args(
-    args: &[u8],
-    (decimals, symbol): (u8, &str),
-    keys: &[&str],
-) -> Result<Value, MessageError> {
-    let mut value = args_value(args)?;
-    let object = value.as_object_mut().ok_or(MessageError::TokenAmount)?;
+/// left as an exact base-unit integer string. The promise receiver identifies
+/// the token.
+fn token_args(args: &[u8], keys: &[&str]) -> Result<Value, MessageError> {
+    let value = args_value(args)?;
+    let object = value.as_object().ok_or(MessageError::TokenAmount)?;
     if object.keys().any(|key| !keys.contains(&key.as_str())) {
         return Err(MessageError::TokenArgs);
     }
-    let amount = object.get_mut("amount").ok_or(MessageError::TokenAmount)?;
-    let units = amount
+    // A key whitelist alone permits incomplete calls such as {"amount":"1"}.
+    if object
+        .get("receiver_id")
+        .and_then(Value::as_str)
+        .and_then(|id| id.parse::<AccountId>().ok())
+        .is_none()
+        || (keys.contains(&"msg") && !object.get("msg").is_some_and(Value::is_string))
+        || object
+            .get("memo")
+            .is_some_and(|memo| !memo.is_null() && !memo.is_string())
+    {
+        return Err(MessageError::TokenArgs);
+    }
+    let amount = object.get("amount").ok_or(MessageError::TokenAmount)?;
+    amount
         .as_str()
         .and_then(|text| {
             text.parse::<u128>()
@@ -373,7 +350,6 @@ fn token_args(
                 .filter(|units| units.to_string() == text)
         })
         .ok_or(MessageError::TokenAmount)?;
-    *amount = json!(token_amount(units, decimals, symbol));
     Ok(value)
 }
 
@@ -383,9 +359,9 @@ pub fn json_args(args: &[u8]) -> Result<Value, MessageError> {
     args_value(args)
 }
 
-/// `yoctoNEAR` with 24 decimals and the `NEAR` symbol, e.g. `1.5 NEAR`.
+/// Exact smallest-unit integer with an explicit unit for refund warnings.
 pub fn near_amount(yocto: u128) -> String {
-    token_amount(yocto, 24, "NEAR")
+    format!("{yocto} yoctoNEAR")
 }
 
 /// yoctoNEAR attached to a promise (transfer amounts and deposits), saturating
@@ -438,19 +414,7 @@ fn array_index(key: &str) -> Option<u32> {
 }
 
 fn near(amount: NearToken) -> Value {
-    json!(near_amount(amount.as_yoctonear()))
-}
-
-/// `units` with `decimals` fractional digits, without trailing zeros,
-/// followed by the symbol, e.g. `1.5 USDC` for 1500000 units with 6 decimals.
-fn token_amount(units: u128, decimals: u8, symbol: &str) -> String {
-    let decimals = usize::from(decimals);
-    let digits = format!("{units:0>width$}", width = decimals + 1);
-    let (whole, fraction) = digits.split_at(digits.len() - decimals);
-    match fraction.trim_end_matches('0') {
-        "" => format!("{whole} {symbol}"),
-        fraction => format!("{whole}.{fraction} {symbol}"),
-    }
+    json!(amount.as_yoctonear().to_string())
 }
 
 /// Message object with fields in the given order.
@@ -544,11 +508,18 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
-    use crate::Timestamp;
+    use defuse_wallet::Timestamp;
 
     const IDENTITY: SigningIdentity<'static> = &[("test_public_key", "key")];
 
     fn request(internal: Vec<WalletOp>, function_name: &str, args: &[u8]) -> RequestMessage {
+        let mut call = FunctionCall::name(function_name).args(args);
+        if FT_TRANSFER_METHODS
+            .iter()
+            .any(|(name, _)| *name == function_name)
+        {
+            call.deposit = NearToken::from_yoctonear(1);
+        }
         RequestMessage {
             pay_for_gas: false,
             chain_id: "mainnet".to_string(),
@@ -560,7 +531,7 @@ mod tests {
                 internal,
                 external: vec![
                     NearPromise::new("token.near".parse::<AccountId>().unwrap())
-                        .function_call(FunctionCall::name(function_name).args(args)),
+                        .function_call(call),
                 ],
             },
         }
@@ -573,10 +544,6 @@ mod tests {
     fn ft_transfer(internal: Vec<WalletOp>, amount: &str) -> RequestMessage {
         let args = format!(r#"{{"receiver_id":"intents.near","amount":{amount},"msg":""}}"#);
         request(internal, "ft_transfer_call", args.as_bytes())
-    }
-
-    fn usdc(token_id: &str) -> WalletOp {
-        WalletOp::require_ft_metadata(token_id.parse::<AccountId>().unwrap(), 6, "USDC")
     }
 
     fn extension_call(inner: &Request) -> RequestMessage {
@@ -623,7 +590,7 @@ mod tests {
             "          {\n",
             "            \"action\": \"function_call\",\n",
             "            \"function_name\": \"submit\",\n",
-            "            \"deposit\": \"0 NEAR\",\n",
+            "            \"deposit\": \"0\",\n",
             "            \"gas\": \"50000000000000\",\n",
             "            \"gas_weight\": \"1\",\n",
             "            \"args\": {\n",
@@ -664,13 +631,13 @@ mod tests {
     #[test]
     fn extension_requests_are_shown_by_the_same_rules() {
         let inner = Request {
-            internal: vec![
-                usdc("usdc.near"),
-                WalletOp::add_extension("evil.near".parse::<AccountId>().unwrap()),
-            ],
+            internal: vec![WalletOp::add_extension(
+                "evil.near".parse::<AccountId>().unwrap(),
+            )],
             external: vec![
                 NearPromise::new("usdc.near".parse::<AccountId>().unwrap()).function_call(
                     FunctionCall::name("ft_transfer")
+                        .attach_deposit(NearToken::from_yoctonear(1))
                         .args(br#"{"receiver_id":"bob.near","amount":"1500000"}"#.to_vec()),
                 ),
             ],
@@ -681,24 +648,15 @@ mod tests {
         ));
         let shown = &document(&message)["request"]["external"][0]["actions"][0]["args"];
         assert_eq!(
-            shown["request"]["internal"][1]["payload"]["account_id"],
+            shown["request"]["internal"][0]["payload"]["account_id"],
             "evil.near"
         );
         assert_eq!(
             shown["request"]["external"][0]["actions"][0]["args"],
-            json!({"receiver_id": "bob.near", "amount": "1.5 USDC"})
+            json!({"receiver_id": "bob.near", "amount": "1500000"})
         );
         assert!(!message.contains("eyJ"));
 
-        // Inner NEP-141 transfers need their own metadata requirement.
-        let unchecked = Request {
-            internal: Vec::new(),
-            ..inner.clone()
-        };
-        assert!(matches!(
-            request_signing_message(IDENTITY, &extension_call(&unchecked)),
-            Err(MessageError::TokenMetadata)
-        ));
         // Unknown fields, other arguments and any encoding other than the
         // serde form (which the message determines) are rejected.
         let transfer = json!({"action": "transfer", "payload": {"amount": "1"}});
@@ -752,7 +710,7 @@ mod tests {
             warnings(&with(
                 promise(Some("carol.near"), 15 * 10_u128.pow(23)).into()
             )),
-            "WARNING: up to 3 NEAR sent to bob.near can be refunded to carol.near, not to this wallet.\n\n"
+            "WARNING: up to 3000000000000000000000000 yoctoNEAR sent to bob.near can be refunded to carol.near, not to this wallet.\n\n"
         );
         // Refunds to the executing wallet, or with nothing attached, need none.
         for request in [
@@ -765,7 +723,7 @@ mod tests {
         // A nested request is executed by the wallet it is sent to.
         assert_eq!(
             warnings(&extension_call(&promise(Some("carol.near"), 1).into())),
-            "WARNING: up to 0.000000000000000000000002 NEAR sent to bob.near can be refunded to carol.near, not to wallet token.near.\n\n"
+            "WARNING: up to 2 yoctoNEAR sent to bob.near can be refunded to carol.near, not to wallet token.near.\n\n"
         );
         assert_eq!(
             warnings(&extension_call(&promise(Some("token.near"), 1).into())),
@@ -776,10 +734,7 @@ mod tests {
     #[test]
     fn token_transfers_accept_only_the_method_parameters() {
         let transfer = |method: &str, args: &str| {
-            request_signing_message(
-                IDENTITY,
-                &request(vec![usdc("token.near")], method, args.as_bytes()),
-            )
+            request_signing_message(IDENTITY, &request(Vec::new(), method, args.as_bytes()))
         };
         transfer(
             "ft_transfer",
@@ -810,6 +765,88 @@ mod tests {
                 matches!(transfer(method, args), Err(MessageError::TokenArgs)),
                 "accepted {args}"
             );
+        }
+    }
+
+    #[test]
+    fn token_transfers_require_valid_fields_and_one_yocto() {
+        for method in ["ft_transfer", "ft_transfer_call"] {
+            let mut args = json!({"receiver_id":"bob.near","amount":"1"});
+            if method == "ft_transfer_call" {
+                args["msg"] = json!("");
+            }
+            let make =
+                |args: &Value| request(Vec::new(), method, &serde_json::to_vec(args).unwrap());
+            for memo in [
+                None,
+                Some(Value::Null),
+                Some(json!("")),
+                Some(json!("Привет")),
+            ] {
+                let mut valid = args.clone();
+                if let Some(memo) = memo {
+                    valid["memo"] = memo;
+                }
+                let msg = make(&valid);
+                request_signing_message(IDENTITY, &msg).unwrap();
+                request_signing_message(IDENTITY, &extension_call(&msg.request)).unwrap();
+            }
+            for (field, replacement) in [
+                ("receiver_id", None),
+                ("receiver_id", Some(Value::Null)),
+                ("receiver_id", Some(json!(1))),
+                ("receiver_id", Some(json!("Bad.near"))),
+                ("receiver_id", Some(json!("a"))),
+                ("receiver_id", Some(json!("a..near"))),
+                ("memo", Some(json!(false))),
+                ("memo", Some(json!([]))),
+            ] {
+                let mut invalid = args.clone();
+                if let Some(value) = replacement {
+                    invalid[field] = value;
+                } else {
+                    invalid.as_object_mut().unwrap().remove(field);
+                }
+                let msg = make(&invalid);
+                for candidate in [msg.clone(), extension_call(&msg.request)] {
+                    assert!(matches!(
+                        request_signing_message(IDENTITY, &candidate),
+                        Err(MessageError::TokenArgs)
+                    ));
+                }
+            }
+            if method == "ft_transfer_call" {
+                for replacement in [None, Some(Value::Null), Some(json!(1)), Some(json!({}))] {
+                    let mut invalid = args.clone();
+                    if let Some(value) = replacement {
+                        invalid["msg"] = value;
+                    } else {
+                        invalid.as_object_mut().unwrap().remove("msg");
+                    }
+                    let msg = make(&invalid);
+                    for candidate in [msg.clone(), extension_call(&msg.request)] {
+                        assert!(matches!(
+                            request_signing_message(IDENTITY, &candidate),
+                            Err(MessageError::TokenArgs)
+                        ));
+                    }
+                }
+            }
+            for deposit in [0, 2, u128::MAX] {
+                let mut msg = make(&args);
+                let NearAction::FunctionCall(call) = &mut msg.request.external[0].actions[0] else {
+                    unreachable!()
+                };
+                call.deposit = NearToken::from_yoctonear(deposit);
+                // Serde omits zero deposits; decoding must still reject that default.
+                let decoded: RequestMessage = serde_json::from_value(json!(msg)).unwrap();
+                for candidate in [decoded, extension_call(&msg.request)] {
+                    assert!(matches!(
+                        request_signing_message(IDENTITY, &candidate),
+                        Err(MessageError::TokenDeposit)
+                    ));
+                }
+            }
         }
     }
 
@@ -847,17 +884,6 @@ mod tests {
         // Too many operations for the limit, whatever their content.
         let mut msg = call(b"{}");
         msg.request.internal = vec![WalletOp::set_signature_mode(true); 256];
-        assert!(matches!(
-            request_signing_message(IDENTITY, &msg),
-            Err(MessageError::TooLarge)
-        ));
-        // A token symbol (shown in each transfer amount) counts, too.
-        let mut msg = call(b"x");
-        msg.request.internal = vec![WalletOp::require_ft_metadata(
-            "token.near".parse::<AccountId>().unwrap(),
-            6,
-            "S".repeat(MAX_SIGNING_MESSAGE_BYTES),
-        )];
         assert!(matches!(
             request_signing_message(IDENTITY, &msg),
             Err(MessageError::TooLarge)
@@ -995,79 +1021,41 @@ mod tests {
     }
 
     #[test]
-    fn amounts_have_decimals_and_symbol() {
-        for (units, decimals, shown) in [
-            (0, 24, "0 NEAR"),
-            (1, 24, "0.000000000000000000000001 NEAR"),
-            (10_u128.pow(24), 24, "1 NEAR"),
-            (15 * 10_u128.pow(23), 24, "1.5 NEAR"),
-            (
-                u128::MAX,
-                24,
-                "340282366920938.463463374607431768211455 NEAR",
-            ),
-            (1_500_000, 6, "1.5 NEAR"),
-            (1_500_000, 0, "1500000 NEAR"),
-        ] {
-            assert_eq!(token_amount(units, decimals, "NEAR"), shown);
-        }
-        let message = request_signing_message(
-            IDENTITY,
-            &RequestMessage {
-                request: NearPromise::new("bob.near".parse::<AccountId>().unwrap())
-                    .transfer(NearToken::from_millinear(1500))
+    fn amounts_preserve_every_base_unit_digit() {
+        for units in [0, 1, 1_500_000, 9_007_199_254_740_993, u128::MAX] {
+            let msg = RequestMessage {
+                request: NearPromise::new("token.near".parse::<AccountId>().unwrap())
+                    .transfer(NearToken::from_yoctonear(units))
+                    .function_call(
+                        FunctionCall::name("ft_transfer")
+                            .args(format!(
+                                r#"{{"receiver_id":"bob.near","amount":"{units}"}}"#
+                            ))
+                            .attach_deposit(NearToken::from_yoctonear(1)),
+                    )
+                    .function_call(
+                        FunctionCall::name("submit")
+                            .args(b"{}")
+                            .attach_deposit(NearToken::from_yoctonear(units)),
+                    )
                     .into(),
                 ..call(b"{}")
-            },
-        )
-        .unwrap();
-        assert_eq!(
-            document(&message)["request"]["external"][0]["actions"][0],
-            json!({"action": "transfer", "amount": "1.5 NEAR"})
-        );
-        assert!(!message.contains("yocto"));
-    }
-
-    #[test]
-    fn token_amounts_use_the_required_metadata() {
-        let message = request_signing_message(
-            IDENTITY,
-            &ft_transfer(vec![usdc("token.near")], r#""1500000""#),
-        )
-        .unwrap();
-        let document = document(&message);
-        assert_eq!(
-            document["request"]["internal"][0],
-            json!({
-                "op": "require_ft_metadata",
-                "payload": {"token_id": "token.near", "decimals": 6, "symbol": "USDC"},
-            })
-        );
-        assert_eq!(
-            document["request"]["external"][0]["actions"][0],
-            json!({
-                "action": "function_call",
-                "function_name": "ft_transfer_call",
-                "args": {"receiver_id": "intents.near", "amount": "1.5 USDC", "msg": ""},
-                "deposit": "0 NEAR",
-                "gas": "50000000000000",
-                "gas_weight": "1",
-            })
-        );
-    }
-
-    #[test]
-    fn token_transfers_need_metadata_and_a_canonical_amount() {
-        for internal in [
-            Vec::new(),
-            vec![usdc("other.near")],
-            vec![usdc("token.near"), usdc("token.near")],
-        ] {
-            assert!(matches!(
-                request_signing_message(IDENTITY, &ft_transfer(internal, r#""1""#)),
-                Err(MessageError::TokenMetadata)
-            ));
+            };
+            let message = request_signing_message(IDENTITY, &msg).unwrap();
+            let doc = document(&message);
+            let actions = &doc["request"]["external"][0]["actions"];
+            assert_eq!(actions[0]["amount"], units.to_string());
+            assert_eq!(actions[1]["deposit"], "1");
+            assert_eq!(actions[2]["deposit"], units.to_string());
+            assert_eq!(actions[1]["args"]["amount"], units.to_string());
+            assert_eq!(doc["request"]["external"][0]["receiver_id"], "token.near");
+            assert!(message.contains("in yoctoNEAR; FT amounts are in token base units"));
+            assert_eq!(near_amount(units), format!("{units} yoctoNEAR"));
         }
+    }
+
+    #[test]
+    fn token_transfers_need_a_canonical_amount() {
         for amount in [
             r#""01""#,
             r#""+1""#,
@@ -1079,10 +1067,7 @@ mod tests {
         ] {
             assert!(
                 matches!(
-                    request_signing_message(
-                        IDENTITY,
-                        &ft_transfer(vec![usdc("token.near")], amount)
-                    ),
+                    request_signing_message(IDENTITY, &ft_transfer(Vec::new(), amount)),
                     Err(MessageError::TokenAmount)
                 ),
                 "accepted {amount}"
@@ -1091,11 +1076,7 @@ mod tests {
         assert!(matches!(
             request_signing_message(
                 IDENTITY,
-                &request(
-                    vec![usdc("token.near")],
-                    "ft_transfer",
-                    br#"{"receiver_id":"bob.near"}"#
-                )
+                &request(Vec::new(), "ft_transfer", br#"{"receiver_id":"bob.near"}"#)
             ),
             Err(MessageError::TokenAmount)
         ));

@@ -1,16 +1,14 @@
 use defuse_crypto::ed25519::Ed25519PublicKey;
-use defuse_wallet::{RequestMessage, offchain::OffchainMessage, readable_message};
+use defuse_wallet::{RequestMessage, offchain::OffchainMessage};
 use serde_json::{Map, Value, json};
 
-pub use defuse_wallet::readable_message::{
-    MAX_SIGNING_MESSAGE_BYTES, OFFCHAIN_PREFIX, REQUEST_PREFIX,
-};
+pub use defuse_wallet_readable::{MAX_SIGNING_MESSAGE_BYTES, OFFCHAIN_PREFIX, REQUEST_PREFIX};
 
 /// A message cannot be signed by this schema.
 #[derive(Debug, thiserror::Error)]
 pub enum MessageError {
     #[error(transparent)]
-    Readable(#[from] readable_message::MessageError),
+    Readable(#[from] defuse_wallet_readable::MessageError),
     #[error("text must be ASCII without DEL")]
     Text,
     #[error("a wallet would show the message differently than it is signed")]
@@ -33,7 +31,8 @@ pub fn request_signing_message(
     msg: &RequestMessage,
 ) -> Result<String, MessageError> {
     let address = stellar_address(public_key);
-    let text = readable_message::request_signing_message(&[("stellar_address", &address)], msg)?;
+    let text =
+        defuse_wallet_readable::request_signing_message(&[("stellar_address", &address)], msg)?;
     document(REQUEST_PREFIX, &text)
 }
 
@@ -43,7 +42,8 @@ pub fn offchain_signing_message(
     msg: &OffchainMessage,
 ) -> Result<String, MessageError> {
     let address = stellar_address(public_key);
-    let text = readable_message::offchain_signing_message(&[("stellar_address", &address)], msg)?;
+    let text =
+        defuse_wallet_readable::offchain_signing_message(&[("stellar_address", &address)], msg)?;
     document(OFFCHAIN_PREFIX, &text)
 }
 
@@ -76,8 +76,8 @@ fn document(prefix: &str, text: &str) -> Result<String, MessageError> {
     }
     let document = Value::Object(document);
     shown_as_signed(&document)?;
-    let mut message =
-        serde_json::to_string_pretty(&document).map_err(readable_message::MessageError::from)?;
+    let mut message = serde_json::to_string_pretty(&document)
+        .map_err(defuse_wallet_readable::MessageError::from)?;
     message.push('\n');
     if message.len() > MAX_SIGNING_MESSAGE_BYTES {
         return Err(MessageError::TooLarge);

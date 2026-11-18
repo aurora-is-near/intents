@@ -2,8 +2,8 @@ use std::{fmt::Write, time::Duration};
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 use defuse_sep53::Sep53;
-use defuse_wallet::readable_message;
 use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
+use defuse_wallet_readable as readable_message;
 use defuse_wallet_stellar::{
     MessageError, WalletStellar,
     crypto::ed25519::{
@@ -90,8 +90,6 @@ fn execution_fields_are_bound() {
             json!("other.near"),
         ),
         ("/request/internal/1/op", json!("add_extension")),
-        ("/request/internal/2/payload/decimals", json!(17)),
-        ("/request/internal/2/payload/symbol", json!("TKM")),
         (
             "/request/external/0/actions/0/payload/function_name",
             json!("other"),
@@ -100,7 +98,8 @@ fn execution_fields_are_bound() {
             "/request/external/0/actions/0/payload/args",
             json!("eyJyZWNlaXZlcl9pZCI6Im90aGVyLm5lYXIiLCJhbW91bnQiOiIyIn0="),
         ),
-        ("/request/external/0/actions/0/payload/deposit", json!("2")),
+        // The generic call: another deposit of a token transfer is not signable at all.
+        ("/request/external/0/actions/1/payload/deposit", json!("2")),
         ("/request/external/0/actions/0/payload/gas", json!("1")),
         (
             "/request/external/0/actions/0/payload/gas_weight",
@@ -109,7 +108,14 @@ fn execution_fields_are_bound() {
     ];
     for (pointer, value) in mutations {
         let mut changed = original.clone();
-        *changed.pointer_mut(pointer).unwrap() = value;
+        // Optional fields may be absent in the wire input, but their defaults are signed.
+        let (parent, field) = pointer.rsplit_once('/').unwrap();
+        changed
+            .pointer_mut(parent)
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .insert(field.to_owned(), value);
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
         assert_ne!(
             request_signing_message(&key(v), &msg).expect("mutation must render"),
@@ -139,22 +145,16 @@ fn execution_fields_are_bound() {
             v["proof"].as_str().unwrap()
         ));
     }
-    // Move the metadata requirement and receiver together; the original proof must fail.
+    // The token contract is part of the signature.
     let mut moved: RequestMessage = serde_json::from_value(original.clone()).unwrap();
-    let defuse_wallet::WalletOp::RequireFtMetadata { token_id, .. } =
-        &mut moved.request.internal[2]
-    else {
-        unreachable!()
-    };
-    *token_id = "other.near".parse().unwrap();
-    moved.request.external[0].receiver_id = token_id.clone();
+    moved.request.external[0].receiver_id = "other.near".parse().unwrap();
     request_signing_message(&key(v), &moved).unwrap();
     assert!(!WalletStellar::verify_request_msg(
         &key(v),
         &moved,
         v["proof"].as_str().unwrap()
     ));
-    // A native transfer has no token-metadata coupling.
+    // The native transfer recipient is bound as well.
     let transfer = &all[1];
     let mut msg: RequestMessage = serde_json::from_value(transfer["msg"].clone()).unwrap();
     msg.request.external[0].receiver_id = "other.near".parse().unwrap();
@@ -244,7 +244,11 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
     let v = &all[0];
     let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
     let valid = v["proof"].as_str().unwrap();
-    assert!(valid.ends_with("Cw=="));
+    // The last character before the padding carries four unused bits.
+    let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let at = alphabet.find(&valid[85..86]).unwrap();
+    let noncanonical = format!("{}{}==", &valid[..85], &alphabet[at + 1..at + 2]);
+    assert_eq!(valid.len(), 88);
     let signature = STANDARD.decode(valid).unwrap();
     for proof in [
         String::new(),
@@ -253,8 +257,11 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
         // Other encodings of the valid signature.
         valid.trim_end_matches('=').to_owned(),
         // Nonzero unused bits in the last character.
-        valid.replace("Cw==", "Cx=="),
-        base64::engine::general_purpose::URL_SAFE.encode(&signature),
+        noncanonical,
+        // The URL-safe alphabet (differs when the proof has `+` or `/`).
+        base64::engine::general_purpose::URL_SAFE
+            .encode(&signature)
+            .replacen('A', "-", usize::from(!valid.contains(['+', '/']))),
         format!(" {}", &valid[1..]),
         defuse_wallet_stellar::crypto::ed25519::Ed25519Signature(
             signature.clone().try_into().unwrap(),
@@ -452,7 +459,7 @@ fn nesting_is_bounded_by_size() {
             Err(error) => panic!("depth {depth}: {error}"),
         }
     }
-    assert_eq!(deepest, 82);
+    assert_eq!(deepest, 81);
 }
 
 #[test]
@@ -518,32 +525,6 @@ fn readable_and_digest_signatures_are_not_interchangeable() {
             &STANDARD.encode(signing.sign(&prehash).to_bytes())
         ));
     }
-}
-
-#[tokio::test]
-async fn metadata_token_id_is_bound_without_a_transfer() {
-    use defuse_wallet_sdk::WalletSigner;
-    use defuse_wallet_stellar::WalletStellarSigner;
-    let signer = WalletStellarSigner(SigningKey::from_bytes(&[42; 32]));
-    let mut msg: RequestMessage = serde_json::from_value(vectors()[2]["msg"].clone()).unwrap();
-    msg.request.external.clear();
-    let proof = signer.sign_request_msg(&msg).await.unwrap();
-    assert!(WalletStellar::verify_request_msg(
-        &signer.public_key(),
-        &msg,
-        &proof
-    ));
-    let defuse_wallet::WalletOp::RequireFtMetadata { token_id, .. } = &mut msg.request.internal[2]
-    else {
-        unreachable!()
-    };
-    *token_id = "other.near".parse().unwrap();
-    request_signing_message(&signer.public_key(), &msg).unwrap();
-    assert!(!WalletStellar::verify_request_msg(
-        &signer.public_key(),
-        &msg,
-        &proof
-    ));
 }
 
 /// The SDK signer returns what an independent SEP-53 implementation signs.

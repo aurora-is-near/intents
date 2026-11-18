@@ -1,7 +1,7 @@
 # Stellar wallet contract
 
 NEAR wallet contract controlled by a **Stellar Ed25519 key**. The key signs
-the [readable signing format](../../README.md#readable-signing-format-v1),
+the [readable signing format](../readable/README.md#format-v1),
 wrapped into one JSON document, with the wallet's `signMessage` API
 ([SEP-53](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0053.md)),
 e.g. Freighter's. It is a separate variant from the digest-signing Ed25519 one
@@ -23,11 +23,12 @@ document with a final LF:
   "about": [
     "NEAR Wallet Contract: execute request (v1)",
     "This signature authorizes NEAR wallet operations, not a login.",
+    "NEAR amounts and deposits are in yoctoNEAR; FT amounts are in token base units.",
     "Gas is in gas units.",
     "Function arguments and deployment state may be opaque: verify them before signing."
   ],
   "warnings": [
-    "WARNING: up to 1 NEAR sent to bob.near can be refunded to refund.near, not to this wallet."
+    "WARNING: up to 1000000000000000000000000 yoctoNEAR sent to bob.near can be refunded to refund.near, not to this wallet."
   ],
   "chain_id": "mainnet",
   "signer_id": "wallet.near",
@@ -45,7 +46,7 @@ document with a final LF:
         "actions": [
           {
             "action": "transfer",
-            "amount": "1 NEAR"
+            "amount": "1000000000000000000000000"
           }
         ]
       }
@@ -61,7 +62,7 @@ actually displays. Function arguments and nested `w_execute_extension`
 requests are JSON objects in it, not strings. The adapter rejects these
 inputs to keep the document within the modeled display constraints:
 
-- text with DEL or non-ASCII characters (in function arguments, token symbols,
+- text with DEL or non-ASCII characters (in function arguments, method names,
   the NEP-641 payload, `chain_id`): the readable format escapes them as
   `\uXXXX`, and the wallet would show the characters themselves, including
   bidirectional controls and look-alike letters;
@@ -94,20 +95,22 @@ wallet's extension and signature controls to manage that authority.
 Only a `G...` public-key identity is represented; contract (`C...`) and muxed
 (`M...`) addresses are not supported signing identities. Before showing the
 derived account as a deposit destination,
-[verify control](../../README.md#verify-control-before-funding) of the key.
+[verify control](../readable/README.md#verify-control-before-funding) of the key.
 
 ## Clear signing
 
 The contract rebuilds and verifies the document intended for the wallet
 prompt. Whether a particular wallet displays it completely and understandably
 requires a real-wallet check. What the document does not decode is listed with the
-[format](../../README.md#readable-signing-format-v1): JSON inside a string
+[format](../readable/README.md#format-v1): JSON inside a string
 value (such as `msg` of `ft_transfer_call` or the NEP-641 payload) stays an
 escaped string.
 
-The rendering model was inspected in [Freighter's signing component at
-revision c1a8b4099069784cd4660be80b7b7a3bed512f86](https://github.com/stellar/freighter/blob/c1a8b4099069784cd4660be80b7b7a3bed512f86/extension/src/popup/components/signMessage/index.tsx):
-the source package version is 5.53.0 and its JSON renderer is
-`react-json-pretty` 2.2.0. These identify the inspected source, not a tested
-installed wallet. Tests reproduce the serialization model only. Display in a
-real wallet, on hardware wallets and in other Stellar wallets is **unverified**.
+Display in a real wallet, on hardware wallets and in other Stellar wallets is
+**unverified**.
+
+## Build
+
+```sh
+make defuse-wallet-stellar
+```
