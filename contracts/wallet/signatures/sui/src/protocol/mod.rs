@@ -77,9 +77,7 @@ impl SuiPublicKey {
 
     /// Native Sui `flag || public_key` bytes.
     pub fn to_sui_bytes(&self) -> Vec<u8> {
-        let mut bytes = vec![self.flag()];
-        bytes.extend_from_slice(self.raw_bytes());
-        bytes
+        [&[self.flag()], self.raw_bytes()].concat()
     }
 
     /// Canonical base64 of native Sui public-key bytes, without the `sui:` tag.
@@ -129,7 +127,9 @@ impl SuiPublicKey {
         message: impl FnOnce() -> Option<M>,
         proof: &str,
     ) -> bool {
-        if proof.len() != 132 {
+        // Both 97-byte Ed25519 and 98-byte ECDSA proofs use 132 padded base64 characters.
+        const PERSONAL_MESSAGE_PROOF_BASE64_LEN: usize = 132;
+        if proof.len() != PERSONAL_MESSAGE_PROOF_BASE64_LEN {
             return false;
         }
         let Ok(bytes) = STANDARD.decode(proof) else {

@@ -33,11 +33,6 @@ fn real_slush_personal_message_signatures_verify() {
         assert!(key.verify_personal_message(signed.as_bytes(), proof));
         // The signature covers the final LF.
         assert!(!key.verify_personal_message(signed.trim_end().as_bytes(), proof));
-        // A proof signs only its own message.
-        for other in captures.iter().filter(|other| *other != capture) {
-            let other = other["signingMessage"].as_str().unwrap();
-            assert!(!key.verify_personal_message(other.as_bytes(), proof));
-        }
         let prompt = lines(capture["prompt"].as_str().unwrap());
         let start = prompt.iter().position(|line| *line == "Message").unwrap() + 1;
         let end = prompt.iter().rposition(|line| *line == "Reject").unwrap();
@@ -53,6 +48,14 @@ fn real_slush_personal_message_signatures_verify() {
             }
             "offchain" => {
                 let msg: OffchainMessage = serde_json::from_value(capture["msg"].clone()).unwrap();
+                // Exercise rejection even when there is only one capture. Payload bytes are opaque.
+                let mut changed = msg.clone();
+                changed.payload.push(' ');
+                let changed_text = offchain_signing_message(&key, &changed).unwrap();
+                assert_ne!(changed_text, signed);
+                assert!(!WalletSui::<Ed25519>::verify_offchain_msg(
+                    &key, &changed, proof
+                ));
                 (
                     offchain_signing_message(&key, &msg).unwrap(),
                     WalletSui::<Ed25519>::verify_offchain_msg(&key, &msg, proof),
