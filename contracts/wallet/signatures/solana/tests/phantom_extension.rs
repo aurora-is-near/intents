@@ -31,17 +31,21 @@ fn real_phantom_signatures_verify() {
         serde_json::from_str(include_str!("fixtures/phantom-extension.json")).unwrap();
     let vectors = fixture["vectors"].as_array().unwrap();
     assert_eq!(vectors.len(), 4);
+
     for v in vectors {
         let key = public_key(v);
         let proof = v["proof"].as_str().unwrap();
         let signed = v["message"].as_str().unwrap();
         assert!(signs(&key, signed, proof));
+
         // The signature covers the final LF.
         assert!(!signs(&key, signed.trim_end(), proof));
+
         // A proof signs only its own message.
         for other in vectors.iter().filter(|other| *other != v) {
             assert!(!signs(&key, other["message"].as_str().unwrap(), proof));
         }
+
         // The contract renders exactly that text and accepts the proof.
         let (rendered, verified) = if v["kind"] == "request" {
             let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
@@ -56,6 +60,7 @@ fn real_phantom_signatures_verify() {
                 WalletSolana::verify_offchain_msg(&key, &msg, proof),
             )
         };
+
         assert_eq!(rendered, signed);
         assert!(verified);
     }

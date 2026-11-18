@@ -9,6 +9,7 @@ fn malformed_proof_skips_message_provider() {
     let vector = &vectors["vectors"][0];
     let key: Ed25519PublicKey = vector["public_key"].as_str().unwrap().parse().unwrap();
     let proof = vector["proof"].as_str().unwrap();
+
     for proof in [
         String::new(),
         "ed25519:".to_owned(),
@@ -34,11 +35,15 @@ fn valid_proofs_cover_base58_limits_and_render_once() {
     let vectors: serde_json::Value =
         serde_json::from_str(include_str!("../tests/fixtures/solana.json")).unwrap();
     let mut encoded_lengths = BTreeSet::new();
+
     for vector in vectors["vectors"].as_array().unwrap() {
         let key: Ed25519PublicKey = vector["public_key"].as_str().unwrap().parse().unwrap();
         let proof = vector["proof"].as_str().unwrap();
+
         encoded_lengths.insert(proof.strip_prefix("ed25519:").unwrap().len());
+
         let calls = Cell::new(0);
+
         assert!(WalletSolana::verify(
             &key,
             || {
@@ -68,12 +73,14 @@ fn signature_length_and_leading_zeroes_are_checked_before_rendering() {
         .unwrap()
         .parse()
         .unwrap();
+
     for size in [63, 64, 65] {
         for zeroes in 0..=size {
             let mut bytes = vec![255; size];
             bytes[..zeroes].fill(0);
             let proof = format!("ed25519:{}", bs58::encode(bytes).into_string());
             let calls = Cell::new(0);
+
             // Stop before crypto: this isolates the decoded-size boundary.
             assert!(!WalletSolana::verify(
                 &key,
@@ -88,6 +95,7 @@ fn signature_length_and_leading_zeroes_are_checked_before_rendering() {
                 usize::from(size == 64),
                 "size={size}, zeroes={zeroes}"
             );
+
             if size == 64 {
                 assert!(proof.len() <= 96);
             }

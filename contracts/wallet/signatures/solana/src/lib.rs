@@ -42,12 +42,14 @@ impl WalletSolana {
         if proof.len() > MAX_PROOF_LEN || !proof.starts_with(PREFIX) {
             return false;
         }
+
         let (Ok(key), Ok(signature)) = (
             <Ed25519 as Curve>::PublicKey::try_from(public_key),
             Ed25519Signature::from_str(proof),
         ) else {
             return false;
         };
+
         message().is_ok_and(|message| Ed25519::verify(&key, message.as_bytes(), &signature.into()))
     }
 }

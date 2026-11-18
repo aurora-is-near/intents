@@ -28,6 +28,7 @@ fn independent_openssl_vectors() {
     for v in vectors() {
         let public_key = key(&v);
         let proof = v["proof"].as_str().unwrap();
+
         if v["kind"] == "request" {
             let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
             assert_eq!(
@@ -80,6 +81,7 @@ fn execution_fields_are_bound() {
             json!("1"),
         ),
     ];
+
     for (pointer, value) in mutations {
         let mut changed = original.clone();
         // Optional fields may be absent in the wire input, but their defaults are signed.
@@ -91,6 +93,7 @@ fn execution_fields_are_bound() {
             .unwrap()
             .insert(field.to_owned(), value);
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
+
         assert_ne!(
             request_signing_message(&key(v), &msg).expect("mutation must render"),
             v["message"]
@@ -100,6 +103,7 @@ fn execution_fields_are_bound() {
             "accepted {pointer}"
         );
     }
+
     for pointer in ["/request/internal", "/request/external/0/actions"] {
         let mut changed = original.clone();
         changed
@@ -121,18 +125,23 @@ fn execution_fields_are_bound() {
     }
     // The token contract is part of the signature.
     let mut moved: RequestMessage = serde_json::from_value(original.clone()).unwrap();
+
     moved.request.external[0].receiver_id = "other.near".parse().unwrap();
     request_signing_message(&key(v), &moved).unwrap();
+
     assert!(!WalletSolana::verify_request_msg(
         &key(v),
         &moved,
         v["proof"].as_str().unwrap()
     ));
+
     // The native transfer recipient is bound independently as well.
     let transfer = &all[1];
     let mut msg: RequestMessage = serde_json::from_value(transfer["msg"].clone()).unwrap();
+
     msg.request.external[0].receiver_id = "other.near".parse().unwrap();
     request_signing_message(&key(transfer), &msg).unwrap();
+
     assert!(!WalletSolana::verify_request_msg(
         &key(transfer),
         &msg,
@@ -143,6 +152,7 @@ fn execution_fields_are_bound() {
 #[test]
 fn transfer_refund_and_state_init_are_bound() {
     let all = vectors();
+
     for (index, pointer, value) in [
         (1, "/request/external/0/refund_to", json!("other.near")),
         (
@@ -185,6 +195,7 @@ fn transfer_refund_and_state_init_are_bound() {
 fn offchain_fields_are_bound_without_normalizing_payload() {
     let all = vectors();
     let v = &all[5];
+
     for (pointer, value) in [
         ("/chain_id", json!("mainnet")),
         ("/signer_id", json!("other.near")),
@@ -201,6 +212,7 @@ fn offchain_fields_are_bound_without_normalizing_payload() {
         let mut changed = v["msg"].clone();
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: OffchainMessage = serde_json::from_value(changed).unwrap();
+
         assert_ne!(
             offchain_signing_message(&key(v), &msg).expect("mutation must render"),
             v["message"]
@@ -217,6 +229,7 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
     let all = vectors();
     let v = &all[0];
     let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
     for proof in [
         "",
         "ed25519:",
@@ -231,14 +244,18 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
         &msg,
         v["proof"].as_str().unwrap()
     ));
+
     // With the identity point as the key, R = identity and s = 0 satisfy the
     // Ed25519 equation for every message (the NEAR host function accepts
     // such a forgery); only the weak-key check rejects it.
     let mut identity = [0; 32];
     identity[0] = 1;
+
     let mut forged = [0; 64];
     forged[0] = 1;
+
     let message = request_signing_message(&Ed25519PublicKey(identity), &msg).unwrap();
+
     assert!(
         VerifyingKey::from_bytes(&identity)
             .unwrap()
@@ -263,25 +280,33 @@ fn limits_and_ambiguous_timeout_are_rejected() {
     let all = vectors();
     let v = &all[0];
     let mut msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
     msg.timeout = Duration::from_nanos(1);
+
     assert!(request_signing_message(&key(v), &msg).is_err());
     assert!(!WalletSolana::verify_request_msg(
         &key(v),
         &msg,
         v["proof"].as_str().unwrap()
     ));
+
     msg.timeout = Duration::from_secs(u64::from(u32::MAX) + 1);
+
     assert!(request_signing_message(&key(v), &msg).is_err());
     assert!(!WalletSolana::verify_request_msg(
         &key(v),
         &msg,
         v["proof"].as_str().unwrap()
     ));
+
     let mut auth: OffchainMessage = serde_json::from_value(all[4]["msg"].clone()).unwrap();
     auth.payload = "x".repeat(16 * 1024);
+
     assert!(offchain_signing_message(&key(v), &auth).is_err());
+
     auth.payload = "bidi\u{202e} and emoji 🌍".to_string();
     let rendered = offchain_signing_message(&key(v), &auth).unwrap();
+
     assert!(rendered.is_ascii());
     assert!(rendered.contains("\\u202e"));
     assert!(rendered.contains("\\ud83c\\udf0d"));
@@ -289,13 +314,14 @@ fn limits_and_ambiguous_timeout_are_rejected() {
 
 #[test]
 fn state_init_fixture_uses_derived_receiver() {
-    let table: serde_json::Value =
-        serde_json::from_str(include_str!("fixtures/solana.json")).unwrap();
+    let table: Value = serde_json::from_str(include_str!("fixtures/solana.json")).unwrap();
+
     for v in table["vectors"].as_array().unwrap() {
         if v["kind"] != "request" {
             continue;
         }
-        let msg: defuse_wallet::RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+        let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
         for promise in msg.request.external {
             for action in promise.actions {
                 if let defuse_wallet::actions::NearAction::DeterministicStateInit(init) = action {
@@ -315,6 +341,7 @@ fn readable_and_digest_signatures_are_not_interchangeable() {
     let msg: RequestMessage = serde_json::from_value(all[0]["msg"].clone()).unwrap();
     let digest_proof = Ed25519Signature::from(signing.sign(&msg.hash())).to_string();
     assert!(!WalletSolana::verify_request_msg(&pk, &msg, &digest_proof));
+
     let readable = signing.sign(request_signing_message(&pk, &msg).unwrap().as_bytes());
     assert!(
         signing
@@ -327,10 +354,12 @@ fn readable_and_digest_signatures_are_not_interchangeable() {
         &msg,
         &Ed25519Signature::from(readable).to_string()
     ));
+
     // A message that cannot be rendered does not fall back to its digest.
     let mut unrenderable = msg;
     unrenderable.timeout = Duration::from_nanos(1);
     assert!(request_signing_message(&pk, &unrenderable).is_err());
+
     let digest_proof = Ed25519Signature::from(signing.sign(&unrenderable.hash())).to_string();
     assert!(!WalletSolana::verify_request_msg(
         &pk,
@@ -346,6 +375,7 @@ fn readable_and_digest_signatures_are_not_interchangeable() {
 fn derived_accounts_match_known_answers() {
     use defuse_wallet::{GlobalContractId, State, StateInit, StateInitV1};
     let all = vectors();
+
     for (index, subwallet_id, timeout, expected) in [
         (0, 0, 3600, "0s7956b08ff10093c0ae71a67bee136d5f95e474e0"),
         (0, 1, 3600, "0sb2bb10b40eef60b31d55e2db6e2ff2dc5fc3dc45"),

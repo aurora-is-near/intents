@@ -24,7 +24,7 @@ async fn call(
         .args_raw(args)
         .deposit(deposit)
         .gas(gas)
-        .finish()
+        .send()
         .wait_until::<Final>()
         .await
         .unwrap()
@@ -35,9 +35,12 @@ async fn call(
 /// its replay is rejected.
 pub async fn check(near: &Near, account: &AccountId, msg: &RequestMessage, proof: &str) {
     let mut padded = serde_json::to_value(msg).unwrap();
+
     padded["max_spend"] = "1".into();
     padded["request"]["unused"] = true.into();
+
     let args = serde_json::to_vec(&json!({"msg": padded, "proof": proof, "unused": true})).unwrap();
+
     call(
         near,
         account,
@@ -49,6 +52,7 @@ pub async fn check(near: &Near, account: &AccountId, msg: &RequestMessage, proof
     .await
     .result()
     .unwrap();
+
     let args = serde_json::to_vec(&json!({"msg": msg, "proof": proof})).unwrap();
     let replay = call(
         near,
@@ -59,6 +63,7 @@ pub async fn check(near: &Near, account: &AccountId, msg: &RequestMessage, proof
         Gas::from_tgas(40),
     )
     .await;
+
     assert!(format!("{:?}", replay.status).contains("already been used"));
 }
 
@@ -95,6 +100,7 @@ pub async fn context<S: SignatureSchema>(
             msg.pay_for_gas = true;
         }),
     ];
+
     for (index, (reason, change)) in changes.into_iter().enumerate() {
         let mut msg = original.clone();
         change(&mut msg);

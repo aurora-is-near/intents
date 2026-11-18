@@ -27,6 +27,7 @@ impl<S: Signer<Ed25519>> WalletSolanaSigner<S> {
             .sign(message.as_bytes())
             .await
             .map_err(SignError::Signer)?;
+
         Ok(Ed25519Signature::from(signature).to_string())
     }
 }
