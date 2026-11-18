@@ -14,10 +14,8 @@ use defuse_crypto::ed25519::{Ed25519, Ed25519PublicKey};
 use defuse_crypto::p256::{P256, P256CompressedPublicKey};
 #[cfg(feature = "secp256k1")]
 use defuse_crypto::secp256k1::{Secp256k1, Secp256k1CompressedPublicKey};
-mod hash;
 #[cfg(any(feature = "p256", feature = "secp256k1"))]
 use defuse_digest::{Digest, sha2::Sha256};
-use hash::blake2b256;
 
 pub use defuse_crypto as crypto;
 
@@ -127,34 +125,41 @@ impl SuiPublicKey {
         message: impl FnOnce() -> Option<M>,
         proof: &str,
     ) -> bool {
-        // Both 97-byte Ed25519 and 98-byte ECDSA proofs use 132 padded base64 characters.
-        const PERSONAL_MESSAGE_PROOF_BASE64_LEN: usize = 132;
-        if proof.len() != PERSONAL_MESSAGE_PROOF_BASE64_LEN {
+        const SIGNATURE_LEN: usize = 64;
+        const PUBLIC_KEY_OFFSET: usize = 1 + SIGNATURE_LEN;
+
+        let expected_len = PUBLIC_KEY_OFFSET + self.raw_bytes().len();
+
+        if Some(proof.len()) != base64::encoded_len(expected_len, true) {
             return false;
         }
+
         let Ok(bytes) = STANDARD.decode(proof) else {
             return false;
         };
-        if bytes.len() != 65 + self.raw_bytes().len()
+
+        if bytes.len() != expected_len
             || bytes[0] != self.flag()
-            || &bytes[65..] != self.raw_bytes()
-            || STANDARD.encode(&bytes) != proof
+            || &bytes[PUBLIC_KEY_OFFSET..] != self.raw_bytes()
         {
             return false;
         }
+
         let Some(message) = message() else {
             return false;
         };
         let Some(digest) = personal_message_digest(message.as_ref()) else {
             return false;
         };
+        let signature = &bytes[1..PUBLIC_KEY_OFFSET];
+
         match self.flag() {
             #[cfg(feature = "ed25519")]
-            0 => verify::<Ed25519>(self.raw_bytes(), &digest, &bytes[1..65]),
+            0 => verify::<Ed25519>(self.raw_bytes(), &digest, signature),
             #[cfg(feature = "secp256k1")]
-            1 => verify::<Secp256k1>(self.raw_bytes(), &Sha256::digest(digest), &bytes[1..65]),
+            1 => verify::<Secp256k1>(self.raw_bytes(), &Sha256::digest(digest), signature),
             #[cfg(feature = "p256")]
-            2 => verify::<P256>(self.raw_bytes(), &Sha256::digest(digest), &bytes[1..65]),
+            2 => verify::<P256>(self.raw_bytes(), &Sha256::digest(digest), signature),
             _ => false,
         }
     }
@@ -183,9 +188,8 @@ impl SuiPublicKey {
 
     /// Serialize a 64-byte signature in the native Sui proof format.
     pub fn encode_signature(&self, signature: &[u8; 64]) -> String {
-        let mut bytes = vec![self.flag()];
-        bytes.extend_from_slice(signature);
-        bytes.extend_from_slice(self.raw_bytes());
+        let bytes = [&[self.flag()], signature.as_ref(), self.raw_bytes()].concat();
+
         STANDARD.encode(bytes)
     }
 }
@@ -199,6 +203,7 @@ where
     else {
         return false;
     };
+
     C::verify(&key, digest, &signature)
 }
 
@@ -213,13 +218,17 @@ impl FromStr for SuiPublicKey {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let encoded = s.strip_prefix("sui:").ok_or(PublicKeyError)?;
+
         if encoded.len() > 48 {
             return Err(PublicKeyError);
         }
+
         let bytes = STANDARD.decode(encoded).map_err(|_| PublicKeyError)?;
+
         if STANDARD.encode(&bytes) != encoded {
             return Err(PublicKeyError);
         }
+
         Self::from_sui_bytes(&bytes)
     }
 }
@@ -270,6 +279,7 @@ pub trait SuiScheme: sealed::Sealed + Curve + Send + Sync + 'static {
 #[cfg(feature = "ed25519")]
 impl SuiScheme for Ed25519 {
     const FLAG: u8 = 0;
+
     fn parse_public_key(bytes: &[u8]) -> Option<Self::PublicKey> {
         let key: Self::PublicKey = (&Ed25519PublicKey(bytes.try_into().ok()?))
             .try_into()
@@ -292,18 +302,22 @@ macro_rules! ecdsa_scheme {
     ($curve:ty, $stored:ident, $variant:ident, $flag:literal) => {
         impl SuiScheme for $curve {
             const FLAG: u8 = $flag;
+
             fn parse_public_key(bytes: &[u8]) -> Option<Self::PublicKey> {
                 if !matches!(bytes.first(), Some(0x02 | 0x03)) {
                     return None;
                 }
                 (&$stored(bytes.try_into().ok()?)).try_into().ok()
             }
+
             fn sui_public_key(key: Self::PublicKey) -> SuiPublicKey {
                 SuiPublicKey::$variant($stored::from(key).0)
             }
+
             fn signature_bytes(signature: Self::Signature) -> [u8; 64] {
                 signature.to_bytes().into()
             }
+
             fn signing_digest(digest: [u8; 32]) -> [u8; 32] {
                 Sha256::digest(digest).into()
             }
@@ -314,3 +328,11 @@ macro_rules! ecdsa_scheme {
 ecdsa_scheme!(Secp256k1, Secp256k1CompressedPublicKey, Secp256k1, 1);
 #[cfg(feature = "p256")]
 ecdsa_scheme!(P256, P256CompressedPublicKey, Secp256r1, 2);
+
+/// BLAKE2b-256 with its native 32-byte output parameter (not truncated BLAKE2b-512).
+/// Uses the vetted `RustCrypto` backend on both NEAR/WASM and native targets.
+/// Hash bytes using `BLAKE2b` with a 32-byte output parameter.
+fn blake2b256(data: impl AsRef<[u8]>) -> [u8; 32] {
+    use ::blake2::{Blake2b, Digest, digest::consts::U32};
+    Blake2b::<U32>::digest(data).into()
+}

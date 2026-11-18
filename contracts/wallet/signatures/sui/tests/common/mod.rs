@@ -7,6 +7,7 @@ use defuse_wallet_sui::{
 // Test-only dispatch lets one fixture table exercise three concrete schemas.
 // No universal contract variant is built from this helper.
 pub struct TestSui;
+
 impl SignatureSchema for TestSui {
     type PublicKey = SuiPublicKey;
     fn verify_request_msg(key: &SuiPublicKey, msg: &RequestMessage, proof: &str) -> bool {

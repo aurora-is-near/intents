@@ -327,6 +327,7 @@ async fn check_state_init_deposit<C: SuiScheme>(
                 .gas(Gas::from_tgas(30)),
         );
     let outcome = execute(near, wallet, attempt).await;
+
     assert!(
         outcome
             .receipts_outcome
@@ -350,6 +351,7 @@ async fn check_state_init_deposit<C: SuiScheme>(
             .deterministic_state_init(init.clone(), deposit),
     )
     .await;
+
     assert_eq!(near.balance(&token).await.unwrap().total, NearToken::ZERO);
     assert_eq!(
         near.balance(refund_to).await.unwrap().total,
@@ -390,6 +392,7 @@ where
         .build(code_hash, signer.clone())
         .with_client(near.clone())
         .with_relayer(near.clone());
+
     near.transaction(wallet.account_id())
         .state_init(wallet.deterministic_state_init().clone(), NearToken::ZERO)
         .send()
@@ -398,12 +401,14 @@ where
         .unwrap()
         .result()
         .unwrap();
+
     let before = near
         .account(wallet.account_id())
         .await
         .unwrap()
         .storage_usage;
     let (msg, proof) = wallet.sign(Request::new()).await.unwrap();
+
     assert!(
         <WalletSui<C> as defuse_wallet::SignatureSchema>::verify_request_msg(
             &wallet.public_key(),
@@ -411,6 +416,7 @@ where
             &proof,
         )
     );
+
     let error = near
         .contract::<WalletContract>(wallet.account_id())
         .w_execute_signed((&msg, proof.as_str()).into())
@@ -419,6 +425,7 @@ where
         .unwrap()
         .result()
         .expect_err("another scheme cannot authorize this global contract");
+
     assert!(error.to_string().contains("invalid signature"), "{error:?}");
     assert_eq!(
         near.account(wallet.account_id())
@@ -427,6 +434,7 @@ where
             .storage_usage,
         before
     );
+
     let msg = defuse_wallet::offchain::OffchainMessage {
         chain_id: wallet.chain_id().clone(),
         signer_id: wallet.account_id().clone(),
@@ -435,6 +443,7 @@ where
         payload: "wrong global scheme".to_owned(),
     };
     let proof = signer.sign_offchain_msg(&msg).await.unwrap();
+
     assert!(
         <WalletSui<C> as defuse_wallet::SignatureSchema>::verify_offchain_msg(
             &wallet.public_key(),
@@ -442,12 +451,14 @@ where
             &proof,
         )
     );
+
     let authorization = String::from(defuse_wallet::WalletAuthorization::Signature { msg, proof });
     let resolver = RpcResolver::new(near.rpc().clone()).await.unwrap();
     let error = resolver
         .resolve_auth(wallet.account_id(), &authorization)
         .await
         .unwrap_err();
+
     assert!(
         format!("{error:?}").contains("invalid signature"),
         "{error:?}"
@@ -463,6 +474,7 @@ async fn check_nonce_rollback_and_replay<C: SuiScheme>(near: &Near, wallet: &Wal
         .gas(Gas::from_tgas(30))
         .await
         .unwrap();
+
     failed.result().expect_err("invalid proof must fail");
     contract
         .w_execute_signed((&msg, proof.as_str()).into())
@@ -490,6 +502,7 @@ async fn check_lockout_and_rotation<C: SuiScheme>(
     let contract = near.contract::<WalletContract>(wallet.account_id());
     // Lockout and external self-call checks remain enforced by the shared core.
     let (msg, proof) = wallet.sign(WalletOp::disable_signature()).await.unwrap();
+
     contract
         .w_execute_signed((&msg, proof.as_str()).into())
         .gas(Gas::from_tgas(30))
@@ -497,10 +510,12 @@ async fn check_lockout_and_rotation<C: SuiScheme>(
         .unwrap()
         .result()
         .expect_err("last authentication method cannot be disabled");
+
     let (msg, proof) = wallet
         .sign(NearPromise::new(wallet.account_id()).transfer(NearToken::from_yoctonear(1)))
         .await
         .unwrap();
+
     contract
         .w_execute_signed((&msg, proof.as_str()).into())
         .gas(Gas::from_tgas(30))
@@ -517,7 +532,9 @@ async fn check_lockout_and_rotation<C: SuiScheme>(
     )
     .await;
     execute(near, &wallet, WalletOp::disable_signature()).await;
+
     let (msg, proof) = wallet.sign(Request::new()).await.unwrap();
+
     contract
         .w_execute_signed((&msg, proof.as_str()).into())
         .gas(Gas::from_tgas(30))
@@ -525,8 +542,10 @@ async fn check_lockout_and_rotation<C: SuiScheme>(
         .unwrap()
         .result()
         .expect_err("disabled signatures must fail");
+
     let extension = recipient.as_extension_of(wallet);
     execute(near, &extension, Request::new()).await;
+
     let authorization = extension.sign_offchain_msg(payload, None).await.unwrap();
     assert_eq!(
         resolver
@@ -549,7 +568,9 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
     use defuse_wallet_sui::{MAX_SIGNING_MESSAGE_BYTES, request_signing_message};
     let contract = near.contract::<WalletContract>(wallet.account_id());
     let (original, _) = wallet.sign(Request::new()).await.unwrap();
+
     entrypoints::context(near, wallet.account_id(), &original, signer).await;
+
     let with_payload = |length| {
         let mut msg = original.clone();
         msg.request = NearPromise::new(recipient.account_id())
@@ -564,6 +585,7 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
     };
     let key = wallet.public_key();
     let (mut low, mut high) = (0, MAX_SIGNING_MESSAGE_BYTES);
+
     while low + 1 < high {
         let middle = usize::midpoint(low, high);
         if request_signing_message(&key, &with_payload(middle)).is_ok() {
@@ -572,11 +594,14 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
             high = middle;
         }
     }
+
     let (msg, oversized) = (with_payload(low), with_payload(high));
     let length = request_signing_message(&key, &msg).unwrap().len();
+
     // Each ASCII padding byte adds exactly one display byte.
     assert_eq!(length, MAX_SIGNING_MESSAGE_BYTES);
     assert!(request_signing_message(&key, &oversized).is_err());
+
     let before = near
         .account(wallet.account_id())
         .await
@@ -588,7 +613,9 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
         .gas(Gas::from_tgas(80))
         .await
         .unwrap();
+
     failed.result().expect_err("oversized display must reject");
+
     assert_eq!(
         near.account(wallet.account_id())
             .await
@@ -597,24 +624,30 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
         before
     );
     let proof = signer.sign_request_msg(&msg).await.unwrap();
+
     if scheme != 0 {
         check_high_s_rejected(near, wallet, &msg, &proof, scheme).await;
     }
+
     let result = contract
         .w_execute_signed((&msg, proof.as_str()).into())
         .gas(Gas::from_tgas(80))
         .await
         .unwrap();
+
     result.result().unwrap();
+
     let after = near
         .account(wallet.account_id())
         .await
         .unwrap()
         .storage_usage;
+
     println!(
         "SUI_RESOURCE_PROFILE {}",
         serde_json::json!({"scheme":scheme,"message_bytes":length,"proof_bytes":proof.len(),"gas":result.total_gas_used().as_gas(),"oversized_rejection_gas":failed.total_gas_used().as_gas(),"storage_before":before,"storage_after":after})
     );
+
     contract
         .w_execute_signed((&msg, proof.as_str()).into())
         .gas(Gas::from_tgas(40))
@@ -635,6 +668,7 @@ async fn check_high_s_rejected<C: SuiScheme>(
     use base64::{Engine, engine::general_purpose::STANDARD};
     let contract = near.contract::<WalletContract>(wallet.account_id());
     let mut bytes = STANDARD.decode(proof).unwrap();
+
     macro_rules! high_s {
         ($curve:ident) => {{
             let signature = $curve::ecdsa::Signature::from_slice(&bytes[1..65]).unwrap();
@@ -644,13 +678,17 @@ async fn check_high_s_rejected<C: SuiScheme>(
                 .to_bytes()
         }};
     }
+
     let signature = match scheme {
         1 => high_s!(k256),
         2 => high_s!(p256),
         _ => unreachable!(),
     };
+
     bytes[1..65].copy_from_slice(&signature);
+
     let proof = STANDARD.encode(bytes);
+
     contract
         .w_execute_signed((msg, proof.as_str()).into())
         .gas(Gas::from_tgas(80))
@@ -673,42 +711,47 @@ async fn check_sparse_nonce_growth<C: SuiScheme, S: WalletSigner<WalletSui<C>>>(
         .await
         .unwrap()
         .storage_usage;
+    let gas = Gas::from_tgas(40);
+
     for page in 1..=4 {
         let mut msg = original.clone();
+
         msg.nonce = original.nonce.wrapping_add(page << 10);
         msg.request = Request::new();
+
         let proof = signer.sign_request_msg(&msg).await.unwrap();
+
         contract
             .w_execute_signed((&msg, proof.as_str()).into())
-            .gas(Gas::from_tgas(40))
+            .gas(gas)
             .await
             .unwrap()
             .result()
             .unwrap();
     }
+
     let after = near
         .account(wallet.account_id())
         .await
         .unwrap()
         .storage_usage;
+
     assert!(after > before);
+
     println!(
         "SUI_NONCE_STORAGE {}",
         serde_json::json!({"scheme":scheme,"new_pages":4,"before":before,"after":after})
     );
 }
 
-async fn check_public_entrypoints<C: SuiScheme>(
-    near: &near_kit::Near,
-    wallet: &Wallet<WalletSui<C>>,
-) {
+async fn check_public_entrypoints<C: SuiScheme>(near: &Near, wallet: &Wallet<WalletSui<C>>) {
     let (msg, proof) = wallet
-        .sign(defuse_wallet::WalletOp::add_extension(
-            near.account_id().clone(),
-        ))
+        .sign(WalletOp::add_extension(near.account_id().clone()))
         .await
         .unwrap();
+
     entrypoints::check(near, wallet.account_id(), &msg, &proof).await;
+
     // The later lockout check needs a wallet without extensions.
     execute(
         near,
