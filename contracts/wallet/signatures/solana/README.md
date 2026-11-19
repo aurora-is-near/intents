@@ -26,10 +26,8 @@ key.
 
 ## Limitations
 
-- The limits of the text are listed with the
-  [format](../readable/README.md#format-v1).
-- The display is confirmed for Phantom for Chrome. Other Solana wallets and
-  hardware wallets are unverified.
+The limits of the text are listed with the
+[format](../readable/README.md#format-v1).
 
 ## Build
 
