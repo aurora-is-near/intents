@@ -95,7 +95,6 @@ impl SuiPublicKey {
     }
 
     /// Parse native Sui public-key bytes, validating points and weak keys.
-    #[cfg(any(feature = "ed25519", feature = "secp256k1", feature = "p256"))]
     pub fn from_sui_bytes(bytes: &[u8]) -> Result<Self, PublicKeyError> {
         let key = match bytes {
             [0, rest @ ..] => Self::Ed25519(rest.try_into().map_err(|_| PublicKeyError)?),
@@ -121,7 +120,6 @@ impl SuiPublicKey {
     ///
     /// Only canonical padded base64 with the exact scheme-dependent length is
     /// accepted. ECDSA low-S checks and weak-key rejection use shared crypto.
-    #[cfg(any(feature = "ed25519", feature = "secp256k1", feature = "p256"))]
     pub fn verify_personal_message(&self, message: &[u8], proof: &str) -> bool {
         match self.flag() {
             #[cfg(feature = "ed25519")]
