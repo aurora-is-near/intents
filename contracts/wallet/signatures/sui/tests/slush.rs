@@ -15,8 +15,7 @@ fn real_slush_signatures_verify() {
     assert_eq!(vectors.len(), 5);
 
     for v in vectors {
-        let key: SuiPublicKey = v["public_key"].as_str().unwrap().parse().unwrap();
-        assert_eq!(key.flag(), 0);
+        let key: SuiPublicKey<Ed25519> = v["public_key"].as_str().unwrap().parse().unwrap();
 
         // Slush signed exactly the captured bytes as a Sui personal message.
         let proof = v["proof"].as_str().unwrap();

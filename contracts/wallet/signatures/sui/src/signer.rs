@@ -39,7 +39,7 @@ pub enum SignError<E> {
 impl<C: SuiScheme, S: Signer<C>> WalletSuiSigner<C, S> {
     async fn sign_message(&self, message: String) -> Result<Proof, SignError<S::Error>> {
         let digest = personal_message_digest(message.as_bytes()).ok_or(MessageError::TooLarge)?;
-        let public_key = C::sui_public_key(self.signer.public_key());
+        let public_key = SuiPublicKey::<C>::from_public_key(self.signer.public_key());
         let signature = self
             .signer
             .sign(&C::signing_digest(digest))
@@ -53,8 +53,8 @@ impl<C: SuiScheme, S: Signer<C>> WalletSuiSigner<C, S> {
 impl<C: SuiScheme, S: Signer<C>> WalletSigner<WalletSui<C>> for WalletSuiSigner<C, S> {
     type Error = SignError<S::Error>;
 
-    fn public_key(&self) -> SuiPublicKey {
-        C::sui_public_key(self.signer.public_key())
+    fn public_key(&self) -> SuiPublicKey<C> {
+        SuiPublicKey::from_public_key(self.signer.public_key())
     }
 
     async fn sign_request_msg(&self, msg: &RequestMessage) -> Result<Proof, Self::Error> {

@@ -6,8 +6,8 @@ use serde_json::Value;
 
 use super::*;
 
-fn check<C: SuiScheme>(vector: &Value) {
-    let key: SuiPublicKey = vector["public_key"].as_str().unwrap().parse().unwrap();
+fn check<C: SuiScheme>(vector: &Value, foreign: &[&Value]) {
+    let key: SuiPublicKey<C> = vector["public_key"].as_str().unwrap().parse().unwrap();
     let proof = vector["proof"].as_str().unwrap();
     let bytes = STANDARD.decode(proof).unwrap();
 
@@ -52,17 +52,13 @@ fn check<C: SuiScheme>(vector: &Value) {
         ));
     }
 
-    let mismatched = if key.flag() == 0 {
-        SuiPublicKey::Secp256k1([0; 33])
-    } else {
-        SuiPublicKey::Ed25519([0; 32])
-    };
-
-    assert!(!WalletSui::<C>::verify(
-        &mismatched,
-        || panic!("another scheme must not render a message"),
-        proof,
-    ));
+    for foreign in foreign {
+        assert!(!WalletSui::<C>::verify(
+            &key,
+            || panic!("another scheme must not render a message"),
+            foreign["proof"].as_str().unwrap(),
+        ));
+    }
 
     let calls = Cell::new(0);
 
@@ -91,7 +87,7 @@ fn check<C: SuiScheme>(vector: &Value) {
     assert!(
         !verified,
         "rendering failure must reject scheme {}",
-        key.flag()
+        C::FLAG
     );
     assert_eq!(calls.get(), 1);
 }
@@ -105,13 +101,19 @@ fn proofs_are_checked_before_rendering_for_every_scheme() {
     assert_eq!(vectors.len(), 27);
 
     for vector in vectors {
-        let key: SuiPublicKey = vector["public_key"].as_str().unwrap().parse().unwrap();
+        // Valid proofs of the two other schemes.
+        let foreign: Vec<&Value> = vectors
+            .iter()
+            .filter(|other| other["scheme"] != vector["scheme"])
+            .collect();
 
-        match key.flag() {
-            0 => check::<Ed25519>(vector),
-            1 => check::<Secp256k1>(vector),
-            2 => check::<P256>(vector),
-            _ => unreachable!(),
+        assert_eq!(foreign.len(), 18);
+
+        match vector["scheme"].as_str().unwrap() {
+            "ED25519" => check::<Ed25519>(vector, &foreign),
+            "Secp256k1" => check::<Secp256k1>(vector, &foreign),
+            "Secp256r1" => check::<P256>(vector, &foreign),
+            scheme => panic!("unexpected scheme: {scheme}"),
         }
     }
 }

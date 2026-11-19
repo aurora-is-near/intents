@@ -23,17 +23,17 @@ pub struct WalletSui<C: SuiScheme>(PhantomData<C>);
 
 impl<C: SuiScheme> WalletSui<C> {
     fn verify(
-        public_key: &SuiPublicKey,
+        public_key: &SuiPublicKey<C>,
         message: impl FnOnce() -> Result<String, MessageError>,
         proof: &str,
     ) -> bool {
-        // Each contract is restricted to its scheme `C` before any message work.
-        public_key.verify_personal_message_with::<C, _>(message, proof)
+        // The proof is bound to the key and its scheme `C` before any message work.
+        public_key.verify_personal_message_with(message, proof)
     }
 }
 
 impl<C: SuiScheme> SignatureSchema for WalletSui<C> {
-    type PublicKey = SuiPublicKey;
+    type PublicKey = SuiPublicKey<C>;
 
     fn verify_request_msg(public_key: &Self::PublicKey, msg: &RequestMessage, proof: &str) -> bool {
         Self::verify(
