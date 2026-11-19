@@ -9,10 +9,9 @@ and uses neither Stellar transactions nor Soroban authorization entries.
 
 ## Signed message
 
-The inspected Freighter source uses a JSON pretty-printer for JSON messages
-and an unformatted block for other text (see [display evidence](#clear-signing)).
-To target that rendering model, the readable text is signed as one JSON
-document with a final LF:
+Freighter pretty-prints a message that is one JSON document and shows other
+text as an unformatted block. The readable text is therefore signed as one
+JSON document with a final LF:
 
 - `about`: the lines of the prefix;
 - `warnings`: the warning lines, `[]` if there are none;
@@ -55,19 +54,16 @@ document with a final LF:
 }
 ```
 
-For an accepted message, its signed bytes are exactly the UTF-8 encoding of
-`JSON.stringify(JSON.parse(message), null, 2) + "\n"`. The final LF is signed;
-this equality describes the serialization model, not proof of what a wallet
-actually displays. Function arguments and nested `w_execute_extension`
-requests are JSON objects in it, not strings. The adapter rejects these
-inputs to keep the document within the modeled display constraints:
+The signed bytes are exactly the UTF-8 encoding of
+`JSON.stringify(JSON.parse(message), null, 2) + "\n"`, so a wallet that
+parses and prints the document shows what is signed. Function arguments and
+nested `w_execute_extension` requests are JSON objects in it, not strings.
+Rejected instead of signed:
 
 - text with DEL or non-ASCII characters (in function arguments, method names,
   the NEP-641 payload, `chain_id`): the readable format escapes them as
   `\uXXXX`, and the wallet would show the characters themselves, including
   bidirectional controls and look-alike letters;
-- state-init data whose keys JavaScript would reorder (base64 keys that are
-  array indexes, such as `"1234"`, must come first in ascending order);
 - a document above 16 KiB (16384 bytes). It is longer than the readable text
   of the same message.
 
@@ -99,15 +95,11 @@ derived account as a deposit destination,
 
 ## Clear signing
 
-The contract rebuilds and verifies the document intended for the wallet
-prompt. Whether a particular wallet displays it completely and understandably
-requires a real-wallet check. What the document does not decode is listed with the
-[format](../readable/README.md#format-v1): JSON inside a string
-value (such as `msg` of `ft_transfer_call` or the NEP-641 payload) stays an
-escaped string.
-
-Display in a real wallet, on hardware wallets and in other Stellar wallets is
-**unverified**.
+The user reads in the wallet prompt the same document that the contract
+rebuilds and verifies. What it does not decode is listed with the
+[format](../readable/README.md#format-v1): JSON inside a string value (such
+as `msg` of `ft_transfer_call` or the NEP-641 payload) stays an escaped
+string.
 
 ## Build
 

@@ -1,13 +1,18 @@
 use std::{fmt::Write, time::Duration};
 
-use base64::{Engine, engine::general_purpose::STANDARD};
+use base64::{
+    Engine,
+    engine::general_purpose::{STANDARD, URL_SAFE},
+};
 use defuse_sep53::Sep53;
-use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
+use defuse_wallet::{
+    RequestMessage, SignatureSchema, StateInit, actions::NearAction, offchain::OffchainMessage,
+};
 use defuse_wallet_readable as readable_message;
 use defuse_wallet_stellar::{
     MessageError, WalletStellar,
     crypto::ed25519::{
-        Ed25519PublicKey,
+        Ed25519PublicKey, Ed25519Signature,
         ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey},
     },
     offchain_signing_message, request_signing_message, stellar_address,
@@ -20,21 +25,26 @@ fn vectors() -> Vec<Value> {
         .unwrap()
         .clone()
 }
+
 fn fixture() -> Value {
     serde_json::from_str(include_str!("fixtures/stellar.json")).unwrap()
 }
+
 fn key(v: &Value) -> Ed25519PublicKey {
     let address = v["address"].as_str().unwrap();
+
     Ed25519PublicKey(
         stellar_strkey::ed25519::PublicKey::from_string(address)
             .unwrap()
             .0,
     )
 }
+
 /// SEP-53 proof of `message` as a Stellar wallet returns it.
 fn sign(signing: &SigningKey, message: &str) -> String {
     STANDARD.encode(signing.sign(&Sep53::prehash(message)).to_bytes())
 }
+
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().fold(String::new(), |mut hex, byte| {
         write!(hex, "{byte:02x}").unwrap();
@@ -46,6 +56,7 @@ fn hex(bytes: &[u8]) -> String {
 fn independent_stellar_sdk_vectors() {
     let all = vectors();
     assert_eq!(all.len(), 10);
+
     for v in all {
         let public_key = key(&v);
         assert_eq!(stellar_address(&public_key), v["address"]);
@@ -53,7 +64,9 @@ fn independent_stellar_sdk_vectors() {
             hex(&Sep53::prehash(v["message"].as_str().unwrap())),
             v["sep53_hash"]
         );
+
         let proof = v["proof"].as_str().unwrap();
+
         if v["kind"] == "request" {
             let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
             assert_eq!(
@@ -106,6 +119,7 @@ fn execution_fields_are_bound() {
             json!("1"),
         ),
     ];
+
     for (pointer, value) in mutations {
         let mut changed = original.clone();
         // Optional fields may be absent in the wire input, but their defaults are signed.
@@ -117,6 +131,7 @@ fn execution_fields_are_bound() {
             .unwrap()
             .insert(field.to_owned(), value);
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
+
         assert_ne!(
             request_signing_message(&key(v), &msg).expect("mutation must render"),
             v["message"]
@@ -126,6 +141,7 @@ fn execution_fields_are_bound() {
             "accepted {pointer}"
         );
     }
+
     for pointer in ["/request/internal", "/request/external/0/actions"] {
         let mut changed = original.clone();
         changed
@@ -135,6 +151,7 @@ fn execution_fields_are_bound() {
             .unwrap()
             .reverse();
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
+
         assert_ne!(
             request_signing_message(&key(v), &msg).expect("mutation must render"),
             v["message"]
@@ -145,20 +162,26 @@ fn execution_fields_are_bound() {
             v["proof"].as_str().unwrap()
         ));
     }
+
     // The token contract is part of the signature.
     let mut moved: RequestMessage = serde_json::from_value(original.clone()).unwrap();
+
     moved.request.external[0].receiver_id = "other.near".parse().unwrap();
     request_signing_message(&key(v), &moved).unwrap();
+
     assert!(!WalletStellar::verify_request_msg(
         &key(v),
         &moved,
         v["proof"].as_str().unwrap()
     ));
+
     // The native transfer recipient is bound as well.
     let transfer = &all[1];
     let mut msg: RequestMessage = serde_json::from_value(transfer["msg"].clone()).unwrap();
+
     msg.request.external[0].receiver_id = "other.near".parse().unwrap();
     request_signing_message(&key(transfer), &msg).unwrap();
+
     assert!(!WalletStellar::verify_request_msg(
         &key(transfer),
         &msg,
@@ -169,6 +192,7 @@ fn execution_fields_are_bound() {
 #[test]
 fn transfer_refund_and_state_init_are_bound() {
     let all = vectors();
+
     for (index, pointer, value) in [
         (1, "/request/external/0/refund_to", json!("other.near")),
         (
@@ -196,6 +220,7 @@ fn transfer_refund_and_state_init_are_bound() {
         let mut changed = v["msg"].clone();
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
+
         assert_ne!(
             request_signing_message(&key(v), &msg).expect("mutation must render"),
             v["message"]
@@ -211,6 +236,7 @@ fn transfer_refund_and_state_init_are_bound() {
 fn offchain_fields_are_bound_without_normalizing_payload() {
     let all = vectors();
     let v = &all[5];
+
     for (pointer, value) in [
         ("/chain_id", json!("mainnet")),
         ("/signer_id", json!("other.near")),
@@ -227,6 +253,7 @@ fn offchain_fields_are_bound_without_normalizing_payload() {
         let mut changed = v["msg"].clone();
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: OffchainMessage = serde_json::from_value(changed).unwrap();
+
         assert_ne!(
             offchain_signing_message(&key(v), &msg).expect("mutation must render"),
             v["message"]
@@ -244,12 +271,16 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
     let v = &all[0];
     let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
     let valid = v["proof"].as_str().unwrap();
+
     // The last character before the padding carries four unused bits.
     let alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let at = alphabet.find(&valid[85..86]).unwrap();
     let noncanonical = format!("{}{}==", &valid[..85], &alphabet[at + 1..at + 2]);
+
     assert_eq!(valid.len(), 88);
+
     let signature = STANDARD.decode(valid).unwrap();
+
     for proof in [
         String::new(),
         "not a signature".to_owned(),
@@ -259,14 +290,11 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
         // Nonzero unused bits in the last character.
         noncanonical,
         // The URL-safe alphabet (differs when the proof has `+` or `/`).
-        base64::engine::general_purpose::URL_SAFE
+        URL_SAFE
             .encode(&signature)
             .replacen('A', "-", usize::from(!valid.contains(['+', '/']))),
         format!(" {}", &valid[1..]),
-        defuse_wallet_stellar::crypto::ed25519::Ed25519Signature(
-            signature.clone().try_into().unwrap(),
-        )
-        .to_string(),
+        Ed25519Signature(signature.clone().try_into().unwrap()).to_string(),
         hex(&signature),
         // A valid proof of another message.
         all[4]["proof"].as_str().unwrap().to_owned(),
@@ -277,20 +305,25 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
             "accepted {proof}"
         );
     }
+
     assert!(WalletStellar::verify_request_msg(&key(v), &msg, valid));
     assert!(!WalletStellar::verify_request_msg(
         &Ed25519PublicKey([0; 32]),
         &msg,
         valid
     ));
+
     // With the identity point as the key, R = identity and s = 0 satisfy the
     // Ed25519 equation for every message (the NEAR host function accepts
     // such a forgery); only the weak-key check rejects it.
     let mut identity = [0; 32];
     identity[0] = 1;
+
     let mut forged = [0; 64];
     forged[0] = 1;
+
     let message = request_signing_message(&Ed25519PublicKey(identity), &msg).unwrap();
+
     assert!(
         VerifyingKey::from_bytes(&identity)
             .unwrap()
@@ -302,6 +335,7 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
         &msg,
         &STANDARD.encode(forged)
     ));
+
     let auth: OffchainMessage = serde_json::from_value(all[4]["msg"].clone()).unwrap();
     assert!(!WalletStellar::verify_offchain_msg(&key(v), &auth, valid));
 }
@@ -312,10 +346,14 @@ fn limits_and_ambiguous_timeout_are_rejected() {
     let v = &all[0];
     let proof = v["proof"].as_str().unwrap();
     let mut msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
     msg.timeout = Duration::from_nanos(1);
+
     assert!(request_signing_message(&key(v), &msg).is_err());
     assert!(!WalletStellar::verify_request_msg(&key(v), &msg, proof));
+
     msg.timeout = Duration::from_secs(u64::from(u32::MAX) + 1);
+
     assert!(request_signing_message(&key(v), &msg).is_err());
     assert!(!WalletStellar::verify_request_msg(&key(v), &msg, proof));
 
@@ -327,21 +365,26 @@ fn limits_and_ambiguous_timeout_are_rejected() {
     let empty = offchain_signing_message(&pk, &auth).unwrap().len();
     auth.payload = "x".repeat(16 * 1024 - empty);
     let largest = offchain_signing_message(&pk, &auth).unwrap();
+
     assert_eq!(largest.len(), 16 * 1024);
     assert!(WalletStellar::verify_offchain_msg(
         &pk,
         &auth,
         &sign(&signing, &largest)
     ));
+
     auth.payload.push('x');
     let identity = stellar_address(&pk);
     readable_message::offchain_signing_message(&[("stellar_address", &identity)], &auth)
         .expect("the readable text still fits");
+
     assert!(matches!(
         offchain_signing_message(&pk, &auth),
         Err(MessageError::TooLarge)
     ));
+
     auth.payload = "x".repeat(16 * 1024);
+
     assert!(matches!(
         offchain_signing_message(&pk, &auth),
         Err(MessageError::Readable(
@@ -357,6 +400,7 @@ fn document_is_the_readable_text() {
     for v in vectors() {
         let address = v["address"].as_str().unwrap();
         let identity = [("stellar_address", address)];
+
         let text = if v["kind"] == "request" {
             let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
             readable_message::request_signing_message(&identity, &msg)
@@ -365,13 +409,16 @@ fn document_is_the_readable_text() {
             readable_message::offchain_signing_message(&identity, &msg)
         }
         .unwrap();
+
         let signed = v["message"].as_str().unwrap();
         let mut document: Map<String, Value> = serde_json::from_str(signed).unwrap();
+
         // A wallet that parses and prints the document shows the signed text.
         assert_eq!(
             format!("{}\n", serde_json::to_string_pretty(&document).unwrap()),
             signed
         );
+
         let mut lines = |name: &str| {
             let Some(Value::Array(lines)) = document.shift_remove(name) else {
                 panic!("missing {name}");
@@ -381,10 +428,12 @@ fn document_is_the_readable_text() {
                 .flat_map(|line| [line.as_str().unwrap(), "\n"])
                 .collect::<String>()
         };
+
         let about = lines("about");
         let warnings = lines("warnings");
         let separator = if warnings.is_empty() { "" } else { "\n" };
         let fields = serde_json::to_string_pretty(&document).unwrap();
+
         assert_eq!(format!("{about}\n{warnings}{separator}{fields}\n"), text);
     }
 }
@@ -395,13 +444,16 @@ fn document_is_the_readable_text() {
 fn messages_shown_differently_are_rejected() {
     let fixture = fixture();
     let rejected = fixture["rejected"].as_array().unwrap();
-    assert_eq!(rejected.len(), 6);
+    assert_eq!(rejected.len(), 5);
+
     let signing = SigningKey::from_bytes(&[42; 32]);
     let pk = Ed25519PublicKey(signing.verifying_key().to_bytes());
     let address = stellar_address(&pk);
     let identity = [("stellar_address", address.as_str())];
+
     for v in rejected {
         let reason = v["reason"].as_str().unwrap();
+
         // The proof that a signer of the readable text would produce.
         let (text, error, accepted) = if v["kind"] == "request" {
             let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
@@ -422,14 +474,74 @@ fn messages_shown_differently_are_rejected() {
                 WalletStellar::verify_offchain_msg(&pk, &msg, &proof),
             )
         };
+
         assert!(!accepted, "{reason}");
-        if reason.contains("reorders") {
-            assert!(matches!(error, MessageError::Display), "{reason}");
-        } else {
-            assert!(text.contains("\\u"), "{reason}");
-            assert!(matches!(error, MessageError::Text), "{reason}");
-        }
+        assert!(text.contains("\\u"), "{reason}");
+        assert!(matches!(error, MessageError::Text), "{reason}");
     }
+}
+
+/// The readable format admits only arguments that a wallet prints as they
+/// are signed; this variant relies on it and has no check of its own.
+#[test]
+fn arguments_that_javascript_prints_differently_are_rejected() {
+    let all = vectors();
+    let v = &all[9];
+
+    for args in [
+        r#"{"b":1,"1":2}"#,
+        r#"{"a":1.5}"#,
+        r#"{"a":1.0}"#,
+        r#"{"a":9007199254740992}"#,
+        r#"{"a":-0}"#,
+        r#"{"a":1,"a":2}"#,
+    ] {
+        let mut msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+        let NearAction::FunctionCall(call) = &mut msg.request.external[0].actions[0] else {
+            unreachable!()
+        };
+        call.args = args.as_bytes().to_vec();
+
+        assert!(
+            matches!(
+                request_signing_message(&key(v), &msg),
+                Err(MessageError::Readable(
+                    readable_message::MessageError::FunctionArgs
+                ))
+            ),
+            "{args}"
+        );
+    }
+}
+
+/// State keys are signed in the order in which a wallet that parses the
+/// document lists them: array indices ascending, then the other keys.
+#[test]
+fn state_keys_follow_javascript_object_order() {
+    let all = vectors();
+    let v = &all[3];
+    let mut msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
+    let NearAction::DeterministicStateInit(init) = &mut msg.request.external[0].actions[0] else {
+        unreachable!()
+    };
+    let StateInit::V1(state) = &mut init.state_init;
+
+    // Base64 of these keys: "1000", "9999", "10000000", "AAEC".
+    for key in [
+        &[0xd7, 0x4d, 0x34][..],
+        &[0xf7, 0xdf, 0x7d],
+        &[0xd7, 0x4d, 0x34, 0xd3, 0x4d, 0x34],
+        &[0, 1, 2],
+    ] {
+        state.data.insert(key.to_vec(), Vec::new());
+    }
+
+    let message = request_signing_message(&key(v), &msg).unwrap();
+    let positions =
+        ["\"1000\"", "\"9999\"", "\"10000000\"", "\"AAEC\""].map(|key| message.find(key).unwrap());
+
+    assert!(positions.is_sorted(), "{message}");
 }
 
 /// The size limit bounds nesting before the JSON parser's limit of 128
@@ -440,15 +552,17 @@ fn nesting_is_bounded_by_size() {
     let v = &all[9];
     let identity = [("stellar_address", v["address"].as_str().unwrap())];
     let mut deepest = 0;
+
     for depth in 1..=127 {
         let mut msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
-        let defuse_wallet::actions::NearAction::FunctionCall(call) =
-            &mut msg.request.external[0].actions[0]
-        else {
+
+        let NearAction::FunctionCall(call) = &mut msg.request.external[0].actions[0] else {
             unreachable!()
         };
+
         call.args = format!("{}{}", "[".repeat(depth), "]".repeat(depth)).into_bytes();
         let text = readable_message::request_signing_message(&identity, &msg);
+
         match request_signing_message(&key(v), &msg) {
             Ok(_) => {
                 assert!(text.is_ok());
@@ -459,6 +573,7 @@ fn nesting_is_bounded_by_size() {
             Err(error) => panic!("depth {depth}: {error}"),
         }
     }
+
     assert_eq!(deepest, 81);
 }
 
@@ -468,10 +583,12 @@ fn state_init_fixture_uses_derived_receiver() {
         if v["kind"] != "request" {
             continue;
         }
-        let msg: defuse_wallet::RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
+        let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
         for promise in msg.request.external {
             for action in promise.actions {
-                if let defuse_wallet::actions::NearAction::DeterministicStateInit(init) = action {
+                if let NearAction::DeterministicStateInit(init) = action {
                     assert_eq!(promise.receiver_id, init.state_init.derive_account_id());
                 }
             }
@@ -486,11 +603,13 @@ fn readable_and_digest_signatures_are_not_interchangeable() {
     let all = vectors();
     let msg: RequestMessage = serde_json::from_value(all[0]["msg"].clone()).unwrap();
     let message = request_signing_message(&pk, &msg).unwrap();
+
     // Signatures over the request digest, over the message without the SEP-53
     // hash (as Solana wallets sign) and over the readable text are not proofs.
     let identity = stellar_address(&pk);
     let text =
         readable_message::request_signing_message(&[("stellar_address", &identity)], &msg).unwrap();
+
     for signature in [
         signing.sign(&msg.hash()),
         signing.sign(message.as_bytes()),
@@ -503,6 +622,7 @@ fn readable_and_digest_signatures_are_not_interchangeable() {
             &STANDARD.encode(signature.to_bytes())
         ));
     }
+
     let proof = sign(&signing, &message);
     assert!(
         signing
@@ -514,10 +634,12 @@ fn readable_and_digest_signatures_are_not_interchangeable() {
             .is_err()
     );
     assert!(WalletStellar::verify_request_msg(&pk, &msg, &proof));
+
     // A message that cannot be rendered does not fall back to its digest.
     let mut unrenderable = msg;
     unrenderable.timeout = Duration::from_nanos(1);
     assert!(request_signing_message(&pk, &unrenderable).is_err());
+
     for prehash in [unrenderable.hash(), Sep53::prehash(unrenderable.hash())] {
         assert!(!WalletStellar::verify_request_msg(
             &pk,
@@ -539,8 +661,10 @@ async fn sdk_signer_matches_independent_vectors() {
         0x7f, 0x60,
     ];
     let signer = WalletStellarSigner(SigningKey::from_bytes(&seed));
+
     for v in vectors() {
         assert_eq!(signer.public_key(), key(&v));
+
         let proof = if v["kind"] == "request" {
             let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
             signer.sign_request_msg(&msg).await.unwrap()
@@ -548,6 +672,7 @@ async fn sdk_signer_matches_independent_vectors() {
             let msg: OffchainMessage = serde_json::from_value(v["msg"].clone()).unwrap();
             signer.sign_offchain_msg(&msg).await.unwrap()
         };
+
         assert_eq!(proof, v["proof"]);
     }
 }
@@ -561,6 +686,7 @@ fn sep53_specification_vector() {
     )
     .unwrap();
     let signing = SigningKey::from_bytes(&seed.0);
+
     assert_eq!(
         stellar_address(&Ed25519PublicKey(signing.verifying_key().to_bytes())),
         address
@@ -576,12 +702,14 @@ fn sep53_specification_vector() {
 /// of the state layout changes every wallet address.
 #[test]
 fn derived_accounts_match_known_answers() {
-    use defuse_wallet::{GlobalContractId, State, StateInit, StateInitV1};
+    use defuse_wallet::{GlobalContractId, State, StateInitV1};
     let all = vectors();
+
     assert_eq!(
         key(&all[0]).to_string(),
         "ed25519:FVen3X669xLzsi6N2V91DoiyzHzg1uAgqiT8jZ9nS96Z"
     );
+
     for (index, subwallet_id, timeout, expected) in [
         (0, 0, 3600, "0s7956b08ff10093c0ae71a67bee136d5f95e474e0"),
         (0, 1, 3600, "0sb2bb10b40eef60b31d55e2db6e2ff2dc5fc3dc45"),
@@ -595,6 +723,7 @@ fn derived_accounts_match_known_answers() {
             data: state.as_storage(),
         })
         .derive_account_id();
+
         assert_eq!(account.as_str(), expected);
     }
 }

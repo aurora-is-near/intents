@@ -5,6 +5,8 @@ mod contract;
 mod message;
 #[cfg(feature = "signer")]
 mod signer;
+#[cfg(test)]
+mod tests;
 
 pub use self::message::*;
 #[cfg(feature = "signer")]
@@ -39,9 +41,11 @@ impl WalletStellar {
         if proof.len() != PROOF_LEN {
             return false;
         }
+
         let Ok(key) = <Ed25519 as Curve>::PublicKey::try_from(public_key) else {
             return false;
         };
+
         let Some(signature) = STANDARD
             .decode(proof)
             .ok()
@@ -49,9 +53,11 @@ impl WalletStellar {
         else {
             return false;
         };
+
         let Ok(message) = message() else {
             return false;
         };
+
         Sep53::verify(&key, message, &Ed25519Signature(signature).into())
     }
 }

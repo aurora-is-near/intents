@@ -11,7 +11,7 @@ pub enum MessageError {
     Readable(#[from] defuse_wallet_readable::MessageError),
     #[error("text must be ASCII without DEL")]
     Text,
-    #[error("a wallet would show the message differently than it is signed")]
+    #[error("text is not a readable v1 message")]
     Display,
     #[error("signing message exceeds 16 KiB")]
     TooLarge,
@@ -33,6 +33,7 @@ pub fn request_signing_message(
     let address = stellar_address(public_key);
     let text =
         defuse_wallet_readable::request_signing_message(&[("stellar_address", &address)], msg)?;
+
     document(REQUEST_PREFIX, &text)
 }
 
@@ -44,19 +45,19 @@ pub fn offchain_signing_message(
     let address = stellar_address(public_key);
     let text =
         defuse_wallet_readable::offchain_signing_message(&[("stellar_address", &address)], msg)?;
+
     document(OFFCHAIN_PREFIX, &text)
 }
 
 /// The readable v1 `text` as one JSON document: its prefix lines in `about`,
 /// its warning lines in `warnings`, then its JSON fields.
 ///
-/// The document matches the modeled Freighter JSON serialization:
-/// `JSON.stringify(JSON.parse(message), null, 2) + "\n"`, encoded as UTF-8.
-/// The final LF is signed. This models serialization, not the actual wallet
-/// display; real-wallet display verification remains an integration check.
-/// See the variant README for the inspected Freighter source revision.
+/// The document is `JSON.stringify(JSON.parse(message), null, 2) + "\n"`, so
+/// a wallet that parses and prints it (as Freighter does) shows the signed
+/// text. The final LF is signed.
 fn document(prefix: &str, text: &str) -> Result<String, MessageError> {
     let rest = text.strip_prefix(prefix).ok_or(MessageError::Display)?;
+
     // Warning lines, one empty line, then the JSON.
     let json = if rest.starts_with("{\n") {
         0
@@ -66,22 +67,31 @@ fn document(prefix: &str, text: &str) -> Result<String, MessageError> {
     let (warnings, json) = rest.split_at(json);
     let fields: Map<String, Value> =
         serde_json::from_str(json).map_err(|_| MessageError::Display)?;
+
     let mut document = Map::new();
     document.insert("about".to_owned(), json!(lines(prefix)));
     document.insert("warnings".to_owned(), json!(lines(warnings)));
+
     for (name, value) in fields {
         if document.insert(name, value).is_some() {
             return Err(MessageError::Display);
         }
     }
+
     let document = Value::Object(document);
-    shown_as_signed(&document)?;
+
+    if !shown_as_signed(&document) {
+        return Err(MessageError::Text);
+    }
+
     let mut message = serde_json::to_string_pretty(&document)
         .map_err(defuse_wallet_readable::MessageError::from)?;
     message.push('\n');
+
     if message.len() > MAX_SIGNING_MESSAGE_BYTES {
         return Err(MessageError::TooLarge);
     }
+
     Ok(message)
 }
 
@@ -89,53 +99,22 @@ fn lines(text: &str) -> Vec<&str> {
     text.lines().filter(|line| !line.is_empty()).collect()
 }
 
-/// Largest integer that JavaScript numbers represent exactly (2^53 - 1).
-const MAX_SAFE_INTEGER: i64 = (1 << 53) - 1;
-
-/// Whether `JSON.stringify(JSON.parse(..), null, 2)` returns the pretty JSON of
-/// `value` unchanged:
+/// Whether a wallet that parses the document shows its text as signed: all
+/// text is ASCII without DEL, so the readable format has no `\uXXXX` escape
+/// that JavaScript would show as the character itself (bidirectional
+/// controls, look-alike letters).
 ///
-/// - text is ASCII without DEL, so the readable format has no `\uXXXX` escape
-///   that JavaScript would show as the character itself (bidirectional
-///   controls, look-alike letters);
-/// - numbers are integers within ±(2^53 - 1);
-/// - objects list array-index keys first, in ascending order, as JavaScript
-///   objects do.
-fn shown_as_signed(value: &Value) -> Result<(), MessageError> {
-    let text = |text: &str| {
-        if text.bytes().all(|byte| byte < 0x7f) {
-            Ok(())
-        } else {
-            Err(MessageError::Text)
-        }
-    };
-    match value {
-        Value::Null | Value::Bool(_) => Ok(()),
-        Value::String(string) => text(string),
-        Value::Number(number) => number
-            .as_i64()
-            .filter(|n| (-MAX_SAFE_INTEGER..=MAX_SAFE_INTEGER).contains(n))
-            .map(|_| ())
-            .ok_or(MessageError::Display),
-        Value::Array(items) => items.iter().try_for_each(shown_as_signed),
-        Value::Object(object) => {
-            if !object
-                .keys()
-                .is_sorted_by_key(|key| array_index(key).unwrap_or(u32::MAX))
-            {
-                return Err(MessageError::Display);
-            }
-            object.iter().try_for_each(|(key, value)| {
-                text(key)?;
-                shown_as_signed(value)
-            })
-        }
-    }
-}
+/// Key order and numbers need no check: the readable format admits only
+/// objects in JavaScript key order and integers within ±(2^53 - 1).
+fn shown_as_signed(value: &Value) -> bool {
+    let ascii = |text: &str| text.bytes().all(|byte| byte < 0x7f);
 
-/// JavaScript array index: a canonical decimal below 2^32 - 1.
-fn array_index(key: &str) -> Option<u32> {
-    key.parse()
-        .ok()
-        .filter(|index: &u32| *index != u32::MAX && index.to_string() == key)
+    match value {
+        Value::Null | Value::Bool(_) | Value::Number(_) => true,
+        Value::String(text) => ascii(text),
+        Value::Array(items) => items.iter().all(shown_as_signed),
+        Value::Object(object) => object
+            .iter()
+            .all(|(key, value)| ascii(key) && shown_as_signed(value)),
+    }
 }

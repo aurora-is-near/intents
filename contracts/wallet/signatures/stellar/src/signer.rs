@@ -29,6 +29,7 @@ impl<S: Signer<Ed25519>> WalletStellarSigner<S> {
             .sign(&Sep53::prehash(message))
             .await
             .map_err(SignError::Signer)?;
+
         Ok(STANDARD.encode(Ed25519Signature::from(signature).0))
     }
 }

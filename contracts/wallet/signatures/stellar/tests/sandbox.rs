@@ -27,9 +27,11 @@ async fn near() -> Near {
     if let Ok(url) = env::var("STELLAR_SANDBOX_RPC_URL") {
         // This override is strictly for an isolated native sandbox, never a public network.
         assert!(is_loopback_sandbox_url(&url));
+
         let signer = InMemorySigner::new("sandbox", "ed25519:3tgdk2wPraJzT4nsTuf86UX41xgPNk3MHnq8epARMdBNs29AFEztAuaQ7iHddDfXG9F2RzV1XNQYgJyAyoW51UBB").unwrap();
         let provisional = Near::custom(&url, "sandbox").build();
         let chain = provisional.rpc().status().await.unwrap().chain_id;
+
         Near::custom(url, chain).signer(signer).build()
     } else {
         SandboxConfig::shared()
@@ -46,7 +48,9 @@ fn is_loopback_sandbox_url(url: &str) -> bool {
     else {
         return false;
     };
+
     let port = endpoint.strip_suffix('/').unwrap_or(endpoint);
+
     !port.is_empty()
         && port.bytes().all(|byte| byte.is_ascii_digit())
         && port.parse::<u16>().is_ok_and(|port| port != 0)
@@ -85,6 +89,7 @@ async fn execute(
         .wait_until::<Final>()
         .await
         .unwrap();
+
     outcome.result().unwrap();
     outcome
 }
@@ -98,11 +103,13 @@ async fn wallet_executes_and_resolves_authorization_in_wasm() {
     let wasm = fs::read(directory.join("defuse-wallet-stellar.wasm"))
         .expect("build with make defuse-wallet-stellar first");
     let code_hash: [u8; 32] = Sha256::digest(&wasm).into();
+
     near.publish(wasm, PublishMode::Immutable)
         .await
         .unwrap()
         .result()
         .unwrap();
+
     let signer = WalletStellarSigner(SigningKey::generate(&mut UnwrapErr(SysRng)));
     let wallet = Wallet::<WalletStellar>::new(code_hash, signer.clone())
         .with_client(near.clone())
@@ -110,7 +117,9 @@ async fn wallet_executes_and_resolves_authorization_in_wasm() {
     let same_key_subwallet = WalletBuilder::new()
         .subwallet_id(1)
         .build(code_hash, signer.clone());
+
     assert_ne!(wallet.account_id(), same_key_subwallet.account_id());
+
     let recipient = WalletBuilder::new()
         .subwallet_id(1)
         .build(
@@ -119,13 +128,16 @@ async fn wallet_executes_and_resolves_authorization_in_wasm() {
         )
         .with_client(near.clone())
         .with_relayer(near.clone());
+
     assert_eq!(
         wallet.deterministic_state_init().derive_account_id(),
         *wallet.account_id()
     );
     assert_ne!(wallet.account_id(), recipient.account_id());
+
     wallet.initialize().await.unwrap();
     recipient.initialize().await.unwrap();
+
     let contract = near.contract::<WalletContract>(wallet.account_id());
     assert_eq!(
         contract.w_public_key().await.unwrap(),
@@ -143,11 +155,10 @@ async fn wallet_executes_and_resolves_authorization_in_wasm() {
         .unwrap();
 
     let (msg, proof) = wallet
-        .sign(defuse_wallet::WalletOp::add_extension(
-            near.account_id().clone(),
-        ))
+        .sign(WalletOp::add_extension(near.account_id().clone()))
         .await
         .unwrap();
+
     entrypoints::check(&near, wallet.account_id(), &msg, &proof).await;
     execute(
         &near,
@@ -155,6 +166,7 @@ async fn wallet_executes_and_resolves_authorization_in_wasm() {
         WalletOp::remove_extension(near.account_id().clone()),
     )
     .await;
+
     let (msg, _) = wallet.sign(Request::new()).await.unwrap();
     entrypoints::context(&near, wallet.account_id(), &msg, &signer).await;
 
@@ -178,6 +190,7 @@ async fn wallet_executes_and_resolves_authorization_in_wasm() {
     let payload = "{ \"domain\": \"Stellar test\", \"amount\": \"9007199254740993\" }";
     let authorization = wallet.sign_offchain_msg(payload, None).await.unwrap();
     let resolver = RpcResolver::new(near.rpc().clone()).await.unwrap();
+
     assert_eq!(
         resolver
             .resolve_auth(wallet.account_id(), &authorization)
@@ -195,6 +208,7 @@ async fn check_nonce_rollback_and_replay(near: &Near, wallet: &Wallet<WalletStel
     let (msg, proof) = wallet.sign(Request::new()).await.unwrap();
     // Malformed, and a valid signature of another message.
     let (_, other) = wallet.sign(Request::new()).await.unwrap();
+
     for invalid in ["ed25519:invalid", other.as_str()] {
         contract
             .w_execute_signed((&msg, invalid).into())
@@ -204,6 +218,7 @@ async fn check_nonce_rollback_and_replay(near: &Near, wallet: &Wallet<WalletStel
             .result()
             .expect_err("invalid proof must fail");
     }
+
     contract
         .w_execute_signed((&msg, proof.as_str()).into())
         .gas(Gas::from_tgas(30))
@@ -230,6 +245,7 @@ async fn check_largest_message(
 ) {
     let contract = near.contract::<WalletContract>(wallet.account_id());
     let (original, _) = wallet.sign(Request::new()).await.unwrap();
+
     let with_padding = |length| {
         let mut msg = original.clone();
         msg.request = NearPromise::new(recipient.account_id())
@@ -242,22 +258,28 @@ async fn check_largest_message(
             .into();
         msg
     };
+
     let key = wallet.public_key();
     let fixed = request_signing_message(&key, &with_padding(0))
         .unwrap()
         .len();
+
     // Each ASCII padding byte adds exactly one signed byte.
     let msg = with_padding(MAX_SIGNING_MESSAGE_BYTES - fixed);
     let length = request_signing_message(&key, &msg).unwrap().len();
+
     assert_eq!(length, MAX_SIGNING_MESSAGE_BYTES);
+
     let oversized = with_padding(MAX_SIGNING_MESSAGE_BYTES - fixed + 1);
     assert!(request_signing_message(&key, &oversized).is_err());
+
     let storage = || async {
         near.account(wallet.account_id())
             .await
             .unwrap()
             .storage_usage
     };
+
     let before = storage().await;
     let (_, other) = wallet.sign(Request::new()).await.unwrap();
     let failed = contract
@@ -265,15 +287,19 @@ async fn check_largest_message(
         .gas(Gas::from_tgas(80))
         .await
         .unwrap();
+
     failed.result().expect_err("oversized message must fail");
     assert_eq!(storage().await, before);
+
     let proof = signer.sign_request_msg(&msg).await.unwrap();
     let result = contract
         .w_execute_signed((&msg, proof.as_str()).into())
         .gas(Gas::from_tgas(80))
         .await
         .unwrap();
+
     result.result().unwrap();
+
     println!(
         "STELLAR_RESOURCE_PROFILE message_bytes={length} proof_bytes={} gas={} oversized_rejection_gas={} storage_before={before} storage_after={}",
         proof.len(),
@@ -293,6 +319,7 @@ async fn check_lockout_and_rotation(
     let contract = near.contract::<WalletContract>(wallet.account_id());
     // Lockout and external self-call checks remain enforced by the shared core.
     let (msg, proof) = wallet.sign(WalletOp::disable_signature()).await.unwrap();
+
     contract
         .w_execute_signed((&msg, proof.as_str()).into())
         .gas(Gas::from_tgas(30))
@@ -300,10 +327,12 @@ async fn check_lockout_and_rotation(
         .unwrap()
         .result()
         .expect_err("last authentication method cannot be disabled");
+
     let (msg, proof) = wallet
         .sign(NearPromise::new(wallet.account_id()).transfer(NearToken::from_yoctonear(1)))
         .await
         .unwrap();
+
     contract
         .w_execute_signed((&msg, proof.as_str()).into())
         .gas(Gas::from_tgas(30))
@@ -320,7 +349,9 @@ async fn check_lockout_and_rotation(
     )
     .await;
     execute(near, &wallet, WalletOp::disable_signature()).await;
+
     let (msg, proof) = wallet.sign(Request::new()).await.unwrap();
+
     contract
         .w_execute_signed((&msg, proof.as_str()).into())
         .gas(Gas::from_tgas(30))
@@ -328,9 +359,13 @@ async fn check_lockout_and_rotation(
         .unwrap()
         .result()
         .expect_err("disabled signatures must fail");
+
     let extension = recipient.as_extension_of(wallet);
+
     execute(near, &extension, Request::new()).await;
+
     let authorization = extension.sign_offchain_msg(payload, None).await.unwrap();
+
     assert_eq!(
         resolver
             .with_max_sub_authorizations(1)
@@ -356,6 +391,7 @@ async fn check_ft_transfer(
     let token: AccountId = format!("ft{}.{}", rand::random::<u32>(), near.account_id())
         .parse()
         .unwrap();
+
     near.transaction(&token)
         .create_account()
         .transfer(NearToken::from_near(5))
@@ -381,6 +417,7 @@ async fn check_ft_transfer(
         NearPromise::new(token.clone()).function_call(ft_transfer(recipient.account_id()));
     let (msg, proof) = wallet.sign(transfer.clone()).await.unwrap();
     let message = request_signing_message(&wallet.public_key(), &msg).unwrap();
+
     assert!(
         message.contains(r#""amount": "1500000000000000000000000""#),
         "{message}"
@@ -391,12 +428,15 @@ async fn check_ft_transfer(
         .await
         .unwrap()
         .storage_usage;
+
     let outcome = execute(near, wallet, transfer).await;
     outcome.result().unwrap();
+
     assert_eq!(
         ft_balance(near, &token, recipient.account_id()).await,
         NearToken::from_millinear(1500).as_yoctonear().to_string()
     );
+
     let gas = outcome
         .receipts_outcome
         .iter()
@@ -407,11 +447,13 @@ async fn check_ft_transfer(
         .await
         .unwrap()
         .storage_usage;
+
     eprintln!(
         "direct FT: message={} bytes, proof={} bytes, receipt gas={gas}, storage={storage_before}->{storage_after}",
         message.len(),
         proof.len()
     );
+
     check_ft_bootstrap(near, wallet, recipient, wasm).await;
 }
 
@@ -423,15 +465,18 @@ async fn check_ft_bootstrap(
     wasm: Vec<u8>,
 ) {
     let ft_hash: [u8; 32] = Sha256::digest(&wasm).into();
+
     near.publish(wasm, PublishMode::Immutable)
         .await
         .unwrap()
         .result()
         .unwrap();
+
     let mut init = StateInitV1::code(ft_hash);
     // Unique account for each run, also on a reused sandbox.
     init.data
         .insert(b"test_run".to_vec(), rand::random::<[u8; 8]>().to_vec());
+
     let init = StateInit::from(init);
     let token = init.derive_account_id();
     let create = NearPromise::new(token.clone())
@@ -455,9 +500,12 @@ async fn check_ft_bootstrap(
                 .attach_deposit(NearToken::from_millinear(10))
                 .gas(Gas::from_tgas(30)),
         );
+
     check_state_init_deposit(near, wallet, &init, recipient.account_id()).await;
+
     let bootstrap = create.function_call(ft_transfer(recipient.account_id()));
     execute(near, wallet, bootstrap).await.result().unwrap();
+
     assert_eq!(
         ft_balance(near, &token, recipient.account_id()).await,
         NearToken::from_millinear(1500).as_yoctonear().to_string()
@@ -490,6 +538,7 @@ async fn check_state_init_deposit(
                 .gas(Gas::from_tgas(30)),
         );
     let outcome = execute(near, wallet, attempt).await;
+
     assert!(
         outcome
             .receipts_outcome
@@ -513,6 +562,7 @@ async fn check_state_init_deposit(
             .deterministic_state_init(init.clone(), deposit),
     )
     .await;
+
     assert_eq!(near.balance(&token).await.unwrap().total, NearToken::ZERO);
     assert_eq!(
         near.balance(refund_to).await.unwrap().total,
@@ -535,7 +585,7 @@ fn ft_transfer(receiver_id: &AccountId) -> FunctionCall {
 }
 
 async fn ft_balance(near: &Near, token: &AccountId, account_id: &AccountId) -> String {
-    near.view::<String>(token, "ft_balance_of")
+    near.view(token, "ft_balance_of")
         .args(serde_json::json!({ "account_id": account_id }))
         .await
         .unwrap()

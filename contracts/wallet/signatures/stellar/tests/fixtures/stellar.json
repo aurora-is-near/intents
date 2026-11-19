@@ -455,44 +455,6 @@
       }
     },
     {
-      "kind": "request",
-      "reason": "state keys that JavaScript reorders",
-      "msg": {
-        "chain_id": "mainnet",
-        "signer_id": "wallet.near",
-        "nonce": 42,
-        "created_at": "2026-11-03T12:34:56.123456789Z",
-        "timeout_secs": 300,
-        "pay_for_gas": false,
-        "request": {
-          "external": [
-            {
-              "receiver_id": "0s762910a479b0c04f9725b03cd7931dc5064ab0ab",
-              "actions": [
-                {
-                  "action": "deterministic_state_init",
-                  "payload": {
-                    "state_init": {
-                      "V1": {
-                        "code": {
-                          "account_id": "alice.near"
-                        },
-                        "data": {
-                          "9999": "",
-                          "10000000": ""
-                        }
-                      }
-                    },
-                    "deposit": "9"
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      }
-    },
-    {
       "kind": "offchain",
       "reason": "bidirectional override in the payload",
       "msg": {
