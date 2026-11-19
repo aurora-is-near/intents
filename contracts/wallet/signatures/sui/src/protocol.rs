@@ -17,6 +17,11 @@ use defuse_crypto::secp256k1::{Secp256k1, Secp256k1CompressedPublicKey};
 #[cfg(any(feature = "p256", feature = "secp256k1"))]
 use defuse_digest::{Digest, sha2::Sha256};
 
+#[cfg(near)]
+use near_sdk::env;
+
+use crate::MessageError;
+
 pub use defuse_crypto as crypto;
 
 /// A direct Sui signing key. Borsh discriminants match the native scheme flags.
@@ -118,18 +123,32 @@ impl SuiPublicKey {
     /// accepted. ECDSA low-S checks and weak-key rejection use shared crypto.
     #[cfg(any(feature = "ed25519", feature = "secp256k1", feature = "p256"))]
     pub fn verify_personal_message(&self, message: &[u8], proof: &str) -> bool {
-        self.verify_personal_message_with(|| Some(message), proof)
+        match self.flag() {
+            #[cfg(feature = "ed25519")]
+            0 => self.verify_personal_message_with::<Ed25519, _>(|| Ok(message), proof),
+            #[cfg(feature = "secp256k1")]
+            1 => self.verify_personal_message_with::<Secp256k1, _>(|| Ok(message), proof),
+            #[cfg(feature = "p256")]
+            2 => self.verify_personal_message_with::<P256, _>(|| Ok(message), proof),
+            _ => false,
+        }
     }
 
     // Decode and bind the proof once, before paying to render or hash a message.
-    #[cfg(any(feature = "ed25519", feature = "secp256k1", feature = "p256"))]
-    pub(crate) fn verify_personal_message_with<M: AsRef<[u8]>>(
+    // The scheme is a type parameter, so a contract variant links only its own
+    // verifier, whatever features Cargo unifies.
+    pub(crate) fn verify_personal_message_with<C: SuiScheme, M: AsRef<[u8]>>(
         &self,
-        message: impl FnOnce() -> Option<M>,
+        message: impl FnOnce() -> Result<M, MessageError>,
         proof: &str,
     ) -> bool {
         const SIGNATURE_LEN: usize = 64;
         const PUBLIC_KEY_OFFSET: usize = 1 + SIGNATURE_LEN;
+
+        // Keep each scheme restricted to its own keys before doing any other work.
+        if self.flag() != C::FLAG {
+            return false;
+        }
 
         let expected_len = PUBLIC_KEY_OFFSET + self.raw_bytes().len();
 
@@ -148,39 +167,29 @@ impl SuiPublicKey {
             return false;
         }
 
-        let Some(message) = message() else {
+        // Report rendering failures on-chain without embedding Rust source locations.
+        #[cfg(near)]
+        let message = message().unwrap_or_else(|error| env::panic_str(&error.to_string()));
+
+        // Native verification remains a predicate, including for unreadable messages.
+        #[cfg(not(near))]
+        let Ok(message) = message() else {
             return false;
         };
+
         let Some(digest) = personal_message_digest(message.as_ref()) else {
             return false;
         };
+
         let signature = &bytes[1..PUBLIC_KEY_OFFSET];
 
-        match self.flag() {
-            #[cfg(feature = "ed25519")]
-            0 => verify::<Ed25519>(self.raw_bytes(), &digest, signature),
-            #[cfg(feature = "secp256k1")]
-            1 => verify::<Secp256k1>(self.raw_bytes(), &Sha256::digest(digest), signature),
-            #[cfg(feature = "p256")]
-            2 => verify::<P256>(self.raw_bytes(), &Sha256::digest(digest), signature),
-            _ => false,
-        }
+        verify::<C>(self.raw_bytes(), digest, signature)
     }
 
     /// No algorithm is enabled: public-key parsing must deny authorization.
     #[cfg(not(any(feature = "ed25519", feature = "secp256k1", feature = "p256")))]
     pub fn from_sui_bytes(_bytes: &[u8]) -> Result<Self, PublicKeyError> {
         Err(PublicKeyError)
-    }
-
-    /// No algorithm is enabled: proofs are never accepted.
-    #[cfg(not(any(feature = "ed25519", feature = "secp256k1", feature = "p256")))]
-    pub(crate) fn verify_personal_message_with<M: AsRef<[u8]>>(
-        &self,
-        _message: impl FnOnce() -> Option<M>,
-        _proof: &str,
-    ) -> bool {
-        false
     }
 
     /// No algorithm is enabled: proofs are never accepted.
@@ -197,17 +206,13 @@ impl SuiPublicKey {
     }
 }
 
-#[cfg(any(feature = "ed25519", feature = "secp256k1", feature = "p256"))]
-fn verify<'a, C: SuiScheme>(key: &[u8], digest: &[u8], signature: &'a [u8]) -> bool
-where
-    C::Signature: TryFrom<&'a [u8]>,
-{
+fn verify<C: SuiScheme>(key: &[u8], digest: [u8; 32], signature: &[u8]) -> bool {
     let (Some(key), Ok(signature)) = (C::parse_public_key(key), C::Signature::try_from(signature))
     else {
         return false;
     };
 
-    C::verify(&key, digest, &signature)
+    C::verify(&key, &C::signing_digest(digest), &signature)
 }
 
 impl fmt::Display for SuiPublicKey {
@@ -241,10 +246,14 @@ impl FromStr for SuiPublicKey {
 /// The BCS vector length is a canonical ULEB128 u32. Returns `None` for larger
 /// messages. This is the native protocol hash, not a wallet display format.
 pub fn personal_message_digest(message: &[u8]) -> Option<[u8; 32]> {
-    let mut length = u32::try_from(message.len()).ok()?;
-    let mut bytes = Vec::with_capacity(message.len().checked_add(8)?);
+    use ::blake2::{Blake2b, Digest, digest::consts::U32};
 
-    bytes.extend_from_slice(&[3, 0, 0]);
+    let mut length = u32::try_from(message.len()).ok()?;
+
+    // Hash the parts in place: the message is not copied.
+    let mut hasher = Blake2b::<U32>::new();
+
+    hasher.update([3, 0, 0]);
 
     loop {
         let mut byte = u8::try_from(length & 0x7f).expect("seven bits");
@@ -254,16 +263,16 @@ pub fn personal_message_digest(message: &[u8]) -> Option<[u8; 32]> {
             byte |= 0x80;
         }
 
-        bytes.push(byte);
+        hasher.update([byte]);
 
         if length == 0 {
             break;
         }
     }
 
-    bytes.extend_from_slice(message);
+    hasher.update(message);
 
-    Some(blake2b256(bytes))
+    Some(hasher.finalize().into())
 }
 
 mod sealed {
@@ -279,7 +288,9 @@ mod sealed {
 
 /// Native single-key scheme glue for SDK signers using the shared crypto traits.
 /// Only the three explicitly supported Sui algorithms implement this trait.
-pub trait SuiScheme: sealed::Sealed + Curve + Send + Sync + 'static {
+pub trait SuiScheme:
+    sealed::Sealed + Curve<Signature: for<'a> TryFrom<&'a [u8]>> + Send + Sync + 'static
+{
     const FLAG: u8;
     fn parse_public_key(bytes: &[u8]) -> Option<Self::PublicKey>;
     fn sui_public_key(key: Self::PublicKey) -> SuiPublicKey;

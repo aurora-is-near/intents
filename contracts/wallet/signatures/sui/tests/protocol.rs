@@ -2,7 +2,7 @@ mod common;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use common::TestSui as WalletSui;
 use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
-use defuse_wallet_sui::{SuiPublicKey, sui::personal_message_digest};
+use defuse_wallet_sui::{SuiPublicKey, protocol::personal_message_digest};
 use serde_json::Value;
 
 fn fixtures() -> Value {

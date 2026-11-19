@@ -70,23 +70,41 @@ fn check<C: SuiScheme>(vector: &Value) {
         &key,
         || {
             calls.set(calls.get() + 1);
+
             Ok(vector["message"].as_str().unwrap().to_owned())
         },
         proof,
     ));
     assert_eq!(calls.get(), 1);
-    assert!(!WalletSui::<C>::verify(
+
+    let calls = Cell::new(0);
+    let verified = WalletSui::<C>::verify(
         &key,
-        || Err(MessageError::TooLarge),
-        proof
-    ));
+        || {
+            calls.set(calls.get() + 1);
+
+            Err(MessageError::TooLarge)
+        },
+        proof,
+    );
+
+    assert!(
+        !verified,
+        "rendering failure must reject scheme {}",
+        key.flag()
+    );
+    assert_eq!(calls.get(), 1);
 }
 
 #[test]
 fn proofs_are_checked_before_rendering_for_every_scheme() {
     let fixture: Value = serde_json::from_str(include_str!("../tests/fixtures/sui.json")).unwrap();
 
-    for vector in fixture["vectors"].as_array().unwrap() {
+    let vectors = fixture["vectors"].as_array().unwrap();
+
+    assert_eq!(vectors.len(), 27);
+
+    for vector in vectors {
         let key: SuiPublicKey = vector["public_key"].as_str().unwrap().parse().unwrap();
 
         match key.flag() {

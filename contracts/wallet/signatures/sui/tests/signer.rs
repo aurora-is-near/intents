@@ -10,7 +10,7 @@ use defuse_wallet_sui::{
         p256::{P256, p256},
         secp256k1::{Secp256k1, k256},
     },
-    sui::SuiScheme,
+    protocol::SuiScheme,
 };
 use serde_json::Value;
 

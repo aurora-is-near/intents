@@ -44,6 +44,8 @@ key.
   signatures. A rejected proof is never retried under another scheme.
 - Ed25519 verification uses the NEAR host function, not ZIP-215 rules, so
   exceptional encodings that Sui accepts may be rejected.
+- On-chain, a well-formed proof for a message that cannot be rendered fails
+  with the rendering error, not with `invalid signature`.
 
 The two text prefixes separate execution requests from NEP-641 authorizations,
 and the `PersonalMessage` intent separates both from Sui transactions.
@@ -60,9 +62,9 @@ make defuse-wallet-sui-ed25519 defuse-wallet-sui-secp256k1 defuse-wallet-sui-p25
 ```
 
 Build each variant on its own, as the `make` targets do: one `cargo build` of
-several variants links all their verifiers into each WASM, which changes the
-code hash and therefore every derived wallet account. The P-256 variant needs
-the `p256_verify` host function.
+several variants unifies their features, which changes the code hash and
+therefore every derived wallet account, although each WASM links only its own
+verifier. The P-256 variant needs the `p256_verify` host function.
 
 ## References
 

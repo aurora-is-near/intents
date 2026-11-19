@@ -3,7 +3,7 @@ lints.workspace = true
 [package]
 name = "defuse-wallet-sui-p256"
 edition.workspace = true
-version.workspace = true
+version = "0.1.0"
 rust-version.workspace = true
 repository.workspace = true
 readme = "../README.md"

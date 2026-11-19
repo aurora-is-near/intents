@@ -13,15 +13,16 @@ use defuse_wallet::{
 };
 use defuse_wallet_sdk::{Wallet, WalletBuilder, WalletSigner, client::WalletContract};
 use defuse_wallet_sui::{
-    MAX_SIGNING_MESSAGE_BYTES, WalletSui, WalletSuiSigner,
+    MAX_SIGNING_MESSAGE_BYTES, MessageError, WalletSui, WalletSuiSigner,
     crypto::{
         Signer,
         ed25519::{Ed25519, ed25519_dalek},
         p256::{P256, p256},
         secp256k1::{Secp256k1, k256},
     },
+    offchain_signing_message,
+    protocol::SuiScheme,
     request_signing_message,
-    sui::SuiScheme,
 };
 use near_kit::{Near, protocol::PublishMode, rpc::FinalExecutionOutcome, transaction::Final};
 use near_kit_sandbox::SandboxConfig;
@@ -581,6 +582,122 @@ async fn check_lockout_and_rotation<C: SuiScheme>(
     );
 }
 
+/// Rendering errors are diagnostic only after the proof envelope passes its checks.
+async fn check_offchain_render_errors<C: SuiScheme, S: WalletSigner<WalletSui<C>>>(
+    near: &Near,
+    wallet: &Wallet<WalletSui<C>>,
+    signer: &S,
+) {
+    let key = wallet.public_key();
+    let resolver = RpcResolver::new(near.rpc().clone()).await.unwrap();
+    let msg = OffchainMessage {
+        chain_id: wallet.chain_id().clone(),
+        signer_id: wallet.account_id().clone(),
+        path: vec![],
+        timestamp: Timestamp::now() - Duration::from_mins(1),
+        payload: "render error control".to_owned(),
+    };
+    let proof = signer.sign_offchain_msg(&msg).await.unwrap();
+    let authorization = String::from(WalletAuthorization::Signature {
+        msg: msg.clone(),
+        proof,
+    });
+    let resolved = resolver
+        .resolve_auth(wallet.account_id(), &authorization)
+        .await
+        .unwrap();
+
+    assert_eq!(resolved, msg.payload);
+
+    let mut oversized = msg;
+    oversized.payload = "a".repeat(MAX_SIGNING_MESSAGE_BYTES);
+
+    assert!(matches!(
+        offchain_signing_message(&key, &oversized),
+        Err(MessageError::TooLarge)
+    ));
+
+    for (proof, expected) in [
+        ("invalid".to_owned(), "invalid signature"),
+        (
+            key.encode_signature(&[0; 64]),
+            "signing message exceeds 16 KiB",
+        ),
+    ] {
+        // An intact envelope need not contain a valid signature to reach rendering.
+        let authorization = String::from(WalletAuthorization::Signature {
+            msg: oversized.clone(),
+            proof,
+        });
+        let error = resolver
+            .resolve_auth(wallet.account_id(), &authorization)
+            .await
+            .expect_err("oversized offchain authorization must reject");
+        let error = format!("{error:?}");
+
+        assert!(error.contains(expected), "expected {expected}: {error}");
+        assert!(!error.contains("panicked at"), "{error}");
+        assert!(!error.contains("src/"), "{error}");
+    }
+}
+
+/// Both failure paths must leave nonce storage untouched.
+async fn check_request_render_errors<C: SuiScheme>(
+    near: &Near,
+    wallet: &Wallet<WalletSui<C>>,
+    oversized: &RequestMessage,
+) -> (u64, FinalExecutionOutcome) {
+    let contract = near.contract::<WalletContract>(wallet.account_id());
+    let key = wallet.public_key();
+
+    // A malformed envelope must reject before the oversized message is rendered.
+    let error = contract
+        .w_execute_signed((oversized, "invalid").into())
+        .gas(Gas::from_tgas(80))
+        .await
+        .unwrap()
+        .result()
+        .expect_err("malformed proof must reject before rendering");
+
+    assert!(error.to_string().contains("invalid signature"), "{error:?}");
+    assert!(
+        !error.to_string().contains("signing message exceeds"),
+        "{error:?}"
+    );
+
+    let before = near
+        .account(wallet.account_id())
+        .await
+        .unwrap()
+        .storage_usage;
+    let invalid = key.encode_signature(&[0; 64]);
+    let failed = contract
+        .w_execute_signed((oversized, invalid.as_str()).into())
+        .gas(Gas::from_tgas(80))
+        .await
+        .unwrap();
+
+    let error = failed.result().expect_err("oversized display must reject");
+
+    // On-chain, a well-formed proof reports why the message cannot be rendered.
+    assert!(
+        error.to_string().contains("signing message exceeds 16 KiB"),
+        "{error:?}"
+    );
+    assert!(!error.to_string().contains("panicked at"), "{error:?}");
+    assert!(!error.to_string().contains("src/"), "{error:?}");
+
+    assert_eq!(
+        near.account(wallet.account_id())
+            .await
+            .unwrap()
+            .storage_usage,
+        before
+    );
+
+    (before, failed)
+}
+
 async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>>(
     near: &Near,
     wallet: &Wallet<WalletSui<C>>,
@@ -624,29 +741,18 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
 
     // Each ASCII padding byte adds exactly one display byte.
     assert_eq!(length, MAX_SIGNING_MESSAGE_BYTES);
-    assert!(request_signing_message(&key, &oversized).is_err());
+    assert!(matches!(
+        request_signing_message(&key, &oversized),
+        Err(MessageError::TooLarge)
+    ));
 
-    let before = near
-        .account(wallet.account_id())
-        .await
-        .unwrap()
-        .storage_usage;
-    let invalid = key.encode_signature(&[0; 64]);
-    let failed = contract
-        .w_execute_signed((&oversized, invalid.as_str()).into())
-        .gas(Gas::from_tgas(80))
-        .await
-        .unwrap();
+    check_offchain_render_errors(near, wallet, signer).await;
 
-    failed.result().expect_err("oversized display must reject");
+    let (before, failed) = check_request_render_errors(near, wallet, &oversized).await;
 
-    assert_eq!(
-        near.account(wallet.account_id())
-            .await
-            .unwrap()
-            .storage_usage,
-        before
-    );
+    // The failing render committed this same nonce first; receipt rollback must free it.
+    assert_eq!(msg.nonce, oversized.nonce);
+    assert_eq!(msg.created_at, oversized.created_at);
 
     let proof = signer.sign_request_msg(&msg).await.unwrap();
 

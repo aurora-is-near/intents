@@ -6,7 +6,6 @@ pub mod protocol;
 mod signer;
 
 pub use message::*;
-pub use protocol as sui;
 pub use protocol::{SuiPublicKey, crypto};
 #[cfg(feature = "signer")]
 pub use signer::*;
@@ -28,9 +27,8 @@ impl<C: SuiScheme> WalletSui<C> {
         message: impl FnOnce() -> Result<String, MessageError>,
         proof: &str,
     ) -> bool {
-        // Keep each contract restricted to its scheme before doing message work.
-        public_key.flag() == C::FLAG
-            && public_key.verify_personal_message_with(|| message().ok(), proof)
+        // Each contract is restricted to its scheme `C` before any message work.
+        public_key.verify_personal_message_with::<C, _>(message, proof)
     }
 }
 

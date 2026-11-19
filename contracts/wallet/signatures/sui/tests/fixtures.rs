@@ -19,12 +19,40 @@ fn key(v: &Value) -> SuiPublicKey {
     v["public_key"].as_str().unwrap().parse().unwrap()
 }
 
+/// Kinds of the vectors of each scheme, in the order the tests index them.
+const LAYOUT: [&str; 9] = [
+    "request", "request", "request", "request", "offchain", "offchain", "offchain", "request",
+    "request",
+];
+
+/// Vectors grouped by their `scheme` and checked against [`LAYOUT`], so that a
+/// regenerated fixture cannot silently drop vectors or shift the indexes.
+fn schemes() -> Vec<Vec<Value>> {
+    let all = vectors();
+    let groups: Vec<Vec<Value>> = ["ED25519", "Secp256k1", "Secp256r1"]
+        .into_iter()
+        .map(|scheme| {
+            let group: Vec<Value> = all
+                .iter()
+                .filter(|v| v["scheme"] == scheme)
+                .cloned()
+                .collect();
+            let kinds: Vec<&str> = group.iter().map(|v| v["kind"].as_str().unwrap()).collect();
+
+            assert_eq!(kinds, LAYOUT, "{scheme}");
+
+            group
+        })
+        .collect();
+
+    assert_eq!(groups.iter().map(Vec::len).sum::<usize>(), all.len());
+
+    groups
+}
+
 #[test]
 fn official_sui_sdk_vectors() {
-    // Nine per scheme: the other tests take them in chunks of nine.
-    assert_eq!(vectors().len(), 27);
-
-    for v in vectors() {
+    for v in schemes().concat() {
         let public_key = key(&v);
         let proof = v["proof"].as_str().unwrap();
 
@@ -50,7 +78,7 @@ fn official_sui_sdk_vectors() {
 
 #[test]
 fn execution_fields_are_bound() {
-    for all in vectors().chunks_exact(9) {
+    for all in schemes() {
         let v = &all[2];
         let original = &v["msg"];
         let mutations = [
@@ -159,7 +187,7 @@ fn execution_fields_are_bound() {
 
 #[test]
 fn transfer_refund_and_state_init_are_bound() {
-    for all in vectors().chunks_exact(9) {
+    for all in schemes() {
         for (index, pointer, value) in [
             (1, "/request/external/0/refund_to", json!("other.near")),
             (
@@ -204,7 +232,7 @@ fn transfer_refund_and_state_init_are_bound() {
 
 #[test]
 fn offchain_fields_are_bound_without_normalizing_payload() {
-    for all in vectors().chunks_exact(9) {
+    for all in schemes() {
         let v = &all[5];
 
         for (pointer, value) in [
@@ -240,7 +268,7 @@ fn offchain_fields_are_bound_without_normalizing_payload() {
 
 #[test]
 fn malformed_wrong_key_and_cross_domain_proofs_fail() {
-    for all in vectors().chunks_exact(9) {
+    for all in schemes() {
         let v = &all[0];
         let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
 
@@ -272,7 +300,7 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
 
 #[test]
 fn limits_and_ambiguous_timeout_are_rejected() {
-    for all in vectors().chunks_exact(9) {
+    for all in schemes() {
         let v = &all[0];
         let mut msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
 
@@ -336,18 +364,18 @@ fn state_init_fixture_uses_derived_receiver() {
 #[test]
 fn derived_accounts_match_known_answers() {
     use defuse_wallet::{GlobalContractId, State, StateInit, StateInitV1};
-    let all = vectors();
+    let all = schemes();
 
-    for (index, subwallet_id, timeout, expected) in [
+    for (scheme, subwallet_id, timeout, expected) in [
         (0, 0, 3600, "0s49051dd7652c535b2f422312d808d4702ae81678"),
         (0, 1, 3600, "0sbe69bfac8784d0a031a24ede2cc64bf701f4bdb2"),
         (0, 0, 300, "0s72b48612a269c7040a20e4a7180191af911de5fb"),
-        (9, 0, 3600, "0sb569e1108c1e485d495072ccd28abf686742fadb"),
-        (9, 1, 3600, "0s4716ec2dd8f5a97184792a125176b554949176f4"),
-        (18, 0, 3600, "0sba9edac674b105460073c20e1548240cd259b34d"),
-        (18, 1, 3600, "0s6f681ded58dec1caaa2ee11e7e42cad3c1ac2c9c"),
+        (1, 0, 3600, "0sb569e1108c1e485d495072ccd28abf686742fadb"),
+        (1, 1, 3600, "0s4716ec2dd8f5a97184792a125176b554949176f4"),
+        (2, 0, 3600, "0sba9edac674b105460073c20e1548240cd259b34d"),
+        (2, 1, 3600, "0s6f681ded58dec1caaa2ee11e7e42cad3c1ac2c9c"),
     ] {
-        let state = State::new(key(&all[index]))
+        let state = State::new(key(&all[scheme][0]))
             .subwallet_id(subwallet_id)
             .timeout(Duration::from_secs(timeout));
         let account = StateInit::V1(StateInitV1 {
