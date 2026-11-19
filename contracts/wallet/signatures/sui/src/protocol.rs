@@ -128,7 +128,10 @@ impl SuiPublicKey {
             1 => self.verify_personal_message_with::<Secp256k1, _>(|| Ok(message), proof),
             #[cfg(feature = "p256")]
             2 => self.verify_personal_message_with::<P256, _>(|| Ok(message), proof),
-            _ => false,
+            _ => {
+                let _ = (message, proof);
+                false
+            }
         }
     }
 
@@ -182,18 +185,6 @@ impl SuiPublicKey {
         let signature = &bytes[1..PUBLIC_KEY_OFFSET];
 
         verify::<C>(self.raw_bytes(), digest, signature)
-    }
-
-    /// No algorithm is enabled: public-key parsing must deny authorization.
-    #[cfg(not(any(feature = "ed25519", feature = "secp256k1", feature = "p256")))]
-    pub fn from_sui_bytes(_bytes: &[u8]) -> Result<Self, PublicKeyError> {
-        Err(PublicKeyError)
-    }
-
-    /// No algorithm is enabled: proofs are never accepted.
-    #[cfg(not(any(feature = "ed25519", feature = "secp256k1", feature = "p256")))]
-    pub const fn verify_personal_message(&self, _message: &[u8], _proof: &str) -> bool {
-        false
     }
 
     /// Serialize a 64-byte signature in the native Sui proof format.
