@@ -46,6 +46,7 @@ fn proof(v: &Value) -> &str {
 #[test]
 fn types_and_domain_match_eth_sig_util() {
     let fixture = fixture();
+
     assert_eq!(fixture["encode_type"]["ExecuteRequest"], REQUEST_TYPE);
     assert_eq!(
         fixture["encode_type"]["OffchainAuthorization"],
@@ -65,6 +66,7 @@ fn independent_vectors_verify() {
                 &msg,
                 proof(&v)
             ));
+
             request_digest(&msg).unwrap()
         } else {
             let msg: OffchainMessage = serde_json::from_value(v["msg"].clone()).unwrap();
@@ -73,8 +75,10 @@ fn independent_vectors_verify() {
                 &msg,
                 proof(&v)
             ));
+
             offchain_digest(&msg).unwrap()
         };
+
         assert_eq!(v["digest"], hex::encode(digest));
     }
 }
@@ -82,6 +86,7 @@ fn independent_vectors_verify() {
 #[test]
 fn execution_fields_are_bound() {
     let all = vectors();
+
     for (index, pointer, value) in [
         (2, "/chain_id", json!("testnet")),
         (2, "/signer_id", json!("other.near")),
@@ -156,6 +161,7 @@ fn execution_fields_are_bound() {
         let mut changed = v["msg"].clone();
         set(&mut changed, pointer, value);
         let changed = request(changed);
+
         assert_ne!(
             hex::encode(request_digest(&changed).expect("mutation must hash")),
             v["digest"]
@@ -171,6 +177,7 @@ fn execution_fields_are_bound() {
 #[test]
 fn order_and_absent_refund_are_bound() {
     let all = vectors();
+
     for pointer in ["/request/internal", "/request/external/0/actions"] {
         let v = &all[2];
         let mut changed = v["msg"].clone();
@@ -181,6 +188,7 @@ fn order_and_absent_refund_are_bound() {
             .unwrap()
             .reverse();
         let changed = request(changed);
+
         assert_ne!(
             hex::encode(request_digest(&changed).expect("mutation must hash")),
             v["digest"]
@@ -191,6 +199,7 @@ fn order_and_absent_refund_are_bound() {
             proof(v)
         ));
     }
+
     // An absent refund target differs from any account.
     let v = &all[1];
     let mut changed = v["msg"].clone();
@@ -199,6 +208,7 @@ fn order_and_absent_refund_are_bound() {
         .unwrap()
         .remove("refund_to");
     let changed = request(changed);
+
     assert_ne!(
         hex::encode(request_digest(&changed).expect("mutation must hash")),
         v["digest"]
@@ -214,6 +224,7 @@ fn order_and_absent_refund_are_bound() {
 fn offchain_fields_are_bound_without_normalizing_payload() {
     let all = vectors();
     let v = &all[5];
+
     for (pointer, value) in [
         ("/chain_id", json!("mainnet")),
         ("/signer_id", json!("other.near")),
@@ -229,6 +240,7 @@ fn offchain_fields_are_bound_without_normalizing_payload() {
         let mut changed = v["msg"].clone();
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: OffchainMessage = serde_json::from_value(changed).unwrap();
+
         assert_ne!(
             hex::encode(offchain_digest(&msg).expect("mutation must hash")),
             v["digest"]
@@ -247,6 +259,7 @@ fn proofs_are_bound_to_their_domain() {
     let all = vectors();
     let msg = request(all[0]["msg"].clone());
     let auth: OffchainMessage = serde_json::from_value(all[4]["msg"].clone()).unwrap();
+
     assert!(!WalletEip712::verify_request_msg(
         &address(&all[0]),
         &msg,
@@ -285,11 +298,13 @@ fn malleated_and_noncanonical_proofs_fail() {
         proof(v).strip_prefix("secp256k1:").unwrap().to_owned(),
         String::new(),
     ];
+
     for byte in [27, 2, 3] {
         let mut bytes = parsed.0;
         bytes[64] = byte;
         variants.push(Secp256k1RecoverableSignature(bytes).to_string());
     }
+
     for proof in variants {
         assert!(
             !WalletEip712::verify_request_msg(&address(v), &msg, &proof),
@@ -304,13 +319,16 @@ fn unsupported_content_is_rejected() {
     let base = request(vectors()[2]["msg"].clone());
     let call = |name: &str, args: &str| {
         let mut msg = base.clone();
+
         let NearAction::FunctionCall(call) = &mut msg.request.external[0].actions[0] else {
             unreachable!()
         };
+
         call.function_name = name.to_owned();
         call.args = args.as_bytes().to_vec();
         msg
     };
+
     for (msg, expected) in [
         (call("ft_transfer", r#"{"memo":"Привет"}"#), "args"),
         (call("ft_transfer", "{\"memo\":\"\\u202e\"}"), "args"),
@@ -324,6 +342,7 @@ fn unsupported_content_is_rejected() {
         (call("ft_transfer\u{7f}", "{}"), "text"),
     ] {
         let error = request_digest(&msg).unwrap_err();
+
         // What cannot be hashed cannot be authorized.
         let signed = &vectors()[2];
         assert!(!WalletEip712::verify_request_msg(
@@ -331,6 +350,7 @@ fn unsupported_content_is_rejected() {
             &msg,
             proof(signed)
         ));
+
         assert!(
             match expected {
                 "args" => matches!(error, Eip712Error::FunctionArgs),
@@ -340,27 +360,37 @@ fn unsupported_content_is_rejected() {
             "{expected}: {error:?}"
         );
     }
+
     let mut msg = base.clone();
     msg.chain_id = "main\u{202e}net".to_owned();
+
     assert!(matches!(request_digest(&msg), Err(Eip712Error::Text)));
+
     let large = "x".repeat(16 * 1024 + 1);
+
     assert!(matches!(
         request_digest(&call("submit", &large)),
         Err(Eip712Error::TooLarge)
     ));
+
     let mut auth: OffchainMessage = serde_json::from_value(vectors()[5]["msg"].clone()).unwrap();
     auth.payload = "caf\u{e9}".to_owned();
+
     assert!(matches!(offchain_digest(&auth), Err(Eip712Error::Text)));
+
     auth.payload = large;
+
     assert!(matches!(offchain_digest(&auth), Err(Eip712Error::TooLarge)));
 }
 
 /// Vector 2 with its first call replaced.
 fn transfer(method: &str, args: &Value, deposit: u128) -> RequestMessage {
     let mut msg = request(vectors()[2]["msg"].clone());
+
     let NearAction::FunctionCall(call) = &mut msg.request.external[0].actions[0] else {
         unreachable!()
     };
+
     method.clone_into(&mut call.function_name);
     call.args = serde_json::to_vec(args).unwrap();
     call.deposit = NearToken::from_yoctonear(deposit);
@@ -370,20 +400,24 @@ fn transfer(method: &str, args: &Value, deposit: u128) -> RequestMessage {
 /// Why `msg` is not hashed. What cannot be hashed cannot be authorized.
 fn rejection(msg: &RequestMessage) -> Eip712Error {
     let signed = &vectors()[2];
+
     assert!(!WalletEip712::verify_request_msg(
         &address(signed),
         msg,
         proof(signed)
     ));
+
     request_digest(msg).unwrap_err()
 }
 
 /// Valid arguments of a NEP-141 transfer `method`.
 fn transfer_args(method: &str) -> Value {
     let mut args = json!({"receiver_id": "bob.near", "amount": "1"});
+
     if method == "ft_transfer_call" {
         args["msg"] = json!("");
     }
+
     args
 }
 
@@ -391,10 +425,12 @@ fn transfer_args(method: &str) -> Value {
 fn with(args: &Value, field: &str, value: Option<Value>) -> Value {
     let mut args = args.clone();
     let object = args.as_object_mut().unwrap();
+
     match value {
         Some(value) => object.insert(field.to_owned(), value),
         None => object.remove(field),
     };
+
     args
 }
 
@@ -405,6 +441,7 @@ fn with(args: &Value, field: &str, value: Option<Value>) -> Value {
 fn token_transfer_parameters_are_validated() {
     type Values = Vec<Option<Value>>;
     let text = |values: &[&str]| -> Values { values.iter().map(|v| Some(json!(v))).collect() };
+
     for method in ["ft_transfer", "ft_transfer_call"] {
         let args = transfer_args(method);
         let mut rules: Vec<(&str, Values, Values)> = vec![
@@ -447,6 +484,7 @@ fn token_transfer_parameters_are_validated() {
                 ],
             ),
         ];
+
         if method == "ft_transfer_call" {
             rules.push((
                 "msg",
@@ -454,11 +492,13 @@ fn token_transfer_parameters_are_validated() {
                 vec![None, Some(Value::Null), Some(json!(1)), Some(json!({}))],
             ));
         }
+
         for (field, accepted, rejected) in rules {
             for value in accepted {
                 let msg = transfer(method, &with(&args, field, value.clone()), 1);
                 assert!(request_digest(&msg).is_ok(), "{method} {field} {value:?}");
             }
+
             for value in rejected {
                 let error = rejection(&transfer(method, &with(&args, field, value.clone()), 1));
                 assert!(
@@ -477,11 +517,13 @@ fn token_transfers_take_only_method_parameters_and_one_yocto() {
     for method in ["ft_transfer", "ft_transfer_call"] {
         let args = transfer_args(method);
         request_digest(&transfer(method, &args, 1)).unwrap();
+
         let other = if method == "ft_transfer" {
             "msg"
         } else {
             "message"
         };
+
         for args in [
             with(&args, "amount_display", Some(json!("1.5 TOKEN"))),
             with(&args, " amount", Some(json!("5"))),
@@ -496,10 +538,12 @@ fn token_transfers_take_only_method_parameters_and_one_yocto() {
                 "{method} {args}: {error:?}"
             );
         }
+
         for deposit in [0, 2, u128::MAX] {
             let msg = transfer(method, &args, deposit);
             // Serde omits a zero deposit; the decoded default is rejected, too.
             let decoded = request(serde_json::to_value(&msg).unwrap());
+
             for msg in [msg, decoded] {
                 let error = rejection(&msg);
                 assert!(
@@ -509,6 +553,7 @@ fn token_transfers_take_only_method_parameters_and_one_yocto() {
             }
         }
     }
+
     // Other methods are not restricted.
     request_digest(&transfer("submit", &json!({"amount": "01", "x": 1}), 0)).unwrap();
 }
@@ -518,28 +563,39 @@ fn token_transfers_take_only_method_parameters_and_one_yocto() {
 fn text_and_item_budget_is_enforced() {
     let all = vectors();
     let mut msg = request(all[8]["msg"].clone());
+
     let NearAction::FunctionCall(call) = &mut msg.request.external[0].actions[0] else {
         unreachable!()
     };
+
     // `{"padding":"a…"}`: one more padding byte.
     call.args.insert(12, b'a');
+
     assert!(matches!(request_digest(&msg), Err(Eip712Error::TooLarge)));
 
     let mut msg = request(all[9]["msg"].clone());
     let extra = msg.request.external[0].actions[0].clone();
     msg.request.external[0].actions.push(extra);
+
     assert!(matches!(request_digest(&msg), Err(Eip712Error::TooLarge)));
 
     let mut auth: OffchainMessage = serde_json::from_value(all[4]["msg"].clone()).unwrap();
     auth.path = vec!["a.near".parse().unwrap(); 128];
+
     offchain_digest(&auth).unwrap();
+
     auth.path.push("a.near".parse().unwrap());
+
     assert!(matches!(offchain_digest(&auth), Err(Eip712Error::TooLarge)));
+
     let mut msg = request(all[2]["msg"].clone());
+
     let NearAction::FunctionCall(call) = &mut msg.request.external[0].actions[1] else {
         unreachable!()
     };
+
     call.function_name = "X".repeat(100 * 1024);
+
     assert!(matches!(request_digest(&msg), Err(Eip712Error::TooLarge)));
 
     // Each add_extension is an operation and a warning.
@@ -547,11 +603,16 @@ fn text_and_item_budget_is_enforced() {
     msg.request.external.clear();
     let extension = "a.near".parse::<defuse_wallet::AccountId>().unwrap();
     msg.request.internal = vec![WalletOp::add_extension(extension); 64];
+
     request_digest(&msg).unwrap();
+
     msg.request
         .internal
         .push(WalletOp::set_signature_mode(true));
+
     assert!(matches!(request_digest(&msg), Err(Eip712Error::TooLarge)));
+
     msg.request.internal = vec![WalletOp::set_signature_mode(true); 100_000];
+
     assert!(matches!(request_digest(&msg), Err(Eip712Error::TooLarge)));
 }

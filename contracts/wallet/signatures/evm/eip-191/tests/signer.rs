@@ -1,5 +1,6 @@
 use defuse_wallet::{
-    AccountId, NearPromise, Request, SignatureSchema, WalletOp, actions::FunctionCall,
+    AccountId, NearPromise, Request, RequestMessage, SignatureSchema, WalletOp,
+    actions::FunctionCall, offchain::OffchainMessage,
 };
 use defuse_wallet_evm_eip191::{
     EthAddress, MessageError, SignError, WalletEip191, WalletEip191Signer,
@@ -31,6 +32,7 @@ fn signer() -> WalletEip191Signer<SigningKey> {
 #[tokio::test]
 async fn signer_proofs_verify_for_both_paths() {
     let wallet = Wallet::<WalletEip191>::new(CODE, signer());
+
     // `w_public_key()` shows the address as lowercase `0x` hex.
     assert_eq!(
         wallet.public_key().to_string(),
@@ -48,17 +50,19 @@ async fn signer_proofs_verify_for_both_paths() {
         )
         .await
         .unwrap();
+
     assert!(WalletEip191::verify_request_msg(
         &wallet.public_key(),
         &msg,
         &proof
     ));
+
     let message = request_signing_message(&wallet.public_key(), &msg).unwrap();
     assert!(message.contains(r#""evm_address": "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23""#));
     assert!(message.contains(r#""account_id": "recovery.near""#));
     assert!(message.contains("\"a\": 1"));
 
-    let auth = defuse_wallet::offchain::OffchainMessage {
+    let auth = OffchainMessage {
         chain_id: msg.chain_id.clone(),
         signer_id: msg.signer_id.clone(),
         path: Vec::new(),
@@ -66,6 +70,7 @@ async fn signer_proofs_verify_for_both_paths() {
         payload: "Login to nothing: this is an authorization".to_string(),
     };
     let proof = signer().sign_offchain_msg(&auth).await.unwrap();
+
     assert!(WalletEip191::verify_offchain_msg(
         &wallet.public_key(),
         &auth,
@@ -89,6 +94,7 @@ async fn signer_refuses_unreadable_requests() {
         )
     };
     let (msg, _) = wallet.sign(Request::new()).await.unwrap();
+
     for (request, token_deposit) in [
         // a NEP-141 transfer without its one yoctoNEAR would fail in the token
         (
@@ -99,11 +105,12 @@ async fn signer_refuses_unreadable_requests() {
         (call("submit", b"\x00\xff"), false),
         (call("submit", br#"{"a":1,"a":2}"#), false),
     ] {
-        let msg = defuse_wallet::RequestMessage {
+        let msg = RequestMessage {
             request,
             ..msg.clone()
         };
         let error = signer().sign_request_msg(&msg).await.unwrap_err();
+
         assert!(
             if token_deposit {
                 matches!(error, SignError::Message(MessageError::TokenDeposit))
@@ -128,6 +135,7 @@ fn account_id_derivable_from_address_alone() {
         data: State::new(address).as_storage(),
     })
     .derive_account_id();
+
     assert_eq!(
         derived,
         *Wallet::<WalletEip191>::new(CODE, signer()).account_id()
@@ -155,7 +163,9 @@ impl RecoverableSigner<Secp256k1> for HighS {
             RecoverableSigner::<Secp256k1>::sign_recoverable(&self.0, msg).await?;
         let (r, s) = signature.split_scalars();
         let high_s = Signature::from_scalars(r, -s).unwrap();
+
         assert_ne!(high_s, signature);
+
         Ok((
             high_s,
             RecoveryId::new(!recovery_id.is_y_odd(), recovery_id.is_x_reduced()),
@@ -168,6 +178,7 @@ impl RecoverableSigner<Secp256k1> for HighS {
 async fn signer_normalizes_high_s_signatures() {
     let wallet = Wallet::<WalletEip191>::new(CODE, WalletEip191Signer(HighS(signer().0)));
     let (msg, proof) = wallet.sign(Request::new()).await.unwrap();
+
     assert!(WalletEip191::verify_request_msg(
         &wallet.public_key(),
         &msg,
@@ -185,6 +196,7 @@ fn derived_accounts_match_known_answers() {
     let address: EthAddress = "0xd8da6bf26964af9d7eed9e03e53415d37aa96045"
         .parse()
         .unwrap();
+
     for (subwallet_id, timeout, expected) in [
         (0, 3600, "0s007ef5585c4ebc3d4c9b1a3f5e96c5aab644e13e"),
         (1, 3600, "0sc5b1f5988d922aa84e66bcd3d1d2b004312e64f7"),
@@ -198,6 +210,7 @@ fn derived_accounts_match_known_answers() {
             data: state.as_storage(),
         })
         .derive_account_id();
+
         assert_eq!(account.as_str(), expected);
     }
 }

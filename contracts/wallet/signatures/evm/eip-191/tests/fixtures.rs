@@ -24,6 +24,7 @@ fn independent_noble_vectors() {
     for v in vectors() {
         let address = address(&v);
         let proof = v["proof"].as_str().unwrap();
+
         if v["kind"] == "request" {
             let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
             assert_eq!(
@@ -76,6 +77,7 @@ fn execution_fields_are_bound() {
             json!("1"),
         ),
     ];
+
     for (pointer, value) in mutations {
         let mut changed = original.clone();
         // Optional fields may be absent in the wire input, but their defaults are signed.
@@ -87,6 +89,7 @@ fn execution_fields_are_bound() {
             .unwrap()
             .insert(field.to_owned(), value);
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
+
         assert_ne!(
             request_signing_message(&address(v), &msg).expect("mutation must render"),
             v["message"]
@@ -96,6 +99,7 @@ fn execution_fields_are_bound() {
             "accepted {pointer}"
         );
     }
+
     for pointer in ["/request/internal", "/request/external/0/actions"] {
         let mut changed = original.clone();
         changed
@@ -105,6 +109,7 @@ fn execution_fields_are_bound() {
             .unwrap()
             .reverse();
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
+
         assert_ne!(
             request_signing_message(&address(v), &msg).expect("mutation must render"),
             v["message"]
@@ -115,20 +120,26 @@ fn execution_fields_are_bound() {
             v["proof"].as_str().unwrap()
         ));
     }
+
     // The token contract is part of the signature.
     let mut moved: RequestMessage = serde_json::from_value(original.clone()).unwrap();
+
     moved.request.external[0].receiver_id = "other.near".parse().unwrap();
     request_signing_message(&address(v), &moved).unwrap();
+
     assert!(!WalletEip191::verify_request_msg(
         &address(v),
         &moved,
         v["proof"].as_str().unwrap()
     ));
+
     // The native transfer recipient is bound independently as well.
     let transfer = &all[1];
     let mut msg: RequestMessage = serde_json::from_value(transfer["msg"].clone()).unwrap();
+
     msg.request.external[0].receiver_id = "other.near".parse().unwrap();
     request_signing_message(&address(transfer), &msg).unwrap();
+
     assert!(!WalletEip191::verify_request_msg(
         &address(transfer),
         &msg,
@@ -139,6 +150,7 @@ fn execution_fields_are_bound() {
 #[test]
 fn transfer_refund_and_state_init_are_bound() {
     let all = vectors();
+
     for (index, pointer, value) in [
         (1, "/request/external/0/refund_to", json!("other.near")),
         (
@@ -166,6 +178,7 @@ fn transfer_refund_and_state_init_are_bound() {
         let mut changed = v["msg"].clone();
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: RequestMessage = serde_json::from_value(changed).unwrap();
+
         assert_ne!(
             request_signing_message(&address(v), &msg).expect("mutation must render"),
             v["message"]
@@ -181,6 +194,7 @@ fn transfer_refund_and_state_init_are_bound() {
 fn offchain_fields_are_bound_without_normalizing_payload() {
     let all = vectors();
     let v = &all[5];
+
     for (pointer, value) in [
         ("/chain_id", json!("mainnet")),
         ("/signer_id", json!("other.near")),
@@ -197,6 +211,7 @@ fn offchain_fields_are_bound_without_normalizing_payload() {
         let mut changed = v["msg"].clone();
         *changed.pointer_mut(pointer).unwrap() = value;
         let msg: OffchainMessage = serde_json::from_value(changed).unwrap();
+
         assert_ne!(
             offchain_signing_message(&address(v), &msg).expect("mutation must render"),
             v["message"]
@@ -214,6 +229,7 @@ fn malformed_wrong_address_and_cross_domain_proofs_fail() {
     let v = &all[0];
     let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
     let proof = v["proof"].as_str().unwrap();
+
     for proof in [
         "",
         "secp256k1:",
@@ -230,11 +246,13 @@ fn malformed_wrong_address_and_cross_domain_proofs_fail() {
             "accepted {proof:?}"
         );
     }
+
     assert!(!WalletEip191::verify_request_msg(
         &EthAddress([0; 20]),
         &msg,
         proof
     ));
+
     let auth: OffchainMessage = serde_json::from_value(all[4]["msg"].clone()).unwrap();
     assert!(!WalletEip191::verify_offchain_msg(
         &address(v),
@@ -257,11 +275,13 @@ fn malleated_and_wallet_encoded_signatures_fail() {
     let high_s = k256::ecdsa::Signature::from_scalars(signature.r(), -signature.s()).unwrap();
     let flipped = k256::ecdsa::RecoveryId::from_byte(recovery_id.to_byte() ^ 1).unwrap();
     let prehash = defuse_erc191::Erc191::prehash(v["message"].as_str().unwrap());
+
     assert_eq!(
         k256::ecdsa::VerifyingKey::recover_from_prehash(&prehash, &high_s, flipped).unwrap(),
         k256::ecdsa::VerifyingKey::recover_from_prehash(&prehash, &signature, recovery_id).unwrap(),
         "malleated signature must recover the same key",
     );
+
     let malleated = Secp256k1RecoverableSignature::from((high_s, flipped)).to_string();
 
     let mut wallet_v = proof.0;
@@ -290,11 +310,13 @@ fn limits_and_ambiguous_timeout_are_rejected() {
     let all = vectors();
     let v = &all[0];
     let mut msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
     for timeout in [
         Duration::from_nanos(1),
         Duration::from_secs(u64::from(u32::MAX) + 1),
     ] {
         msg.timeout = timeout;
+
         assert!(request_signing_message(&address(v), &msg).is_err());
         assert!(!WalletEip191::verify_request_msg(
             &address(v),
@@ -302,11 +324,15 @@ fn limits_and_ambiguous_timeout_are_rejected() {
             v["proof"].as_str().unwrap()
         ));
     }
+
     let mut auth: OffchainMessage = serde_json::from_value(all[4]["msg"].clone()).unwrap();
     auth.payload = "x".repeat(16 * 1024);
+
     assert!(offchain_signing_message(&address(v), &auth).is_err());
+
     auth.payload = "bidi\u{202e} and emoji 🌍".to_string();
     let rendered = offchain_signing_message(&address(v), &auth).unwrap();
+
     assert!(rendered.is_ascii());
     assert!(rendered.contains("\\u202e"));
     assert!(rendered.contains("\\ud83c\\udf0d"));
@@ -318,7 +344,9 @@ fn state_init_fixture_uses_derived_receiver() {
         if v["kind"] != "request" {
             continue;
         }
+
         let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
         for promise in msg.request.external {
             for action in promise.actions {
                 if let defuse_wallet::actions::NearAction::DeterministicStateInit(init) = action {

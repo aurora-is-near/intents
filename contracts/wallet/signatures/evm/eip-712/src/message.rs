@@ -8,7 +8,7 @@ use defuse_wallet::{
     actions::{DeterministicStateInit, FunctionCall, NearAction, Transfer},
     offchain::OffchainMessage,
 };
-use defuse_wallet_readable::{MAX_SIGNING_MESSAGE_BYTES, attached_near, json_args, near_amount};
+use defuse_wallet_readable::MAX_SIGNING_MESSAGE_BYTES;
 use serde_json::Value;
 
 use crate::eip712::{Hash, array, boolean, digest, dynamic, hash_struct, uint};
@@ -108,13 +108,16 @@ pub fn request_digest(msg: &RequestMessage) -> Result<Hash, Eip712Error> {
         request,
     } = msg;
     let timeout_secs = u32::try_from(timeout.as_secs()).map_err(|_| Eip712Error::Timeout)?;
+
     if timeout.subsec_nanos() != 0 {
         return Err(Eip712Error::Timeout);
     }
+
     // Each operation and promise is an item, too.
     if request.internal.len() + request.external.len() > MAX_ITEMS {
         return Err(Eip712Error::TooLarge);
     }
+
     // As in the readable format: each add_extension, then each promise whose
     // attached NEAR can be refunded to an account other than this wallet.
     let extensions = request.internal.iter().filter_map(|op| match op {
@@ -123,17 +126,21 @@ pub fn request_digest(msg: &RequestMessage) -> Result<Hash, Eip712Error> {
         )),
         _ => None,
     });
+
     let refunds = request.external.iter().filter_map(|promise| {
         let refund_to = promise.refund_to.as_ref().filter(|id| *id != signer_id)?;
-        let attached = attached_near(promise);
-        (attached != 0).then(|| {
+        // Transfer amounts and deposits: the most that `refund_to` can receive.
+        let attached = promise.total_deposit();
+
+        (!attached.is_zero()).then(|| {
             format!(
-                "up to {} sent to {} can be refunded to {refund_to}, not to this wallet",
-                near_amount(attached),
+                "up to {} yoctoNEAR sent to {} can be refunded to {refund_to}, not to this wallet",
+                attached.as_yoctonear(),
                 promise.receiver_id
             )
         })
     });
+
     let mut budget = Budget::default();
     let members = [
         budget.items(extensions.chain(refunds), Budget::text)?,
@@ -146,6 +153,7 @@ pub fn request_digest(msg: &RequestMessage) -> Result<Hash, Eip712Error> {
         budget.items(&request.internal, operation)?,
         budget.items(&request.external, promise)?,
     ];
+
     Ok(digest(
         &domain_separator(),
         &hash_struct(REQUEST_TYPE, members),
@@ -169,6 +177,7 @@ pub fn offchain_digest(msg: &OffchainMessage) -> Result<Hash, Eip712Error> {
         budget.timestamp(*timestamp)?,
         budget.text(payload)?,
     ];
+
     Ok(digest(
         &domain_separator(),
         &hash_struct(OFFCHAIN_TYPE, members),
@@ -187,9 +196,11 @@ impl Budget {
     /// `bytes` member.
     fn bytes(&mut self, value: &[u8]) -> Result<Hash, Eip712Error> {
         self.bytes = self.bytes.saturating_add(value.len());
+
         if self.bytes > MAX_TEXT_BYTES {
             return Err(Eip712Error::TooLarge);
         }
+
         Ok(dynamic(value))
     }
 
@@ -198,9 +209,11 @@ impl Budget {
     fn text(&mut self, value: impl AsRef<str>) -> Result<Hash, Eip712Error> {
         let value = value.as_ref();
         let hash = self.bytes(value.as_bytes())?;
+
         if !value.bytes().all(|byte| (0x20..=0x7e).contains(&byte)) {
             return Err(Eip712Error::Text);
         }
+
         Ok(hash)
     }
 
@@ -208,6 +221,7 @@ impl Budget {
     fn timestamp(&mut self, value: defuse_wallet::Timestamp) -> Result<Hash, Eip712Error> {
         u64::try_from(value.as_nanos()).map_err(|_| Eip712Error::Timestamp)?;
         let value = serde_json::to_value(value).map_err(|_| Eip712Error::Timestamp)?;
+
         self.text(value.as_str().ok_or(Eip712Error::Timestamp)?)
     }
 
@@ -218,13 +232,17 @@ impl Budget {
         mut encode: impl FnMut(&mut Self, T) -> Result<Hash, Eip712Error>,
     ) -> Result<Hash, Eip712Error> {
         let mut hashes = Vec::new();
+
         for item in items {
             self.items += 1;
+
             if self.items > MAX_ITEMS {
                 return Err(Eip712Error::TooLarge);
             }
+
             hashes.push(encode(self, item)?);
         }
+
         Ok(array(hashes))
     }
 }
@@ -241,6 +259,7 @@ fn operation(budget: &mut Budget, op: &WalletOp) -> Result<Hash, Eip712Error> {
         WalletOp::AddExtension { account_id } => ("add_extension", account_id.as_str(), ""),
         WalletOp::RemoveExtension { account_id } => ("remove_extension", account_id.as_str(), ""),
     };
+
     Ok(hash_struct(
         OPERATION_TYPE,
         [
@@ -258,6 +277,7 @@ fn promise(budget: &mut Budget, promise: &NearPromise) -> Result<Hash, Eip712Err
         refund_to,
         actions,
     } = promise;
+
     Ok(hash_struct(
         PROMISE_TYPE,
         [
@@ -292,15 +312,18 @@ fn action(budget: &mut Budget, action: &NearAction) -> Result<Hash, Eip712Error>
             if function_name == "w_execute_extension" {
                 return Err(Eip712Error::Unsupported);
             }
+
             let name = budget.text("function_call")?;
             let name_hash = budget.text(function_name)?;
             // Counted before parsing; exact ASCII JSON bytes.
             let args_hash = budget.bytes(args)?;
+
             if !args.iter().all(|byte| (0x20..=0x7e).contains(byte)) {
                 return Err(Eip712Error::FunctionArgs);
             }
-            let value = json_args(args).map_err(|_| Eip712Error::FunctionArgs)?;
-            token_args(function_name, &value, *deposit)?;
+
+            token_args(function_name, &json_args(args)?, *deposit)?;
+
             [
                 name,
                 uint(deposit.as_yoctonear()),
@@ -325,7 +348,17 @@ fn action(budget: &mut Budget, action: &NearAction) -> Result<Hash, Eip712Error>
         ],
         _ => return Err(Eip712Error::Unsupported),
     };
+
     Ok(hash_struct(ACTION_TYPE, members))
+}
+
+/// Function arguments that are exactly their compact JSON serialization, so
+/// the signed string has no whitespace, duplicate keys or alternative forms.
+fn json_args(args: &[u8]) -> Result<Value, Eip712Error> {
+    serde_json::from_slice(args)
+        .ok()
+        .filter(|value| serde_json::to_vec(value).is_ok_and(|compact| compact == args))
+        .ok_or(Eip712Error::FunctionArgs)
 }
 
 /// NEP-141 transfer methods with their parameters, as in the readable format:
@@ -349,10 +382,12 @@ fn token_args(function_name: &str, args: &Value, deposit: NearToken) -> Result<(
     else {
         return Ok(());
     };
+
     // Reject a predictably failing token call before other wallet effects commit.
     if deposit.as_yoctonear() != 1 {
         return Err(Eip712Error::TokenDeposit);
     }
+
     let object = args.as_object().ok_or(Eip712Error::TokenArgs)?;
     let text = |key: &str| object.get(key).and_then(Value::as_str);
     let valid = object.keys().all(|key| keys.contains(&key.as_str()))
@@ -366,6 +401,7 @@ fn token_args(function_name: &str, args: &Value, deposit: NearToken) -> Result<(
                 .parse::<u128>()
                 .is_ok_and(|units| units.to_string() == amount)
         });
+
     if valid {
         Ok(())
     } else {
@@ -381,6 +417,7 @@ fn state_init_hash(budget: &mut Budget, state_init: &StateInit) -> Result<Hash, 
         GlobalContractId::CodeHash(hash) => (bs58::encode(hash).into_string(), ""),
         GlobalContractId::AccountId(account_id) => (String::new(), account_id.as_str()),
     };
+
     Ok(hash_struct(
         STATE_INIT_TYPE,
         [

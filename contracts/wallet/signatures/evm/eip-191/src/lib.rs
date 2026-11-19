@@ -7,6 +7,8 @@ mod message;
 mod proof;
 #[cfg(feature = "signer")]
 mod signer;
+#[cfg(test)]
+mod tests;
 
 pub use defuse_crypto as crypto;
 

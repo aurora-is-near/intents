@@ -6,6 +6,8 @@ mod eip712;
 mod message;
 #[cfg(feature = "signer")]
 mod signer;
+#[cfg(test)]
+mod tests;
 
 pub use defuse_wallet_evm_eip191::{EthAddress, EvmProof, crypto};
 

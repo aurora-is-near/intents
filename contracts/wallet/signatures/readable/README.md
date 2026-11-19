@@ -60,7 +60,9 @@ their order, and fields have a fixed order:
   `actions`;
 - action: `action`, then `amount` for `transfer`; `function_name`, `deposit`,
   `gas`, `gas_weight`, `args` for `function_call`; `deposit`, `state_init`
-  (object keys sorted as strings) for `deterministic_state_init`.
+  for `deterministic_state_init`. Object keys of `state_init` are in
+  JavaScript object order: integer keys (`"0"` to `"4294967294"`, without
+  leading zeros) first in ascending order, then the others sorted as strings.
 
 Values:
 

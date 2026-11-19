@@ -89,6 +89,7 @@ mod tests {
                 dynamic("Hello, Bob!"),
             ],
         );
+
         assert_eq!(
             domain,
             hex!("f2cee375fa42b42143804025fc449deafd50cc031ca257e0b194a650a912090f")

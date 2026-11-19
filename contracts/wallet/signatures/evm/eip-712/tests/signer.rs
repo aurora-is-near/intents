@@ -29,10 +29,12 @@ fn signer() -> WalletEip712Signer<SigningKey> {
 #[tokio::test]
 async fn signer_proofs_verify_for_both_paths() {
     let wallet = Wallet::<WalletEip712>::new(CODE, signer());
+
     assert_eq!(
         wallet.public_key().to_string(),
         "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23"
     );
+
     let (msg, proof) = wallet
         .sign(
             Request::new()
@@ -44,6 +46,7 @@ async fn signer_proofs_verify_for_both_paths() {
         )
         .await
         .unwrap();
+
     assert!(WalletEip712::verify_request_msg(
         &wallet.public_key(),
         &msg,
@@ -58,6 +61,7 @@ async fn signer_proofs_verify_for_both_paths() {
         payload: "Authorization, not a login".to_string(),
     };
     let proof = signer().sign_offchain_msg(&auth).await.unwrap();
+
     assert!(WalletEip712::verify_offchain_msg(
         &wallet.public_key(),
         &auth,
@@ -81,6 +85,7 @@ async fn signer_refuses_unsupported_requests() {
             .into(),
         ..msg.clone()
     };
+
     for (msg, expected) in [
         (
             call("w_execute_extension", br#"{"request":{}}"#),
@@ -95,6 +100,7 @@ async fn signer_refuses_unsupported_requests() {
         ),
     ] {
         let error = signer().sign_request_msg(&msg).await.unwrap_err();
+
         assert!(
             match expected {
                 "unsupported" => matches!(error, SignError::Message(Eip712Error::Unsupported)),
@@ -127,7 +133,9 @@ impl RecoverableSigner<Secp256k1> for HighS {
             RecoverableSigner::<Secp256k1>::sign_recoverable(&self.0, msg).await?;
         let (r, s) = signature.split_scalars();
         let high_s = Signature::from_scalars(r, -s).unwrap();
+
         assert_ne!(high_s, signature);
+
         Ok((
             high_s,
             RecoveryId::new(!recovery_id.is_y_odd(), recovery_id.is_x_reduced()),
@@ -140,6 +148,7 @@ impl RecoverableSigner<Secp256k1> for HighS {
 async fn signer_normalizes_high_s_signatures() {
     let wallet = Wallet::<WalletEip712>::new(CODE, WalletEip712Signer(HighS(signer().0)));
     let (msg, proof) = wallet.sign(Request::new()).await.unwrap();
+
     assert!(WalletEip712::verify_request_msg(
         &wallet.public_key(),
         &msg,

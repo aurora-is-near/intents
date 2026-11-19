@@ -39,10 +39,6 @@ and verifies. The limits of that text are listed with the
 logins by other applications; the text says that it is not one, and the
 contract accepts it only for the network and wallet account it names.
 
-The display is confirmed for `MetaMask` with a software account for NEP-641
-authorizations only; the display of execution requests is unverified. Other
-wallets and hardware wallets are unverified.
-
 ## Build
 
 ```sh

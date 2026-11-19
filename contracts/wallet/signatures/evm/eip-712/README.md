@@ -44,7 +44,7 @@ homogeneous. Members that do not apply are `""`, `0` or an empty array.
 | `Promise.refund_to` | `""` is this wallet |
 | `Action.action` | `transfer`, `function_call` or `deterministic_state_init` |
 | `Action.yocto_near` | transfer amount or attached deposit, in yoctoNEAR |
-| `Action.args` | the exact argument string: compact JSON that serializes identically in Rust and JavaScript, as in the [readable format](../../readable/README.md#format-v1) |
+| `Action.args` | the exact argument string: compact JSON as `serde_json` serializes it, so without whitespace, duplicate keys or alternative forms |
 | `Action.gas`, `gas_weight` | gas units (default `0`) and weight (default `1`) |
 | `Action.state_init` | one item for `deterministic_state_init` |
 | `StateInit.code_hash`, `code_account_id` | base58 code hash or account ID of the global contract; the other is `""` |
@@ -87,14 +87,9 @@ less:
 - Strings and the structure are shown as they are hashed. Integers and
   `pay_for_gas` are hashed by value, but a wallet may show them as the dApp
   wrote them: `MetaMask` hashes `"0x10"`, `" 16"` and `"016"` as `16` and any
-  non-empty string, including `"false"`, as `true`. Clients must pass decimal
+  non-empty string, including `"false"`, as `true`. A dApp must pass decimal
   integers and JSON booleans; a prompt that shows anything else is not from an
-  honest client. The contract rejects `pay_for_gas` `true`.
-
-The display is confirmed for `MetaMask` with a software account for NEP-641
-authorizations only: it lists the primary type and every member and does not
-show the domain. The display of execution requests is unverified. Other
-wallets and hardware wallets are unverified.
+  honest dApp. The contract rejects `pay_for_gas` `true`.
 
 ## Build
 

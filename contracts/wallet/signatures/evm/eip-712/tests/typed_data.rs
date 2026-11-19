@@ -16,10 +16,13 @@ fn keccak(data: &[u8]) -> [u8; 32] {
 
 fn deps(types: &Value, ty: &str, out: &mut BTreeSet<String>) {
     let base = ty.trim_end_matches("[]");
+
     if out.contains(base) || types.get(base).is_none() {
         return;
     }
+
     out.insert(base.to_owned());
+
     for field in types[base].as_array().unwrap() {
         deps(types, field["type"].as_str().unwrap(), out);
     }
@@ -29,9 +32,12 @@ fn encode_type(types: &Value, primary: &str) -> String {
     let mut all = BTreeSet::new();
     deps(types, primary, &mut all);
     all.remove(primary);
+
     let mut order = vec![primary.to_owned()];
     order.extend(all); // BTreeSet iterates sorted by name
+
     let mut encoded = String::new();
+
     for name in order {
         let fields: Vec<String> = types[&name]
             .as_array()
@@ -45,22 +51,28 @@ fn encode_type(types: &Value, primary: &str) -> String {
                 )
             })
             .collect();
+
         write!(encoded, "{name}({})", fields.join(",")).unwrap();
     }
+
     encoded
 }
 
 fn encode_value(types: &Value, ty: &str, value: &Value) -> [u8; 32] {
     if let Some(item) = ty.strip_suffix("[]") {
         let mut buf = Vec::new();
+
         for v in value.as_array().expect("array") {
             buf.extend_from_slice(&encode_value(types, item, v));
         }
+
         return keccak(&buf);
     }
+
     if types.get(ty).is_some() {
         return hash_struct(types, ty, value);
     }
+
     match ty {
         "string" => keccak(value.as_str().expect("string").as_bytes()),
         "bytes" => {
@@ -79,9 +91,11 @@ fn encode_value(types: &Value, ty: &str, value: &Value) -> [u8; 32] {
                 Value::String(s) => s.parse().expect("decimal string"),
                 other => panic!("uint value {other}"),
             };
+
             if bits < 128 {
                 assert!(n < (1u128 << bits), "{n} does not fit {t}");
             }
+
             let mut w = [0u8; 32];
             w[16..].copy_from_slice(&n.to_be_bytes());
             w
@@ -94,12 +108,14 @@ fn hash_struct(types: &Value, ty: &str, value: &Value) -> [u8; 32] {
     let mut buf = keccak(encode_type(types, ty).as_bytes()).to_vec();
     let object = value.as_object().expect("struct object");
     let fields = types[ty].as_array().unwrap();
+
     // every message member must be a declared field and vice versa
     assert_eq!(
         object.len(),
         fields.len(),
         "extra or missing members in {ty}"
     );
+
     for field in fields {
         let name = field["name"].as_str().unwrap();
         let v = object
@@ -107,6 +123,7 @@ fn hash_struct(types: &Value, ty: &str, value: &Value) -> [u8; 32] {
             .unwrap_or_else(|| panic!("missing {ty}.{name}"));
         buf.extend_from_slice(&encode_value(types, field["type"].as_str().unwrap(), v));
     }
+
     keccak(&buf)
 }
 
@@ -118,9 +135,11 @@ fn digest(typed: &Value) -> [u8; 32] {
         typed["primaryType"].as_str().unwrap(),
         &typed["message"],
     );
+
     let mut buf = vec![0x19, 0x01];
     buf.extend_from_slice(&domain);
     buf.extend_from_slice(&message);
+
     keccak(&buf)
 }
 
@@ -132,14 +151,18 @@ fn check(file: &str) {
     })
     .unwrap();
     let vectors = fixture["vectors"].as_array().unwrap();
+    assert!(!vectors.is_empty());
+
     for (i, v) in vectors.iter().enumerate() {
         let typed = &v["typed_data"];
         let independent = digest(typed);
+
         assert_eq!(
             hex::encode(independent),
             v["digest"].as_str().unwrap(),
             "{file} vector {i}: generic EIP-712 digest of typed_data != fixture digest"
         );
+
         let derived = if v["kind"] == "request" {
             let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
             request_digest(&msg).unwrap()
@@ -147,15 +170,19 @@ fn check(file: &str) {
             let msg: OffchainMessage = serde_json::from_value(v["msg"].clone()).unwrap();
             offchain_digest(&msg).unwrap()
         };
+
         assert_eq!(derived, independent, "{file} vector {i}: contract digest");
+
         // encodeType computed from `types` equals the contract's constants.
         let primary = typed["primaryType"].as_str().unwrap();
         let et = encode_type(&typed["types"], primary);
+
         let expected = if primary == "ExecuteRequest" {
             defuse_wallet_evm_eip712::REQUEST_TYPE
         } else {
             defuse_wallet_evm_eip712::OFFCHAIN_TYPE
         };
+
         assert_eq!(et, expected, "{file} vector {i}: encodeType");
         assert_eq!(
             encode_type(&typed["types"], "EIP712Domain"),
@@ -170,6 +197,7 @@ fn check(file: &str) {
             defuse_wallet_evm_eip712::DOMAIN_VERSION
         );
         assert_eq!(typed["domain"].as_object().unwrap().len(), 2);
+
         println!(
             "{file} vector {i} ({primary}): ok {}",
             hex::encode(independent)

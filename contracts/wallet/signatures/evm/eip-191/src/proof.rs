@@ -29,10 +29,12 @@ impl EvmProof {
         if proof.len() > Self::MAX_LEN || !proof.starts_with("secp256k1:") {
             return None;
         }
+
         let (signature, recovery_id) = <(Signature, RecoveryId)>::try_from(
             &Secp256k1RecoverableSignature::from_str(proof).ok()?,
         )
         .ok()?;
+
         (!recovery_id.is_x_reduced()).then_some(Self {
             signature,
             recovery_id,
@@ -57,11 +59,13 @@ impl EvmProof {
     {
         let (signature, recovery_id) = signer.sign_recoverable(prehash).await?;
         let low_s = signature.normalize_s();
+
         let recovery_id = if low_s == signature {
             recovery_id
         } else {
             RecoveryId::new(!recovery_id.is_y_odd(), recovery_id.is_x_reduced())
         };
+
         Ok(Secp256k1RecoverableSignature::from((low_s, recovery_id)).to_string())
     }
 }

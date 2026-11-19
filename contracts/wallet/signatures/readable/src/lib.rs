@@ -70,15 +70,19 @@ pub fn request_signing_message(
     } = msg;
     u64::try_from(created_at.as_nanos()).map_err(|_| MessageError::Timestamp)?;
     let timeout_secs = u32::try_from(timeout.as_secs()).map_err(|_| MessageError::Timeout)?;
+
     if timeout.subsec_nanos() != 0 {
         return Err(MessageError::Timeout);
     }
+
     // Before parsing any arguments, so oversized requests are rejected cheaply.
     if input_bytes(request) > MAX_SIGNING_MESSAGE_BYTES {
         return Err(MessageError::TooLarge);
     }
+
     let mut warnings = Vec::new();
     let request = request_value(request, signer_id, "this wallet", &mut warnings)?;
+
     render(
         REQUEST_PREFIX,
         &warnings,
@@ -117,9 +121,11 @@ pub fn offchain_signing_message(
         .iter()
         .map(|account| account.len())
         .fold(payload.len(), usize::saturating_add);
+
     if shown > MAX_SIGNING_MESSAGE_BYTES {
         return Err(MessageError::TooLarge);
     }
+
     render(
         OFFCHAIN_PREFIX,
         &[],
@@ -177,9 +183,11 @@ struct ExtensionArgs {
 fn extension_request(args: &[u8]) -> Result<Request, MessageError> {
     let extension: ExtensionArgs =
         serde_json::from_value(args_value(args)?).map_err(|_| MessageError::FunctionArgs)?;
+
     if serde_json::to_vec(&extension)? != args {
         return Err(MessageError::FunctionArgs);
     }
+
     Ok(extension.request)
 }
 
@@ -192,6 +200,7 @@ fn request_value(
     warnings: &mut Vec<String>,
 ) -> Result<Value, MessageError> {
     let Request { internal, external } = request;
+
     for op in internal {
         if let WalletOp::AddExtension { account_id } = op {
             warnings.push(format!(
@@ -199,10 +208,12 @@ fn request_value(
             ));
         }
     }
+
     let external = external
         .iter()
         .map(|promise| promise_value(promise, (wallet, name), warnings))
         .collect::<Result<_, _>>()?;
+
     Ok(Value::Object(object([
         ("internal", json!(internal)),
         ("external", Value::Array(external)),
@@ -232,18 +243,22 @@ fn promise_value(
         actions,
     } = promise;
     if let Some(refund_to) = refund_to.as_ref().filter(|account| *account != wallet) {
-        let attached = attached_near(promise);
-        if attached != 0 {
+        // Transfer amounts and deposits: the most that `refund_to` can receive.
+        let attached = promise.total_deposit();
+
+        if !attached.is_zero() {
             warnings.push(format!(
                 "WARNING: up to {} sent to {receiver_id} can be refunded to {refund_to}, not to {name}.",
-                near_amount(attached)
+                near_amount(attached.as_yoctonear())
             ));
         }
     }
+
     let actions = actions
         .iter()
         .map(|action| action_value(action, receiver_id, warnings))
         .collect::<Result<_, _>>()?;
+
     Ok(Value::Object(object([
         ("receiver_id", json!(receiver_id)),
         ("refund_to", json!(refund_to)),
@@ -283,6 +298,7 @@ fn action_value(
             } else {
                 args_value(args)?
             };
+
             object([
                 ("action", json!("function_call")),
                 ("function_name", json!(function_name)),
@@ -313,9 +329,11 @@ fn action_value(
 /// serialize differently (see [`portable`]).
 fn args_value(args: &[u8]) -> Result<Value, MessageError> {
     let value: Value = serde_json::from_slice(args).map_err(|_| MessageError::FunctionArgs)?;
+
     if !portable(&value) || serde_json::to_vec(&value)? != args {
         return Err(MessageError::FunctionArgs);
     }
+
     Ok(value)
 }
 
@@ -324,10 +342,12 @@ fn args_value(args: &[u8]) -> Result<Value, MessageError> {
 /// the token.
 fn token_args(args: &[u8], keys: &[&str]) -> Result<Value, MessageError> {
     let value = args_value(args)?;
-    let object = value.as_object().ok_or(MessageError::TokenAmount)?;
+    let object = value.as_object().ok_or(MessageError::TokenArgs)?;
+
     if object.keys().any(|key| !keys.contains(&key.as_str())) {
         return Err(MessageError::TokenArgs);
     }
+
     // A key whitelist alone permits incomplete calls such as {"amount":"1"}.
     if object
         .get("receiver_id")
@@ -341,7 +361,9 @@ fn token_args(args: &[u8], keys: &[&str]) -> Result<Value, MessageError> {
     {
         return Err(MessageError::TokenArgs);
     }
+
     let amount = object.get("amount").ok_or(MessageError::TokenAmount)?;
+
     amount
         .as_str()
         .and_then(|text| {
@@ -350,37 +372,13 @@ fn token_args(args: &[u8], keys: &[&str]) -> Result<Value, MessageError> {
                 .filter(|units| units.to_string() == text)
         })
         .ok_or(MessageError::TokenAmount)?;
+
     Ok(value)
 }
 
-/// Function arguments that are exactly their compact JSON serialization, also
-/// in JavaScript (the rule for arguments shown in readable messages).
-pub fn json_args(args: &[u8]) -> Result<Value, MessageError> {
-    args_value(args)
-}
-
 /// Exact smallest-unit integer with an explicit unit for refund warnings.
-pub fn near_amount(yocto: u128) -> String {
+fn near_amount(yocto: u128) -> String {
     format!("{yocto} yoctoNEAR")
-}
-
-/// yoctoNEAR attached to a promise (transfer amounts and deposits), saturating
-/// at `u128::MAX`: the most that its `refund_to` can receive.
-pub fn attached_near(promise: &NearPromise) -> u128 {
-    promise
-        .actions
-        .iter()
-        .map(|action| match action {
-            NearAction::Transfer(Transfer { amount })
-            | NearAction::FunctionCall(FunctionCall {
-                deposit: amount, ..
-            })
-            | NearAction::DeterministicStateInit(DeterministicStateInit {
-                deposit: amount, ..
-            }) => amount.as_yoctonear(),
-            _ => 0,
-        })
-        .fold(0, u128::saturating_add)
 }
 
 /// Largest integer that JavaScript numbers represent exactly (2^53 - 1).
@@ -425,16 +423,37 @@ fn object<const N: usize>(fields: [(&str, Value); N]) -> Map<String, Value> {
         .collect()
 }
 
-/// State init with keys sorted at every level.
-fn sorted(mut value: Value) -> Value {
-    value.sort_all_objects();
-    value
+/// State init with the keys of every object in the order of a JavaScript
+/// object built from them: array-index keys first, in ascending order, then
+/// the other keys sorted as strings. `JSON.stringify` gives the same order.
+fn sorted(value: Value) -> Value {
+    match value {
+        Value::Array(items) => Value::Array(items.into_iter().map(sorted).collect()),
+        Value::Object(object) => {
+            let mut entries: Vec<_> = object
+                .into_iter()
+                .map(|(key, value)| (array_index(&key).unwrap_or(u32::MAX), key, sorted(value)))
+                .collect();
+
+            // `array_index` is never `u32::MAX`, so the other keys come last.
+            entries.sort_by(|(a_index, a, _), (b_index, b, _)| (a_index, a).cmp(&(b_index, b)));
+
+            Value::Object(
+                entries
+                    .into_iter()
+                    .map(|(_, key, value)| (key, value))
+                    .collect(),
+            )
+        }
+        scalar => scalar,
+    }
 }
 
 /// Pretty JSON, stopping as soon as it cannot fit the message (escaping only
 /// makes it longer), so deeply indented input costs at most the limit.
 fn pretty(fields: &Map<String, Value>) -> Result<String, MessageError> {
     struct Capped(Vec<u8>);
+
     impl std::io::Write for Capped {
         fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
             if self.0.len() + bytes.len() > MAX_SIGNING_MESSAGE_BYTES {
@@ -448,7 +467,9 @@ fn pretty(fields: &Map<String, Value>) -> Result<String, MessageError> {
             Ok(())
         }
     }
+
     let mut json = Capped(Vec::new());
+
     serde_json::to_writer_pretty(&mut json, fields).map_err(|error| {
         if error.is_io() {
             MessageError::TooLarge
@@ -456,6 +477,7 @@ fn pretty(fields: &Map<String, Value>) -> Result<String, MessageError> {
             error.into()
         }
     })?;
+
     Ok(String::from_utf8(json.0).expect("JSON is UTF-8"))
 }
 
@@ -469,37 +491,46 @@ fn render<const H: usize, const T: usize>(
 ) -> Result<String, MessageError> {
     let mut fields = object(head);
     let identity = identity.iter().map(|&(name, value)| (name, json!(value)));
+
     for (name, value) in identity.chain(tail) {
         if fields.insert(name.to_owned(), value).is_some() {
             return Err(MessageError::IdentityField);
         }
     }
+
     let json = pretty(&fields)?;
     let mut message = String::from(prefix);
+
     // Account IDs in warnings are ASCII.
     for warning in warnings {
         message.push_str(warning);
         message.push('\n');
     }
+
     if !warnings.is_empty() {
         message.push('\n');
     }
+
     // Escape DEL and all non-ASCII characters, including bidi controls and line separators.
     // UTF-16 code units make the exact format reproducible in browser JavaScript.
     for unit in json.encode_utf16() {
         if message.len() >= MAX_SIGNING_MESSAGE_BYTES {
             return Err(MessageError::TooLarge);
         }
+
         if unit <= 0x7e {
             message.push(char::from(u8::try_from(unit).expect("ASCII unit")));
         } else {
             write!(message, "\\u{unit:04x}").expect("String write");
         }
     }
+
     message.push('\n');
+
     if message.len() > MAX_SIGNING_MESSAGE_BYTES {
         return Err(MessageError::TooLarge);
     }
+
     Ok(message)
 }
 
@@ -514,12 +545,14 @@ mod tests {
 
     fn request(internal: Vec<WalletOp>, function_name: &str, args: &[u8]) -> RequestMessage {
         let mut call = FunctionCall::name(function_name).args(args);
+
         if FT_TRANSFER_METHODS
             .iter()
             .any(|(name, _)| *name == function_name)
         {
             call.deposit = NearToken::from_yoctonear(1);
         }
+
         RequestMessage {
             pay_for_gas: false,
             chain_id: "mainnet".to_string(),
@@ -760,6 +793,9 @@ mod tests {
                 "ft_transfer_call",
                 r#"{"receiver_id":"bob.near","amount":"1","msg":"","amount_display":"1 USDC"}"#,
             ),
+            ("ft_transfer", "[]"),
+            ("ft_transfer", "null"),
+            ("ft_transfer_call", r#""bob.near""#),
         ] {
             assert!(
                 matches!(transfer(method, args), Err(MessageError::TokenArgs)),
@@ -871,6 +907,45 @@ mod tests {
                 "accepted {data}"
             );
         }
+    }
+
+    #[test]
+    fn state_init_keys_follow_javascript_object_order() {
+        // As `JSON.stringify` orders an object built from these keys: array
+        // indices ascending ("9999" before "10000000"), then the other keys
+        // as strings ("0100" has a leading zero, so it is not an index).
+        let request: Request = serde_json::from_value(json!({
+            "external": [{
+                "receiver_id": "a.near",
+                "actions": [{
+                    "action": "deterministic_state_init",
+                    "payload": {"state_init": {"V1": {
+                        "code": {"account_id": "code.near"},
+                        "data": {
+                            "/w==": "", "0100": "", "1000": "",
+                            "10000000": "", "9999": "", "AAEC": "",
+                        },
+                    }}},
+                }],
+            }],
+        }))
+        .unwrap();
+        let msg = RequestMessage {
+            request,
+            ..call(b"{}")
+        };
+        let message = request_signing_message(IDENTITY, &msg).unwrap();
+        let data =
+            &document(&message)["request"]["external"][0]["actions"][0]["state_init"]["V1"]["data"];
+
+        assert_eq!(
+            data.as_object()
+                .unwrap()
+                .keys()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            ["1000", "9999", "10000000", "/w==", "0100", "AAEC"]
+        );
     }
 
     #[test]
