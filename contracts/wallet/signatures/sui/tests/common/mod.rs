@@ -10,6 +10,7 @@ pub struct TestSui;
 
 impl SignatureSchema for TestSui {
     type PublicKey = SuiPublicKey;
+
     fn verify_request_msg(key: &SuiPublicKey, msg: &RequestMessage, proof: &str) -> bool {
         match key.flag() {
             0 => WalletSui::<Ed25519>::verify_request_msg(key, msg, proof),
@@ -18,6 +19,7 @@ impl SignatureSchema for TestSui {
             _ => false,
         }
     }
+
     fn verify_offchain_msg(key: &SuiPublicKey, msg: &OffchainMessage, proof: &str) -> bool {
         match key.flag() {
             0 => WalletSui::<Ed25519>::verify_offchain_msg(key, msg, proof),

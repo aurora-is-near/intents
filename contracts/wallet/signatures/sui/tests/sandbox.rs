@@ -7,13 +7,15 @@ use std::{env, fs, path::Path, time::Duration};
 
 use defuse_nep641::resolver::RpcResolver;
 use defuse_wallet::{
-    AccountId, Gas, NearPromise, NearToken, Request, RequestMessage, StateInit, StateInitV1,
-    Timestamp, WalletOp, actions::FunctionCall,
+    AccountId, Gas, NearPromise, NearToken, Request, RequestMessage, SignatureSchema, StateInit,
+    StateInitV1, Timestamp, WalletAuthorization, WalletOp, actions::FunctionCall,
+    offchain::OffchainMessage,
 };
 use defuse_wallet_sdk::{Wallet, WalletBuilder, WalletSigner, client::WalletContract};
 use defuse_wallet_sui::{
-    WalletSui, WalletSuiSigner,
+    MAX_SIGNING_MESSAGE_BYTES, WalletSui, WalletSuiSigner,
     crypto::{
+        Signer,
         ed25519::{Ed25519, ed25519_dalek},
         p256::{P256, p256},
         secp256k1::{Secp256k1, k256},
@@ -47,6 +49,7 @@ async fn execute<C: SuiScheme>(
         .wait_until::<Final>()
         .await
         .unwrap();
+
     outcome.result().unwrap();
     outcome
 }
@@ -54,6 +57,7 @@ async fn execute<C: SuiScheme>(
 #[tokio::test]
 async fn wallet_executes_and_resolves_authorization_in_wasm() {
     let near = near().await;
+
     run_variant::<Ed25519, _>(
         &near,
         "ed25519",
@@ -77,7 +81,7 @@ async fn wallet_executes_and_resolves_authorization_in_wasm() {
 async fn run_variant<C, S>(near: &Near, variant: &str, raw_signer: S)
 where
     C: SuiScheme,
-    S: defuse_wallet_sui::crypto::Signer<C> + Clone + 'static,
+    S: Signer<C> + Clone + 'static,
     S::Error: std::error::Error + Send + Sync + 'static,
 {
     let signer = WalletSuiSigner::<C, _>::new(raw_signer);
@@ -87,11 +91,13 @@ where
     let wasm = fs::read(directory.join(format!("defuse-wallet-sui-{variant}.wasm")))
         .expect("build all three Sui contract variants first");
     let code_hash: [u8; 32] = Sha256::digest(&wasm).into();
+
     near.publish(wasm, PublishMode::Immutable)
         .await
         .unwrap()
         .result()
         .unwrap();
+
     // StateInit accepts Borsh state directly. A valid proof for another scheme
     // must still fail even if its key was deliberately placed in this leaf.
     if C::FLAG == 0 {
@@ -109,6 +115,7 @@ where
         )
         .await;
     }
+
     let run_id = rand::random::<u32>() & !1;
     let scheme = C::FLAG;
     let wallet = WalletBuilder::new()
@@ -121,13 +128,16 @@ where
         .build(code_hash, signer.clone())
         .with_client(near.clone())
         .with_relayer(near.clone());
+
     assert_eq!(
         wallet.deterministic_state_init().derive_account_id(),
         *wallet.account_id()
     );
     assert_ne!(wallet.account_id(), recipient.account_id());
+
     wallet.initialize().await.unwrap();
     recipient.initialize().await.unwrap();
+
     let contract = near.contract::<WalletContract>(wallet.account_id());
     assert_eq!(
         contract.w_public_key().await.unwrap(),
@@ -161,6 +171,7 @@ where
     if C::FLAG == 0 {
         check_ft_transfer(near, &wallet, &recipient).await;
     }
+
     check_resources_and_context(near, &wallet, &recipient, scheme, &signer).await;
     check_nonce_rollback_and_replay(near, &wallet).await;
 
@@ -168,6 +179,7 @@ where
     let payload = "{ \"domain\": \"Sui test\", \"amount\": \"9007199254740993\" }";
     let authorization = wallet.sign_offchain_msg(payload, None).await.unwrap();
     let resolver = RpcResolver::new(near.rpc().clone()).await.unwrap();
+
     assert_eq!(
         resolver
             .resolve_auth(wallet.account_id(), &authorization)
@@ -193,6 +205,7 @@ async fn check_ft_transfer<C: SuiScheme>(
     let token: AccountId = format!("ft{}.{}", rand::random::<u32>(), near.account_id())
         .parse()
         .unwrap();
+
     near.transaction(&token)
         .create_account()
         .transfer(NearToken::from_near(5))
@@ -218,6 +231,7 @@ async fn check_ft_transfer<C: SuiScheme>(
         NearPromise::new(token.clone()).function_call(ft_transfer(recipient.account_id()));
     let (msg, proof) = wallet.sign(transfer.clone()).await.unwrap();
     let message = request_signing_message(&wallet.public_key(), &msg).unwrap();
+
     assert!(
         message.contains(r#""amount": "1500000000000000000000000""#),
         "{message}"
@@ -228,12 +242,15 @@ async fn check_ft_transfer<C: SuiScheme>(
         .await
         .unwrap()
         .storage_usage;
+
     let outcome = execute(near, wallet, transfer).await;
     outcome.result().unwrap();
+
     assert_eq!(
         ft_balance(near, &token, recipient.account_id()).await,
         NearToken::from_millinear(1500).as_yoctonear().to_string()
     );
+
     let gas = outcome
         .receipts_outcome
         .iter()
@@ -244,11 +261,13 @@ async fn check_ft_transfer<C: SuiScheme>(
         .await
         .unwrap()
         .storage_usage;
+
     eprintln!(
         "direct FT: message={} bytes, proof={} bytes, receipt gas={gas}, storage={storage_before}->{storage_after}",
         message.len(),
         proof.len()
     );
+
     check_ft_bootstrap(near, wallet, recipient, wasm).await;
 }
 
@@ -260,15 +279,18 @@ async fn check_ft_bootstrap<C: SuiScheme>(
     wasm: Vec<u8>,
 ) {
     let ft_hash: [u8; 32] = Sha256::digest(&wasm).into();
+
     near.publish(wasm, PublishMode::Immutable)
         .await
         .unwrap()
         .result()
         .unwrap();
+
     let mut init = StateInitV1::code(ft_hash);
     // Unique account for each run, also on a reused sandbox.
     init.data
         .insert(b"test_run".to_vec(), rand::random::<[u8; 8]>().to_vec());
+
     let init = StateInit::from(init);
     let token = init.derive_account_id();
     let create = NearPromise::new(token.clone())
@@ -292,9 +314,12 @@ async fn check_ft_bootstrap<C: SuiScheme>(
                 .attach_deposit(NearToken::from_millinear(10))
                 .gas(Gas::from_tgas(30)),
         );
+
     check_state_init_deposit(near, wallet, &init, recipient.account_id()).await;
+
     let bootstrap = create.function_call(ft_transfer(recipient.account_id()));
     execute(near, wallet, bootstrap).await.result().unwrap();
+
     assert_eq!(
         ft_balance(near, &token, recipient.account_id()).await,
         NearToken::from_millinear(1500).as_yoctonear().to_string()
@@ -374,7 +399,7 @@ fn ft_transfer(receiver_id: &AccountId) -> FunctionCall {
 }
 
 async fn ft_balance(near: &Near, token: &AccountId, account_id: &AccountId) -> String {
-    near.view::<String>(token, "ft_balance_of")
+    near.view(token, "ft_balance_of")
         .args(serde_json::json!({ "account_id": account_id }))
         .await
         .unwrap()
@@ -383,7 +408,7 @@ async fn ft_balance(near: &Near, token: &AccountId, account_id: &AccountId) -> S
 async fn check_wrong_global_scheme<C, S>(near: &Near, code_hash: [u8; 32], signer: S)
 where
     C: SuiScheme,
-    S: defuse_wallet_sui::crypto::Signer<C> + Clone + 'static,
+    S: Signer<C> + Clone + 'static,
     S::Error: std::error::Error + Send + Sync + 'static,
 {
     let signer = WalletSuiSigner::<C, _>::new(signer);
@@ -409,13 +434,11 @@ where
         .storage_usage;
     let (msg, proof) = wallet.sign(Request::new()).await.unwrap();
 
-    assert!(
-        <WalletSui<C> as defuse_wallet::SignatureSchema>::verify_request_msg(
-            &wallet.public_key(),
-            &msg,
-            &proof,
-        )
-    );
+    assert!(WalletSui::<C>::verify_request_msg(
+        &wallet.public_key(),
+        &msg,
+        &proof,
+    ));
 
     let error = near
         .contract::<WalletContract>(wallet.account_id())
@@ -435,7 +458,7 @@ where
         before
     );
 
-    let msg = defuse_wallet::offchain::OffchainMessage {
+    let msg = OffchainMessage {
         chain_id: wallet.chain_id().clone(),
         signer_id: wallet.account_id().clone(),
         path: vec![],
@@ -444,15 +467,13 @@ where
     };
     let proof = signer.sign_offchain_msg(&msg).await.unwrap();
 
-    assert!(
-        <WalletSui<C> as defuse_wallet::SignatureSchema>::verify_offchain_msg(
-            &wallet.public_key(),
-            &msg,
-            &proof,
-        )
-    );
+    assert!(WalletSui::<C>::verify_offchain_msg(
+        &wallet.public_key(),
+        &msg,
+        &proof,
+    ));
 
-    let authorization = String::from(defuse_wallet::WalletAuthorization::Signature { msg, proof });
+    let authorization = String::from(WalletAuthorization::Signature { msg, proof });
     let resolver = RpcResolver::new(near.rpc().clone()).await.unwrap();
     let error = resolver
         .resolve_auth(wallet.account_id(), &authorization)
@@ -544,9 +565,11 @@ async fn check_lockout_and_rotation<C: SuiScheme>(
         .expect_err("disabled signatures must fail");
 
     let extension = recipient.as_extension_of(wallet);
+
     execute(near, &extension, Request::new()).await;
 
     let authorization = extension.sign_offchain_msg(payload, None).await.unwrap();
+
     assert_eq!(
         resolver
             .with_max_sub_authorizations(1)
@@ -565,7 +588,6 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
     scheme: u8,
     signer: &S,
 ) {
-    use defuse_wallet_sui::{MAX_SIGNING_MESSAGE_BYTES, request_signing_message};
     let contract = near.contract::<WalletContract>(wallet.account_id());
     let (original, _) = wallet.sign(Request::new()).await.unwrap();
 
@@ -581,6 +603,7 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
                     .unused_gas_weight(0),
             )
             .into();
+
         msg
     };
     let key = wallet.public_key();
@@ -588,6 +611,7 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
 
     while low + 1 < high {
         let middle = usize::midpoint(low, high);
+
         if request_signing_message(&key, &with_payload(middle)).is_ok() {
             low = middle;
         } else {
@@ -623,6 +647,7 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
             .storage_usage,
         before
     );
+
     let proof = signer.sign_request_msg(&msg).await.unwrap();
 
     if scheme != 0 {
@@ -655,6 +680,7 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
         .unwrap()
         .result()
         .expect_err("large-request replay");
+
     check_sparse_nonce_growth(near, wallet, scheme, &original, signer).await;
 }
 
@@ -666,6 +692,7 @@ async fn check_high_s_rejected<C: SuiScheme>(
     scheme: u8,
 ) {
     use base64::{Engine, engine::general_purpose::STANDARD};
+
     let contract = near.contract::<WalletContract>(wallet.account_id());
     let mut bytes = STANDARD.decode(proof).unwrap();
 

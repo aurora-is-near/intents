@@ -45,6 +45,7 @@ impl schemars::JsonSchema for SuiPublicKey {
     fn schema_name() -> String {
         "SuiPublicKey".to_owned()
     }
+
     fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
         <String as schemars::JsonSchema>::json_schema(generator)
     }
@@ -97,6 +98,7 @@ impl SuiPublicKey {
             [2, rest @ ..] => Self::Secp256r1(rest.try_into().map_err(|_| PublicKeyError)?),
             _ => return Err(PublicKeyError),
         };
+
         let valid = match key.flag() {
             #[cfg(feature = "ed25519")]
             0 => Ed25519::parse_public_key(key.raw_bytes()).is_some(),
@@ -106,6 +108,7 @@ impl SuiPublicKey {
             2 => P256::parse_public_key(key.raw_bytes()).is_some(),
             _ => false,
         };
+
         valid.then_some(key).ok_or(PublicKeyError)
     }
 
@@ -240,24 +243,32 @@ impl FromStr for SuiPublicKey {
 pub fn personal_message_digest(message: &[u8]) -> Option<[u8; 32]> {
     let mut length = u32::try_from(message.len()).ok()?;
     let mut bytes = Vec::with_capacity(message.len().checked_add(8)?);
+
     bytes.extend_from_slice(&[3, 0, 0]);
+
     loop {
         let mut byte = u8::try_from(length & 0x7f).expect("seven bits");
         length >>= 7;
+
         if length != 0 {
             byte |= 0x80;
         }
+
         bytes.push(byte);
+
         if length == 0 {
             break;
         }
     }
+
     bytes.extend_from_slice(message);
+
     Some(blake2b256(bytes))
 }
 
 mod sealed {
     pub trait Sealed {}
+
     #[cfg(feature = "ed25519")]
     impl Sealed for super::Ed25519 {}
     #[cfg(feature = "secp256k1")]
@@ -284,14 +295,18 @@ impl SuiScheme for Ed25519 {
         let key: Self::PublicKey = (&Ed25519PublicKey(bytes.try_into().ok()?))
             .try_into()
             .ok()?;
+
         (!key.is_weak()).then_some(key)
     }
+
     fn sui_public_key(key: Self::PublicKey) -> SuiPublicKey {
         SuiPublicKey::Ed25519(key.to_bytes())
     }
+
     fn signature_bytes(signature: Self::Signature) -> [u8; 64] {
         signature.to_bytes()
     }
+
     fn signing_digest(digest: [u8; 32]) -> [u8; 32] {
         digest
     }
@@ -307,6 +322,7 @@ macro_rules! ecdsa_scheme {
                 if !matches!(bytes.first(), Some(0x02 | 0x03)) {
                     return None;
                 }
+
                 (&$stored(bytes.try_into().ok()?)).try_into().ok()
             }
 
@@ -324,6 +340,7 @@ macro_rules! ecdsa_scheme {
         }
     };
 }
+
 #[cfg(feature = "secp256k1")]
 ecdsa_scheme!(Secp256k1, Secp256k1CompressedPublicKey, Secp256k1, 1);
 #[cfg(feature = "p256")]
@@ -331,8 +348,8 @@ ecdsa_scheme!(P256, P256CompressedPublicKey, Secp256r1, 2);
 
 /// BLAKE2b-256 with its native 32-byte output parameter (not truncated BLAKE2b-512).
 /// Uses the vetted `RustCrypto` backend on both NEAR/WASM and native targets.
-/// Hash bytes using `BLAKE2b` with a 32-byte output parameter.
 fn blake2b256(data: impl AsRef<[u8]>) -> [u8; 32] {
     use ::blake2::{Blake2b, Digest, digest::consts::U32};
+
     Blake2b::<U32>::digest(data).into()
 }

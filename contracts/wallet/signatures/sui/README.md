@@ -50,11 +50,8 @@ and the `PersonalMessage` intent separates both from Sui transactions.
 
 ## Limitations
 
-- The limits of the text are listed with the
-  [format](../readable/README.md#format-v1).
-- The display is confirmed for Slush with a direct Ed25519 account, for
-  NEP-641 authorizations only. Execution requests, secp256k1 and secp256r1
-  accounts, other wallets, mobile and hardware wallets are not yet verified.
+The limits of the text are listed with the
+[format](../readable/README.md#format-v1).
 
 ## Build
 

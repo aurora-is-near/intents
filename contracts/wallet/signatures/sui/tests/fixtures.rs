@@ -21,6 +21,9 @@ fn key(v: &Value) -> SuiPublicKey {
 
 #[test]
 fn official_sui_sdk_vectors() {
+    // Nine per scheme: the other tests take them in chunks of nine.
+    assert_eq!(vectors().len(), 27);
+
     for v in vectors() {
         let public_key = key(&v);
         let proof = v["proof"].as_str().unwrap();
@@ -106,12 +109,14 @@ fn execution_fields_are_bound() {
 
         for pointer in ["/request/internal", "/request/external/0/actions"] {
             let mut changed = original.clone();
+
             changed
                 .pointer_mut(pointer)
                 .unwrap()
                 .as_array_mut()
                 .unwrap()
                 .reverse();
+
             let msg: RequestMessage = serde_json::from_value(changed).unwrap();
 
             assert_ne!(
@@ -201,6 +206,7 @@ fn transfer_refund_and_state_init_are_bound() {
 fn offchain_fields_are_bound_without_normalizing_payload() {
     for all in vectors().chunks_exact(9) {
         let v = &all[5];
+
         for (pointer, value) in [
             ("/chain_id", json!("mainnet")),
             ("/signer_id", json!("other.near")),
@@ -331,6 +337,7 @@ fn state_init_fixture_uses_derived_receiver() {
 fn derived_accounts_match_known_answers() {
     use defuse_wallet::{GlobalContractId, State, StateInit, StateInitV1};
     let all = vectors();
+
     for (index, subwallet_id, timeout, expected) in [
         (0, 0, 3600, "0s49051dd7652c535b2f422312d808d4702ae81678"),
         (0, 1, 3600, "0sbe69bfac8784d0a031a24ede2cc64bf701f4bdb2"),

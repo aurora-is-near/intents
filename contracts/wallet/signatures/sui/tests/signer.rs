@@ -28,9 +28,11 @@ async fn check<C: SuiScheme, S: Signer<C>>(signer: S, scheme: &str) {
 
         let proof = if v["kind"] == "request" {
             let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
             signer.sign_request_msg(&msg).await.unwrap()
         } else {
             let msg: OffchainMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
             signer.sign_offchain_msg(&msg).await.unwrap()
         };
 

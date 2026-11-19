@@ -1,4 +1,5 @@
 mod common;
+use base64::{Engine, engine::general_purpose::STANDARD};
 use common::TestSui as WalletSui;
 use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
 use defuse_wallet_sui::{SuiPublicKey, sui::personal_message_digest};
@@ -51,7 +52,6 @@ fn sdk_addresses_hashes_and_native_intent_boundaries() {
 
 #[test]
 fn malformed_native_envelopes_and_cross_purpose_proofs_fail() {
-    use base64::{Engine, engine::general_purpose::STANDARD};
     let fixtures = fixtures();
 
     for v in fixtures["vectors"].as_array().unwrap() {
@@ -89,11 +89,13 @@ fn malformed_native_envelopes_and_cross_purpose_proofs_fail() {
         for flag in [3, 4, 5, 6, 7, 255] {
             let mut bytes = key.to_sui_bytes();
             bytes[0] = flag;
+
             assert!(SuiPublicKey::from_sui_bytes(&bytes).is_err());
         }
 
         if v["kind"] == "request" {
             let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
             assert!(!WalletSui::verify_request_msg(
                 &key,
                 &msg,
@@ -101,6 +103,7 @@ fn malformed_native_envelopes_and_cross_purpose_proofs_fail() {
             ));
         } else {
             let msg: OffchainMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+
             assert!(!WalletSui::verify_offchain_msg(
                 &key,
                 &msg,
@@ -114,13 +117,13 @@ fn malformed_native_envelopes_and_cross_purpose_proofs_fail() {
     for flag in [1, 2] {
         let mut bytes = vec![0; 34];
         bytes[0] = flag;
+
         assert!(SuiPublicKey::from_sui_bytes(&bytes).is_err());
     }
 }
 
 #[test]
 fn ecdsa_keys_require_native_compressed_sec1_tags() {
-    use base64::{Engine, engine::general_purpose::STANDARD};
     let fixtures = fixtures();
 
     for v in fixtures["vectors"].as_array().unwrap() {

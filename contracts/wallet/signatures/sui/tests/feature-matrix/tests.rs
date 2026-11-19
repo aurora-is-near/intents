@@ -96,6 +96,7 @@ fn malformed_proofs_never_authorize() {
         for index in 0..original.len() {
             let mut mutated = original.clone();
             mutated[index] ^= 1;
+
             assert!(!key.verify_personal_message(message, &STANDARD.encode(mutated)));
         }
     }
