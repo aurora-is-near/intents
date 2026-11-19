@@ -1979,6 +1979,7 @@ dependencies = [
  "defuse-wallet-sdk",
  "defuse-wallet-sui",
  "hex",
+ "impl-tools 0.12.0",
  "near-kit",
  "near-kit-sandbox",
  "near-sdk",
@@ -1999,18 +2000,6 @@ dependencies = [
  "defuse-wallet-sui",
  "defuse-wallet-sui-ed25519",
  "near-sdk",
-]
-
-[[package]]
-name = "defuse-wallet-sui-feature-tests"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "borsh",
- "defuse-wallet",
- "defuse-wallet-sui",
- "near-sdk",
- "serde_json",
 ]
 
 [[package]]

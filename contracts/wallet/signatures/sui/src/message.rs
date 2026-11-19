@@ -1,4 +1,4 @@
-use crate::SuiPublicKey;
+use crate::{SuiPublicKey, protocol::SuiScheme};
 use defuse_wallet::{RequestMessage, offchain::OffchainMessage};
 use defuse_wallet_readable::SigningIdentity;
 
@@ -8,7 +8,10 @@ pub use defuse_wallet_readable::{
 
 /// Render with the identity fields of the stored key: its Sui native base64
 /// (flag plus key) and its directly derived address.
-fn with_identity<T>(public_key: &SuiPublicKey, render: impl FnOnce(SigningIdentity<'_>) -> T) -> T {
+fn with_identity<C: SuiScheme, T>(
+    public_key: &SuiPublicKey<C>,
+    render: impl FnOnce(SigningIdentity<'_>) -> T,
+) -> T {
     let (key, address) = (public_key.to_base64(), public_key.address());
 
     render(&[
@@ -18,8 +21,8 @@ fn with_identity<T>(public_key: &SuiPublicKey, render: impl FnOnce(SigningIdenti
 }
 
 /// Reconstruct the full readable Sui execution message from the stored key.
-pub fn request_signing_message(
-    public_key: &SuiPublicKey,
+pub fn request_signing_message<C: SuiScheme>(
+    public_key: &SuiPublicKey<C>,
     msg: &RequestMessage,
 ) -> Result<String, MessageError> {
     with_identity(public_key, |identity| {
@@ -28,8 +31,8 @@ pub fn request_signing_message(
 }
 
 /// Reconstruct the full readable Sui NEP-641 authorization message.
-pub fn offchain_signing_message(
-    public_key: &SuiPublicKey,
+pub fn offchain_signing_message<C: SuiScheme>(
+    public_key: &SuiPublicKey<C>,
     msg: &OffchainMessage,
 ) -> Result<String, MessageError> {
     with_identity(public_key, |identity| {

@@ -1,23 +1,16 @@
 mod common;
-use common::TestSui as WalletSui;
 use std::time::Duration;
 
+use common::{FixtureScheme, each_scheme, key, stored, verify};
 use defuse_wallet::{RequestMessage, SignatureSchema, offchain::OffchainMessage};
-use defuse_wallet_sui::{SuiPublicKey, offchain_signing_message, request_signing_message};
+use defuse_wallet_sui::{
+    WalletSui,
+    crypto::{ed25519::Ed25519, p256::P256, secp256k1::Secp256k1},
+    offchain_signing_message, request_signing_message,
+};
 // Link the native NEAR host mocks used by the deterministic-address hash.
 use near_sdk as _;
 use serde_json::{Value, json};
-
-fn vectors() -> Vec<Value> {
-    serde_json::from_str::<Value>(include_str!("fixtures/sui.json")).unwrap()["vectors"]
-        .as_array()
-        .unwrap()
-        .clone()
-}
-
-fn key(v: &Value) -> SuiPublicKey {
-    v["public_key"].as_str().unwrap().parse().unwrap()
-}
 
 /// Kinds of the vectors of each scheme, in the order the tests index them.
 const LAYOUT: [&str; 9] = [
@@ -25,60 +18,51 @@ const LAYOUT: [&str; 9] = [
     "request",
 ];
 
-/// Vectors grouped by their `scheme` and checked against [`LAYOUT`], so that a
+/// Vectors of the scheme `C`, checked against [`LAYOUT`], so that a
 /// regenerated fixture cannot silently drop vectors or shift the indexes.
-fn schemes() -> Vec<Vec<Value>> {
-    let all = vectors();
-    let groups: Vec<Vec<Value>> = ["ED25519", "Secp256k1", "Secp256r1"]
-        .into_iter()
-        .map(|scheme| {
-            let group: Vec<Value> = all
-                .iter()
-                .filter(|v| v["scheme"] == scheme)
-                .cloned()
-                .collect();
-            let kinds: Vec<&str> = group.iter().map(|v| v["kind"].as_str().unwrap()).collect();
+fn scheme<C: FixtureScheme>() -> Vec<Value> {
+    let group = common::vectors::<C>();
+    let kinds: Vec<&str> = group.iter().map(|v| v["kind"].as_str().unwrap()).collect();
 
-            assert_eq!(kinds, LAYOUT, "{scheme}");
+    assert_eq!(kinds, LAYOUT, "{}", C::NAME);
 
-            group
-        })
-        .collect();
+    group
+}
 
-    assert_eq!(groups.iter().map(Vec::len).sum::<usize>(), all.len());
+#[test]
+fn every_vector_belongs_to_one_of_the_three_schemes() {
+    let grouped = scheme::<Ed25519>().len() + scheme::<Secp256k1>().len() + scheme::<P256>().len();
 
-    groups
+    assert_eq!(grouped, common::all_vectors().len());
 }
 
 #[test]
 fn official_sui_sdk_vectors() {
-    for v in schemes().concat() {
-        let public_key = key(&v);
-        let proof = v["proof"].as_str().unwrap();
+    fn check<C: FixtureScheme>() {
+        for v in scheme::<C>() {
+            let public_key = key::<C>(&v);
+            let rendered = if v["kind"] == "request" {
+                let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
 
-        if v["kind"] == "request" {
-            let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+                request_signing_message(&public_key, &msg).unwrap()
+            } else {
+                let msg: OffchainMessage = serde_json::from_value(v["msg"].clone()).unwrap();
 
-            assert_eq!(
-                request_signing_message(&public_key, &msg).unwrap(),
-                v["message"]
-            );
-            assert!(WalletSui::verify_request_msg(&public_key, &msg, proof));
-        } else {
-            let msg: OffchainMessage = serde_json::from_value(v["msg"].clone()).unwrap();
+                offchain_signing_message(&public_key, &msg).unwrap()
+            };
 
-            assert_eq!(
-                offchain_signing_message(&public_key, &msg).unwrap(),
-                v["message"]
-            );
-            assert!(WalletSui::verify_offchain_msg(&public_key, &msg, proof));
+            assert_eq!(rendered, v["message"]);
+            assert!(verify(&public_key, &v, v["proof"].as_str().unwrap()));
         }
     }
+
+    each_scheme!(check);
 }
 
 #[test]
 fn execution_fields_are_bound() {
-    for all in schemes() {
+    fn check<C: FixtureScheme>() {
+        let all = scheme::<C>();
         let v = &all[2];
         let original = &v["msg"];
         let mutations = [
@@ -126,11 +110,15 @@ fn execution_fields_are_bound() {
             let msg: RequestMessage = serde_json::from_value(changed).unwrap();
 
             assert_ne!(
-                request_signing_message(&key(v), &msg).expect("mutation must render"),
+                request_signing_message(&key::<C>(v), &msg).expect("mutation must render"),
                 v["message"]
             );
             assert!(
-                !WalletSui::verify_request_msg(&key(v), &msg, v["proof"].as_str().unwrap()),
+                !WalletSui::<C>::verify_request_msg(
+                    &key::<C>(v),
+                    &msg,
+                    v["proof"].as_str().unwrap()
+                ),
                 "accepted {pointer}"
             );
         }
@@ -148,11 +136,11 @@ fn execution_fields_are_bound() {
             let msg: RequestMessage = serde_json::from_value(changed).unwrap();
 
             assert_ne!(
-                request_signing_message(&key(v), &msg).expect("mutation must render"),
+                request_signing_message(&key::<C>(v), &msg).expect("mutation must render"),
                 v["message"]
             );
-            assert!(!WalletSui::verify_request_msg(
-                &key(v),
+            assert!(!WalletSui::<C>::verify_request_msg(
+                &key::<C>(v),
                 &msg,
                 v["proof"].as_str().unwrap()
             ));
@@ -162,10 +150,10 @@ fn execution_fields_are_bound() {
         let mut moved: RequestMessage = serde_json::from_value(original.clone()).unwrap();
 
         moved.request.external[0].receiver_id = "other.near".parse().unwrap();
-        request_signing_message(&key(v), &moved).unwrap();
+        request_signing_message(&key::<C>(v), &moved).unwrap();
 
-        assert!(!WalletSui::verify_request_msg(
-            &key(v),
+        assert!(!WalletSui::<C>::verify_request_msg(
+            &key::<C>(v),
             &moved,
             v["proof"].as_str().unwrap()
         ));
@@ -175,19 +163,22 @@ fn execution_fields_are_bound() {
         let mut msg: RequestMessage = serde_json::from_value(transfer["msg"].clone()).unwrap();
 
         msg.request.external[0].receiver_id = "other.near".parse().unwrap();
-        request_signing_message(&key(transfer), &msg).unwrap();
+        request_signing_message(&key::<C>(transfer), &msg).unwrap();
 
-        assert!(!WalletSui::verify_request_msg(
-            &key(transfer),
+        assert!(!WalletSui::<C>::verify_request_msg(
+            &key::<C>(transfer),
             &msg,
             transfer["proof"].as_str().unwrap()
         ));
     }
+
+    each_scheme!(check);
 }
 
 #[test]
 fn transfer_refund_and_state_init_are_bound() {
-    for all in schemes() {
+    fn check<C: FixtureScheme>() {
+        let all = scheme::<C>();
         for (index, pointer, value) in [
             (1, "/request/external/0/refund_to", json!("other.near")),
             (
@@ -219,20 +210,27 @@ fn transfer_refund_and_state_init_are_bound() {
             let msg: RequestMessage = serde_json::from_value(changed).unwrap();
 
             assert_ne!(
-                request_signing_message(&key(v), &msg).expect("mutation must render"),
+                request_signing_message(&key::<C>(v), &msg).expect("mutation must render"),
                 v["message"]
             );
             assert!(
-                !WalletSui::verify_request_msg(&key(v), &msg, v["proof"].as_str().unwrap()),
+                !WalletSui::<C>::verify_request_msg(
+                    &key::<C>(v),
+                    &msg,
+                    v["proof"].as_str().unwrap()
+                ),
                 "accepted {pointer}"
             );
         }
     }
+
+    each_scheme!(check);
 }
 
 #[test]
 fn offchain_fields_are_bound_without_normalizing_payload() {
-    for all in schemes() {
+    fn check<C: FixtureScheme>() {
+        let all = scheme::<C>();
         let v = &all[5];
 
         for (pointer, value) in [
@@ -255,20 +253,27 @@ fn offchain_fields_are_bound_without_normalizing_payload() {
             let msg: OffchainMessage = serde_json::from_value(changed).unwrap();
 
             assert_ne!(
-                offchain_signing_message(&key(v), &msg).expect("mutation must render"),
+                offchain_signing_message(&key::<C>(v), &msg).expect("mutation must render"),
                 v["message"]
             );
             assert!(
-                !WalletSui::verify_offchain_msg(&key(v), &msg, v["proof"].as_str().unwrap()),
+                !WalletSui::<C>::verify_offchain_msg(
+                    &key::<C>(v),
+                    &msg,
+                    v["proof"].as_str().unwrap()
+                ),
                 "accepted {pointer}"
             );
         }
     }
+
+    each_scheme!(check);
 }
 
 #[test]
 fn malformed_wrong_key_and_cross_domain_proofs_fail() {
-    for all in schemes() {
+    fn check<C: FixtureScheme>() {
+        let all = scheme::<C>();
         let v = &all[0];
         let msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
 
@@ -279,45 +284,55 @@ fn malformed_wrong_key_and_cross_domain_proofs_fail() {
             "not a signature",
             all[4]["proof"].as_str().unwrap(),
         ] {
-            assert!(!WalletSui::verify_request_msg(&key(v), &msg, proof));
+            assert!(!WalletSui::<C>::verify_request_msg(
+                &key::<C>(v),
+                &msg,
+                proof
+            ));
         }
 
-        assert!(!WalletSui::verify_request_msg(
-            &SuiPublicKey::Ed25519([0; 32]),
+        // `StateInit` can store any key: the proof of another key is refused.
+        let wrong = stored::<C>(&vec![0; key::<C>(v).raw_bytes().len()]);
+
+        assert!(!WalletSui::<C>::verify_request_msg(
+            &wrong,
             &msg,
             v["proof"].as_str().unwrap()
         ));
 
         let auth: OffchainMessage = serde_json::from_value(all[4]["msg"].clone()).unwrap();
 
-        assert!(!WalletSui::verify_offchain_msg(
-            &key(v),
+        assert!(!WalletSui::<C>::verify_offchain_msg(
+            &key::<C>(v),
             &auth,
             v["proof"].as_str().unwrap()
         ));
     }
+
+    each_scheme!(check);
 }
 
 #[test]
 fn limits_and_ambiguous_timeout_are_rejected() {
-    for all in schemes() {
+    fn check<C: FixtureScheme>() {
+        let all = scheme::<C>();
         let v = &all[0];
         let mut msg: RequestMessage = serde_json::from_value(v["msg"].clone()).unwrap();
 
         msg.timeout = Duration::from_nanos(1);
 
-        assert!(request_signing_message(&key(v), &msg).is_err());
-        assert!(!WalletSui::verify_request_msg(
-            &key(v),
+        assert!(request_signing_message(&key::<C>(v), &msg).is_err());
+        assert!(!WalletSui::<C>::verify_request_msg(
+            &key::<C>(v),
             &msg,
             v["proof"].as_str().unwrap()
         ));
 
         msg.timeout = Duration::from_secs(u64::from(u32::MAX) + 1);
 
-        assert!(request_signing_message(&key(v), &msg).is_err());
-        assert!(!WalletSui::verify_request_msg(
-            &key(v),
+        assert!(request_signing_message(&key::<C>(v), &msg).is_err());
+        assert!(!WalletSui::<C>::verify_request_msg(
+            &key::<C>(v),
             &msg,
             v["proof"].as_str().unwrap()
         ));
@@ -325,23 +340,23 @@ fn limits_and_ambiguous_timeout_are_rejected() {
         let mut auth: OffchainMessage = serde_json::from_value(all[4]["msg"].clone()).unwrap();
         auth.payload = "x".repeat(16 * 1024);
 
-        assert!(offchain_signing_message(&key(v), &auth).is_err());
+        assert!(offchain_signing_message(&key::<C>(v), &auth).is_err());
 
         auth.payload = "bidi\u{202e} and emoji 🌍".to_string();
 
-        let rendered = offchain_signing_message(&key(v), &auth).unwrap();
+        let rendered = offchain_signing_message(&key::<C>(v), &auth).unwrap();
 
         assert!(rendered.is_ascii());
         assert!(rendered.contains("\\u202e"));
         assert!(rendered.contains("\\ud83c\\udf0d"));
     }
+
+    each_scheme!(check);
 }
 
 #[test]
 fn state_init_fixture_uses_derived_receiver() {
-    let table: Value = serde_json::from_str(include_str!("fixtures/sui.json")).unwrap();
-
-    for v in table["vectors"].as_array().unwrap() {
+    for v in common::all_vectors() {
         if v["kind"] != "request" {
             continue;
         }
@@ -364,26 +379,35 @@ fn state_init_fixture_uses_derived_receiver() {
 #[test]
 fn derived_accounts_match_known_answers() {
     use defuse_wallet::{GlobalContractId, State, StateInit, StateInitV1};
-    let all = schemes();
 
-    for (scheme, subwallet_id, timeout, expected) in [
-        (0, 0, 3600, "0s49051dd7652c535b2f422312d808d4702ae81678"),
-        (0, 1, 3600, "0sbe69bfac8784d0a031a24ede2cc64bf701f4bdb2"),
-        (0, 0, 300, "0s72b48612a269c7040a20e4a7180191af911de5fb"),
-        (1, 0, 3600, "0sb569e1108c1e485d495072ccd28abf686742fadb"),
-        (1, 1, 3600, "0s4716ec2dd8f5a97184792a125176b554949176f4"),
-        (2, 0, 3600, "0sba9edac674b105460073c20e1548240cd259b34d"),
-        (2, 1, 3600, "0s6f681ded58dec1caaa2ee11e7e42cad3c1ac2c9c"),
-    ] {
-        let state = State::new(key(&all[scheme][0]))
-            .subwallet_id(subwallet_id)
-            .timeout(Duration::from_secs(timeout));
-        let account = StateInit::V1(StateInitV1 {
-            code: GlobalContractId::CodeHash([0x11; 32]),
-            data: state.as_storage(),
-        })
-        .derive_account_id();
+    fn check<C: FixtureScheme>(known: &[(u32, u64, &str)]) {
+        let public_key = key::<C>(&scheme::<C>()[0]);
 
-        assert_eq!(account.as_str(), expected);
+        for &(subwallet_id, timeout, expected) in known {
+            let state = State::new(public_key)
+                .subwallet_id(subwallet_id)
+                .timeout(Duration::from_secs(timeout));
+            let account = StateInit::V1(StateInitV1 {
+                code: GlobalContractId::CodeHash([0x11; 32]),
+                data: state.as_storage(),
+            })
+            .derive_account_id();
+
+            assert_eq!(account.as_str(), expected, "{}", C::NAME);
+        }
     }
+
+    check::<Ed25519>(&[
+        (0, 3600, "0s4a8437992cee5812f4bdc749e9e5ae0cef7ff6f8"),
+        (1, 3600, "0sc07d0962bdb16423339c6f66b4e04a402d24bb0b"),
+        (0, 300, "0s6e1818d42750a7eb70e2a108514d4d62d6fc62ce"),
+    ]);
+    check::<Secp256k1>(&[
+        (0, 3600, "0s05a737b0b48b9f072456d250152b440873786830"),
+        (1, 3600, "0sd8fdeebf26a3ec48cb94d883f26016f7cd03cdb1"),
+    ]);
+    check::<P256>(&[
+        (0, 3600, "0s896c6c95b46ec102f962d7807aa3cb1d1c92381a"),
+        (1, 3600, "0sd2628ffa3454bc15cfefa17c7b6c98c949ec5fee"),
+    ]);
 }

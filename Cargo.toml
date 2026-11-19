@@ -13,7 +13,6 @@ members = [
   "contracts/wallet",
   "contracts/wallet/signatures/ed25519",
   "contracts/wallet/signatures/sui",
-  "contracts/wallet/signatures/sui/tests/feature-matrix",
   "contracts/wallet/signatures/sui/ed25519",
   "contracts/wallet/signatures/sui/secp256k1",
   "contracts/wallet/signatures/sui/p256",
