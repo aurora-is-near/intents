@@ -20,8 +20,8 @@ contract, so the same key has a different wallet account in each.
   (flag 7) and other account authorities are rejected.
 - The public key is 32 bytes for Ed25519 and a 33-byte compressed SEC1 point
   (tag `0x02` or `0x03`) for ECDSA. `w_public_key()` returns
-  `sui:<base64(flag || public_key)>`; the wallet state stores
-  `flag || public_key`.
+  `sui:<base64(flag || public_key)>`; the wallet state stores only
+  `public_key`, because the flag is fixed by the contract variant.
 - The signed text has two identity fields after `signer_id`: `sui_public_key`
   (base64 of `flag || public_key`) and `sui_address` (`0x` and the lowercase
   hex BLAKE2b-256 of `flag || public_key`).

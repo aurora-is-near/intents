@@ -101,21 +101,24 @@ where
 
     // StateInit accepts Borsh state directly. A valid proof for another scheme
     // must still fail even if its key was deliberately placed in this leaf.
-    if C::FLAG == 0 {
-        check_wrong_global_scheme::<Secp256k1, _>(
-            near,
-            code_hash,
-            k256::ecdsa::SigningKey::from_bytes((&[4; 32]).into()).unwrap(),
-        )
-        .await;
-    } else {
-        check_wrong_global_scheme::<Ed25519, _>(
-            near,
-            code_hash,
-            ed25519_dalek::SigningKey::from_bytes(&[4; 32]),
-        )
-        .await;
-    }
+    check_wrong_global_scheme::<C, Ed25519, _>(
+        near,
+        code_hash,
+        ed25519_dalek::SigningKey::from_bytes(&[4; 32]),
+    )
+    .await;
+    check_wrong_global_scheme::<C, Secp256k1, _>(
+        near,
+        code_hash,
+        k256::ecdsa::SigningKey::from_bytes((&[4; 32]).into()).unwrap(),
+    )
+    .await;
+    check_wrong_global_scheme::<C, P256, _>(
+        near,
+        code_hash,
+        p256::ecdsa::SigningKey::from_bytes((&[4; 32]).into()).unwrap(),
+    )
+    .await;
 
     let run_id = rand::random::<u32>() & !1;
     let scheme = C::FLAG;
@@ -406,13 +409,28 @@ async fn ft_balance(near: &Near, token: &AccountId, account_id: &AccountId) -> S
         .unwrap()
 }
 
-async fn check_wrong_global_scheme<C, S>(near: &Near, code_hash: [u8; 32], signer: S)
+/// The key of the foreign scheme `F` in a leaf of the contract variant `C`.
+///
+/// The stored key has no flag: the other ECDSA key has the same length, so the
+/// state is readable and the proof is refused; a key of another length leaves
+/// a state that the variant cannot read at all.
+async fn check_wrong_global_scheme<C, F, S>(near: &Near, code_hash: [u8; 32], signer: S)
 where
     C: SuiScheme,
-    S: Signer<C> + Clone + 'static,
+    F: SuiScheme,
+    S: Signer<F> + Clone + 'static,
     S::Error: std::error::Error + Send + Sync + 'static,
 {
-    let signer = WalletSuiSigner::<C, _>::new(signer);
+    if C::FLAG == F::FLAG {
+        return;
+    }
+
+    let expected = if size_of::<C::Key>() == size_of::<F::Key>() {
+        "invalid signature"
+    } else {
+        "Cannot deserialize the contract state"
+    };
+    let signer = WalletSuiSigner::<F, _>::new(signer);
     let wallet = WalletBuilder::new()
         .subwallet_id(rand::random())
         .build(code_hash, signer.clone())
@@ -435,7 +453,7 @@ where
         .storage_usage;
     let (msg, proof) = wallet.sign(Request::new()).await.unwrap();
 
-    assert!(WalletSui::<C>::verify_request_msg(
+    assert!(WalletSui::<F>::verify_request_msg(
         &wallet.public_key(),
         &msg,
         &proof,
@@ -450,7 +468,7 @@ where
         .result()
         .expect_err("another scheme cannot authorize this global contract");
 
-    assert!(error.to_string().contains("invalid signature"), "{error:?}");
+    assert!(error.to_string().contains(expected), "{error:?}");
     assert_eq!(
         near.account(wallet.account_id())
             .await
@@ -468,7 +486,7 @@ where
     };
     let proof = signer.sign_offchain_msg(&msg).await.unwrap();
 
-    assert!(WalletSui::<C>::verify_offchain_msg(
+    assert!(WalletSui::<F>::verify_offchain_msg(
         &wallet.public_key(),
         &msg,
         &proof,
@@ -481,10 +499,7 @@ where
         .await
         .unwrap_err();
 
-    assert!(
-        format!("{error:?}").contains("invalid signature"),
-        "{error:?}"
-    );
+    assert!(format!("{error:?}").contains(expected), "{error:?}");
 }
 
 async fn check_nonce_rollback_and_replay<C: SuiScheme>(near: &Near, wallet: &Wallet<WalletSui<C>>) {
