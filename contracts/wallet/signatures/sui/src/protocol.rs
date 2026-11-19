@@ -18,9 +18,6 @@ use defuse_crypto::secp256k1::{Secp256k1, Secp256k1CompressedPublicKey};
 use defuse_digest::{Digest, sha2::Sha256};
 use impl_tools::autoimpl;
 
-#[cfg(near)]
-use near_sdk::env;
-
 use crate::MessageError;
 
 pub use defuse_crypto as crypto;
@@ -132,12 +129,6 @@ impl<C: SuiScheme> SuiPublicKey<C> {
             return false;
         }
 
-        // Report rendering failures on-chain without embedding Rust source locations.
-        #[cfg(near)]
-        let message = message().unwrap_or_else(|error| env::panic_str(&error.to_string()));
-
-        // Native verification remains a predicate, including for unreadable messages.
-        #[cfg(not(near))]
         let Ok(message) = message() else {
             return false;
         };
