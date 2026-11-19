@@ -37,8 +37,8 @@ near-sdk.workspace = true
 defuse-wallet-sui = { path = ".", features = ["abi", "signer", "ed25519", "secp256k1", "p256"] }
 
 defuse-nep641 = { workspace = true, features = ["resolver"] }
-near-kit-sandbox.workspace = true
 near-kit.workspace = true
+near-kit-sandbox.workspace = true
 near-sdk = { workspace = true, features = ["unit-testing"] }
 rand.workspace = true
 serde_json.workspace = true
