@@ -1,0 +1,3682 @@
+{
+  "generator": "@metamask/eth-sig-util 8.2.0 (TypedDataUtils.eip712Hash, signTypedData V4); public web3.js test key",
+  "domain_separator": "9ed0384a9369f42aa89e172b67359e73238fce303b45b92842e471874e2f6d22",
+  "encode_type": {
+    "ExecuteRequest": "ExecuteRequest(string[] warnings,string chain_id,string signer_id,uint32 nonce,string created_at,uint32 timeout_secs,bool pay_for_gas,Operation[] internal,Promise[] external)Action(string action,uint128 yocto_near,string function_name,string args,uint64 gas,uint64 gas_weight,StateInit[] state_init)Operation(string op,string account_id,string signature_mode)Promise(string receiver_id,string refund_to,Action[] actions)StateEntry(bytes key,bytes value)StateInit(string code_hash,string code_account_id,StateEntry[] data)",
+    "OffchainAuthorization": "OffchainAuthorization(string chain_id,string signer_id,string[] path,string timestamp,string payload)"
+  },
+  "vectors": [
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {}
+      },
+      "address": "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+      "typed_data": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            }
+          ],
+          "ExecuteRequest": [
+            {
+              "name": "warnings",
+              "type": "string[]"
+            },
+            {
+              "name": "chain_id",
+              "type": "string"
+            },
+            {
+              "name": "signer_id",
+              "type": "string"
+            },
+            {
+              "name": "nonce",
+              "type": "uint32"
+            },
+            {
+              "name": "created_at",
+              "type": "string"
+            },
+            {
+              "name": "timeout_secs",
+              "type": "uint32"
+            },
+            {
+              "name": "pay_for_gas",
+              "type": "bool"
+            },
+            {
+              "name": "internal",
+              "type": "Operation[]"
+            },
+            {
+              "name": "external",
+              "type": "Promise[]"
+            }
+          ],
+          "Operation": [
+            {
+              "name": "op",
+              "type": "string"
+            },
+            {
+              "name": "account_id",
+              "type": "string"
+            },
+            {
+              "name": "signature_mode",
+              "type": "string"
+            }
+          ],
+          "Promise": [
+            {
+              "name": "receiver_id",
+              "type": "string"
+            },
+            {
+              "name": "refund_to",
+              "type": "string"
+            },
+            {
+              "name": "actions",
+              "type": "Action[]"
+            }
+          ],
+          "Action": [
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "yocto_near",
+              "type": "uint128"
+            },
+            {
+              "name": "function_name",
+              "type": "string"
+            },
+            {
+              "name": "args",
+              "type": "string"
+            },
+            {
+              "name": "gas",
+              "type": "uint64"
+            },
+            {
+              "name": "gas_weight",
+              "type": "uint64"
+            },
+            {
+              "name": "state_init",
+              "type": "StateInit[]"
+            }
+          ],
+          "StateInit": [
+            {
+              "name": "code_hash",
+              "type": "string"
+            },
+            {
+              "name": "code_account_id",
+              "type": "string"
+            },
+            {
+              "name": "data",
+              "type": "StateEntry[]"
+            }
+          ],
+          "StateEntry": [
+            {
+              "name": "key",
+              "type": "bytes"
+            },
+            {
+              "name": "value",
+              "type": "bytes"
+            }
+          ]
+        },
+        "primaryType": "ExecuteRequest",
+        "domain": {
+          "name": "NEAR Wallet Contract",
+          "version": "1"
+        },
+        "message": {
+          "warnings": [],
+          "chain_id": "mainnet",
+          "signer_id": "wallet.near",
+          "nonce": 42,
+          "created_at": "2026-11-03T12:34:56.123456789Z",
+          "timeout_secs": 300,
+          "pay_for_gas": false,
+          "internal": [],
+          "external": []
+        }
+      },
+      "digest": "e607dc5accaff737b2c7f7c4a9f4e535ba01a41d3323be708e9880273d7d34fa",
+      "proof": "secp256k1:NYodhUFPkSSJtfNhao7YW7cYFeprcfKJwsq1nNZuMHX16XEL99ipv9gsP78a3MjhG6ihJhJ4VyQx2WfWQF4oRZuy1"
+    },
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "internal": [
+            {
+              "op": "add_extension",
+              "payload": {
+                "account_id": "recovery.near"
+              }
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "bob.near",
+              "refund_to": "refund.near",
+              "actions": [
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1000000000000000000000000"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "address": "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+      "typed_data": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            }
+          ],
+          "ExecuteRequest": [
+            {
+              "name": "warnings",
+              "type": "string[]"
+            },
+            {
+              "name": "chain_id",
+              "type": "string"
+            },
+            {
+              "name": "signer_id",
+              "type": "string"
+            },
+            {
+              "name": "nonce",
+              "type": "uint32"
+            },
+            {
+              "name": "created_at",
+              "type": "string"
+            },
+            {
+              "name": "timeout_secs",
+              "type": "uint32"
+            },
+            {
+              "name": "pay_for_gas",
+              "type": "bool"
+            },
+            {
+              "name": "internal",
+              "type": "Operation[]"
+            },
+            {
+              "name": "external",
+              "type": "Promise[]"
+            }
+          ],
+          "Operation": [
+            {
+              "name": "op",
+              "type": "string"
+            },
+            {
+              "name": "account_id",
+              "type": "string"
+            },
+            {
+              "name": "signature_mode",
+              "type": "string"
+            }
+          ],
+          "Promise": [
+            {
+              "name": "receiver_id",
+              "type": "string"
+            },
+            {
+              "name": "refund_to",
+              "type": "string"
+            },
+            {
+              "name": "actions",
+              "type": "Action[]"
+            }
+          ],
+          "Action": [
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "yocto_near",
+              "type": "uint128"
+            },
+            {
+              "name": "function_name",
+              "type": "string"
+            },
+            {
+              "name": "args",
+              "type": "string"
+            },
+            {
+              "name": "gas",
+              "type": "uint64"
+            },
+            {
+              "name": "gas_weight",
+              "type": "uint64"
+            },
+            {
+              "name": "state_init",
+              "type": "StateInit[]"
+            }
+          ],
+          "StateInit": [
+            {
+              "name": "code_hash",
+              "type": "string"
+            },
+            {
+              "name": "code_account_id",
+              "type": "string"
+            },
+            {
+              "name": "data",
+              "type": "StateEntry[]"
+            }
+          ],
+          "StateEntry": [
+            {
+              "name": "key",
+              "type": "bytes"
+            },
+            {
+              "name": "value",
+              "type": "bytes"
+            }
+          ]
+        },
+        "primaryType": "ExecuteRequest",
+        "domain": {
+          "name": "NEAR Wallet Contract",
+          "version": "1"
+        },
+        "message": {
+          "warnings": [
+            "add_extension gives recovery.near full control of this wallet",
+            "up to 1000000000000000000000000 yoctoNEAR sent to bob.near can be refunded to refund.near, not to this wallet"
+          ],
+          "chain_id": "mainnet",
+          "signer_id": "wallet.near",
+          "nonce": 42,
+          "created_at": "2026-11-03T12:34:56.123456789Z",
+          "timeout_secs": 300,
+          "pay_for_gas": false,
+          "internal": [
+            {
+              "op": "add_extension",
+              "account_id": "recovery.near",
+              "signature_mode": ""
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "bob.near",
+              "refund_to": "refund.near",
+              "actions": [
+                {
+                  "action": "transfer",
+                  "yocto_near": "1000000000000000000000000",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "digest": "24e7321e20d1a00dbfab0b8396e4bc5e4958d83756cb62d39c82420e27368aab",
+      "proof": "secp256k1:JJHMmVMgYRofPVo95BfajWpcEETgVNe1E9ZVFzycVDuMe8aec8XaTi8fGd61Puqx4tneN9w7V3euDZrNQwQKbW16x"
+    },
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": true,
+        "request": {
+          "internal": [
+            {
+              "op": "set_signature_mode",
+              "payload": {
+                "enable": false
+              }
+            },
+            {
+              "op": "remove_extension",
+              "payload": {
+                "account_id": "old.near"
+              }
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "token.near",
+              "actions": [
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "ft_transfer",
+                    "args": "eyJyZWNlaXZlcl9pZCI6ImJvYi5uZWFyIiwiYW1vdW50IjoiOTAwNzE5OTI1NDc0MDk5MyIsIm1lbW8iOiJoaSJ9",
+                    "deposit": "1",
+                    "gas": "50000000000000",
+                    "gas_weight": "18446744073709551614"
+                  }
+                },
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "near_deposit",
+                    "args": "e30="
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "address": "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+      "typed_data": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            }
+          ],
+          "ExecuteRequest": [
+            {
+              "name": "warnings",
+              "type": "string[]"
+            },
+            {
+              "name": "chain_id",
+              "type": "string"
+            },
+            {
+              "name": "signer_id",
+              "type": "string"
+            },
+            {
+              "name": "nonce",
+              "type": "uint32"
+            },
+            {
+              "name": "created_at",
+              "type": "string"
+            },
+            {
+              "name": "timeout_secs",
+              "type": "uint32"
+            },
+            {
+              "name": "pay_for_gas",
+              "type": "bool"
+            },
+            {
+              "name": "internal",
+              "type": "Operation[]"
+            },
+            {
+              "name": "external",
+              "type": "Promise[]"
+            }
+          ],
+          "Operation": [
+            {
+              "name": "op",
+              "type": "string"
+            },
+            {
+              "name": "account_id",
+              "type": "string"
+            },
+            {
+              "name": "signature_mode",
+              "type": "string"
+            }
+          ],
+          "Promise": [
+            {
+              "name": "receiver_id",
+              "type": "string"
+            },
+            {
+              "name": "refund_to",
+              "type": "string"
+            },
+            {
+              "name": "actions",
+              "type": "Action[]"
+            }
+          ],
+          "Action": [
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "yocto_near",
+              "type": "uint128"
+            },
+            {
+              "name": "function_name",
+              "type": "string"
+            },
+            {
+              "name": "args",
+              "type": "string"
+            },
+            {
+              "name": "gas",
+              "type": "uint64"
+            },
+            {
+              "name": "gas_weight",
+              "type": "uint64"
+            },
+            {
+              "name": "state_init",
+              "type": "StateInit[]"
+            }
+          ],
+          "StateInit": [
+            {
+              "name": "code_hash",
+              "type": "string"
+            },
+            {
+              "name": "code_account_id",
+              "type": "string"
+            },
+            {
+              "name": "data",
+              "type": "StateEntry[]"
+            }
+          ],
+          "StateEntry": [
+            {
+              "name": "key",
+              "type": "bytes"
+            },
+            {
+              "name": "value",
+              "type": "bytes"
+            }
+          ]
+        },
+        "primaryType": "ExecuteRequest",
+        "domain": {
+          "name": "NEAR Wallet Contract",
+          "version": "1"
+        },
+        "message": {
+          "warnings": [],
+          "chain_id": "mainnet",
+          "signer_id": "wallet.near",
+          "nonce": 42,
+          "created_at": "2026-11-03T12:34:56.123456789Z",
+          "timeout_secs": 300,
+          "pay_for_gas": true,
+          "internal": [
+            {
+              "op": "set_signature_mode",
+              "account_id": "",
+              "signature_mode": "disable"
+            },
+            {
+              "op": "remove_extension",
+              "account_id": "old.near",
+              "signature_mode": ""
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "token.near",
+              "refund_to": "",
+              "actions": [
+                {
+                  "action": "function_call",
+                  "yocto_near": "1",
+                  "function_name": "ft_transfer",
+                  "args": "{\"receiver_id\":\"bob.near\",\"amount\":\"9007199254740993\",\"memo\":\"hi\"}",
+                  "gas": "50000000000000",
+                  "gas_weight": "18446744073709551614",
+                  "state_init": []
+                },
+                {
+                  "action": "function_call",
+                  "yocto_near": "0",
+                  "function_name": "near_deposit",
+                  "args": "{}",
+                  "gas": "0",
+                  "gas_weight": "1",
+                  "state_init": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "digest": "a852c8193ce72f17abc2ae87f9e90007ba22a68648ee1b63c743faa4610f2067",
+      "proof": "secp256k1:5s1WEA5eriWtZnHyrgvmGWCAfw8m1AW2ngztEh5848yrVJ26NDdxMoxjw41LgZQXedDsdYxWqLGM5jVAvK9HJLmyS"
+    },
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "external": [
+            {
+              "receiver_id": "0s762910a479b0c04f9725b03cd7931dc5064ab0ab",
+              "actions": [
+                {
+                  "action": "deterministic_state_init",
+                  "payload": {
+                    "state_init": {
+                      "V1": {
+                        "code": {
+                          "account_id": "alice.near"
+                        },
+                        "data": {
+                          "1000": "",
+                          "1234": "",
+                          "AAEC": "AwQF"
+                        }
+                      }
+                    },
+                    "deposit": "9"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "address": "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+      "typed_data": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            }
+          ],
+          "ExecuteRequest": [
+            {
+              "name": "warnings",
+              "type": "string[]"
+            },
+            {
+              "name": "chain_id",
+              "type": "string"
+            },
+            {
+              "name": "signer_id",
+              "type": "string"
+            },
+            {
+              "name": "nonce",
+              "type": "uint32"
+            },
+            {
+              "name": "created_at",
+              "type": "string"
+            },
+            {
+              "name": "timeout_secs",
+              "type": "uint32"
+            },
+            {
+              "name": "pay_for_gas",
+              "type": "bool"
+            },
+            {
+              "name": "internal",
+              "type": "Operation[]"
+            },
+            {
+              "name": "external",
+              "type": "Promise[]"
+            }
+          ],
+          "Operation": [
+            {
+              "name": "op",
+              "type": "string"
+            },
+            {
+              "name": "account_id",
+              "type": "string"
+            },
+            {
+              "name": "signature_mode",
+              "type": "string"
+            }
+          ],
+          "Promise": [
+            {
+              "name": "receiver_id",
+              "type": "string"
+            },
+            {
+              "name": "refund_to",
+              "type": "string"
+            },
+            {
+              "name": "actions",
+              "type": "Action[]"
+            }
+          ],
+          "Action": [
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "yocto_near",
+              "type": "uint128"
+            },
+            {
+              "name": "function_name",
+              "type": "string"
+            },
+            {
+              "name": "args",
+              "type": "string"
+            },
+            {
+              "name": "gas",
+              "type": "uint64"
+            },
+            {
+              "name": "gas_weight",
+              "type": "uint64"
+            },
+            {
+              "name": "state_init",
+              "type": "StateInit[]"
+            }
+          ],
+          "StateInit": [
+            {
+              "name": "code_hash",
+              "type": "string"
+            },
+            {
+              "name": "code_account_id",
+              "type": "string"
+            },
+            {
+              "name": "data",
+              "type": "StateEntry[]"
+            }
+          ],
+          "StateEntry": [
+            {
+              "name": "key",
+              "type": "bytes"
+            },
+            {
+              "name": "value",
+              "type": "bytes"
+            }
+          ]
+        },
+        "primaryType": "ExecuteRequest",
+        "domain": {
+          "name": "NEAR Wallet Contract",
+          "version": "1"
+        },
+        "message": {
+          "warnings": [],
+          "chain_id": "mainnet",
+          "signer_id": "wallet.near",
+          "nonce": 42,
+          "created_at": "2026-11-03T12:34:56.123456789Z",
+          "timeout_secs": 300,
+          "pay_for_gas": false,
+          "internal": [],
+          "external": [
+            {
+              "receiver_id": "0s762910a479b0c04f9725b03cd7931dc5064ab0ab",
+              "refund_to": "",
+              "actions": [
+                {
+                  "action": "deterministic_state_init",
+                  "yocto_near": "9",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": [
+                    {
+                      "code_hash": "",
+                      "code_account_id": "alice.near",
+                      "data": [
+                        {
+                          "key": "0x000102",
+                          "value": "0x030405"
+                        },
+                        {
+                          "key": "0xd74d34",
+                          "value": "0x"
+                        },
+                        {
+                          "key": "0xd76df8",
+                          "value": "0x"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "digest": "bcdb58e22d37887d20d424581b38c15eb928b1fea42549c8c58b7c97e75dd58a",
+      "proof": "secp256k1:Mm6SCZh7LpE7UoFQiSViibHGuQUJVvPAsNWtMRBzyWqmDcD3K4jauB74wWvUiR8netZBMZF9oSBYMzRhL1BLxycsr"
+    },
+    {
+      "kind": "offchain",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "timestamp": "2026-11-03T12:34:56.123456789Z",
+        "payload": ""
+      },
+      "address": "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+      "typed_data": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            }
+          ],
+          "OffchainAuthorization": [
+            {
+              "name": "chain_id",
+              "type": "string"
+            },
+            {
+              "name": "signer_id",
+              "type": "string"
+            },
+            {
+              "name": "path",
+              "type": "string[]"
+            },
+            {
+              "name": "timestamp",
+              "type": "string"
+            },
+            {
+              "name": "payload",
+              "type": "string"
+            }
+          ]
+        },
+        "primaryType": "OffchainAuthorization",
+        "domain": {
+          "name": "NEAR Wallet Contract",
+          "version": "1"
+        },
+        "message": {
+          "chain_id": "mainnet",
+          "signer_id": "wallet.near",
+          "path": [],
+          "timestamp": "2026-11-03T12:34:56.123456789Z",
+          "payload": ""
+        }
+      },
+      "digest": "724248df1c381d62eaef9a8d713500b2ef654691b2009a37c00e968da87e02ff",
+      "proof": "secp256k1:5BvRPiHGQWE6vn9SM5mS3JGpXPaWKeSpk4vtyteqSSVNZeCW7rtKLoeTJJh7PekSB96odRNgiMVWDJHVTZzSYFaZW"
+    },
+    {
+      "kind": "offchain",
+      "msg": {
+        "chain_id": "testnet",
+        "signer_id": "wallet.near",
+        "path": [
+          "parent.near",
+          "app.near"
+        ],
+        "timestamp": "2026-11-03T12:34:56.120000000Z",
+        "payload": "{ \"amount\": 9007199254740993, \"memo\": \"hi\", \"duplicate\":1,\"duplicate\":2 }"
+      },
+      "address": "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+      "typed_data": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            }
+          ],
+          "OffchainAuthorization": [
+            {
+              "name": "chain_id",
+              "type": "string"
+            },
+            {
+              "name": "signer_id",
+              "type": "string"
+            },
+            {
+              "name": "path",
+              "type": "string[]"
+            },
+            {
+              "name": "timestamp",
+              "type": "string"
+            },
+            {
+              "name": "payload",
+              "type": "string"
+            }
+          ]
+        },
+        "primaryType": "OffchainAuthorization",
+        "domain": {
+          "name": "NEAR Wallet Contract",
+          "version": "1"
+        },
+        "message": {
+          "chain_id": "testnet",
+          "signer_id": "wallet.near",
+          "path": [
+            "parent.near",
+            "app.near"
+          ],
+          "timestamp": "2026-11-03T12:34:56.12Z",
+          "payload": "{ \"amount\": 9007199254740993, \"memo\": \"hi\", \"duplicate\":1,\"duplicate\":2 }"
+        }
+      },
+      "digest": "29839e043320bef3c50fdaa06eab8f2fa1b357d7f73c40b6c3569c994970b608",
+      "proof": "secp256k1:JcLpU9CjZ67W7YAEqzkCBUTHhyadZ9MV8J75FqVxMcGQjQchGC7Ud9QB5rcCVo2qQk4EMfuCop4ys7FQUtrE63DbV"
+    },
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "internal": [
+            {
+              "op": "set_signature_mode",
+              "payload": {
+                "enable": true
+              }
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "token.near",
+              "actions": [
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "ft_transfer_call",
+                    "args": "eyJyZWNlaXZlcl9pZCI6ImludGVudHMubmVhciIsImFtb3VudCI6IjE1MDAwMDAiLCJtc2ciOiJ7XCJyZWNlaXZlcl9pZFwiOlwiYm9iLm5lYXJcIn0ifQ==",
+                    "deposit": "1",
+                    "gas": "50000000000000"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "address": "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+      "typed_data": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            }
+          ],
+          "ExecuteRequest": [
+            {
+              "name": "warnings",
+              "type": "string[]"
+            },
+            {
+              "name": "chain_id",
+              "type": "string"
+            },
+            {
+              "name": "signer_id",
+              "type": "string"
+            },
+            {
+              "name": "nonce",
+              "type": "uint32"
+            },
+            {
+              "name": "created_at",
+              "type": "string"
+            },
+            {
+              "name": "timeout_secs",
+              "type": "uint32"
+            },
+            {
+              "name": "pay_for_gas",
+              "type": "bool"
+            },
+            {
+              "name": "internal",
+              "type": "Operation[]"
+            },
+            {
+              "name": "external",
+              "type": "Promise[]"
+            }
+          ],
+          "Operation": [
+            {
+              "name": "op",
+              "type": "string"
+            },
+            {
+              "name": "account_id",
+              "type": "string"
+            },
+            {
+              "name": "signature_mode",
+              "type": "string"
+            }
+          ],
+          "Promise": [
+            {
+              "name": "receiver_id",
+              "type": "string"
+            },
+            {
+              "name": "refund_to",
+              "type": "string"
+            },
+            {
+              "name": "actions",
+              "type": "Action[]"
+            }
+          ],
+          "Action": [
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "yocto_near",
+              "type": "uint128"
+            },
+            {
+              "name": "function_name",
+              "type": "string"
+            },
+            {
+              "name": "args",
+              "type": "string"
+            },
+            {
+              "name": "gas",
+              "type": "uint64"
+            },
+            {
+              "name": "gas_weight",
+              "type": "uint64"
+            },
+            {
+              "name": "state_init",
+              "type": "StateInit[]"
+            }
+          ],
+          "StateInit": [
+            {
+              "name": "code_hash",
+              "type": "string"
+            },
+            {
+              "name": "code_account_id",
+              "type": "string"
+            },
+            {
+              "name": "data",
+              "type": "StateEntry[]"
+            }
+          ],
+          "StateEntry": [
+            {
+              "name": "key",
+              "type": "bytes"
+            },
+            {
+              "name": "value",
+              "type": "bytes"
+            }
+          ]
+        },
+        "primaryType": "ExecuteRequest",
+        "domain": {
+          "name": "NEAR Wallet Contract",
+          "version": "1"
+        },
+        "message": {
+          "warnings": [],
+          "chain_id": "mainnet",
+          "signer_id": "wallet.near",
+          "nonce": 42,
+          "created_at": "2026-11-03T12:34:56.123456789Z",
+          "timeout_secs": 300,
+          "pay_for_gas": false,
+          "internal": [
+            {
+              "op": "set_signature_mode",
+              "account_id": "",
+              "signature_mode": "enable"
+            }
+          ],
+          "external": [
+            {
+              "receiver_id": "token.near",
+              "refund_to": "",
+              "actions": [
+                {
+                  "action": "function_call",
+                  "yocto_near": "1",
+                  "function_name": "ft_transfer_call",
+                  "args": "{\"receiver_id\":\"intents.near\",\"amount\":\"1500000\",\"msg\":\"{\\\"receiver_id\\\":\\\"bob.near\\\"}\"}",
+                  "gas": "50000000000000",
+                  "gas_weight": "1",
+                  "state_init": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "digest": "56422079ada918fa9f2240d4925273336dda041001460d4edcae5104f85a1693",
+      "proof": "secp256k1:DgWDuUg13XQsAfrfbMasrN5T5uG2dVaZNGkmmNKeGUupBVhvHTwnnMcs6hv8XFGm6Kjq6sHPUjXvVhJTQCBpuGq6g"
+    },
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "external": [
+            {
+              "receiver_id": "app.near",
+              "actions": [
+                {
+                  "action": "deterministic_state_init",
+                  "payload": {
+                    "state_init": {
+                      "V1": {
+                        "code": {
+                          "hash": "11111111111111111111111111111111"
+                        },
+                        "data": {}
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "address": "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+      "typed_data": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            }
+          ],
+          "ExecuteRequest": [
+            {
+              "name": "warnings",
+              "type": "string[]"
+            },
+            {
+              "name": "chain_id",
+              "type": "string"
+            },
+            {
+              "name": "signer_id",
+              "type": "string"
+            },
+            {
+              "name": "nonce",
+              "type": "uint32"
+            },
+            {
+              "name": "created_at",
+              "type": "string"
+            },
+            {
+              "name": "timeout_secs",
+              "type": "uint32"
+            },
+            {
+              "name": "pay_for_gas",
+              "type": "bool"
+            },
+            {
+              "name": "internal",
+              "type": "Operation[]"
+            },
+            {
+              "name": "external",
+              "type": "Promise[]"
+            }
+          ],
+          "Operation": [
+            {
+              "name": "op",
+              "type": "string"
+            },
+            {
+              "name": "account_id",
+              "type": "string"
+            },
+            {
+              "name": "signature_mode",
+              "type": "string"
+            }
+          ],
+          "Promise": [
+            {
+              "name": "receiver_id",
+              "type": "string"
+            },
+            {
+              "name": "refund_to",
+              "type": "string"
+            },
+            {
+              "name": "actions",
+              "type": "Action[]"
+            }
+          ],
+          "Action": [
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "yocto_near",
+              "type": "uint128"
+            },
+            {
+              "name": "function_name",
+              "type": "string"
+            },
+            {
+              "name": "args",
+              "type": "string"
+            },
+            {
+              "name": "gas",
+              "type": "uint64"
+            },
+            {
+              "name": "gas_weight",
+              "type": "uint64"
+            },
+            {
+              "name": "state_init",
+              "type": "StateInit[]"
+            }
+          ],
+          "StateInit": [
+            {
+              "name": "code_hash",
+              "type": "string"
+            },
+            {
+              "name": "code_account_id",
+              "type": "string"
+            },
+            {
+              "name": "data",
+              "type": "StateEntry[]"
+            }
+          ],
+          "StateEntry": [
+            {
+              "name": "key",
+              "type": "bytes"
+            },
+            {
+              "name": "value",
+              "type": "bytes"
+            }
+          ]
+        },
+        "primaryType": "ExecuteRequest",
+        "domain": {
+          "name": "NEAR Wallet Contract",
+          "version": "1"
+        },
+        "message": {
+          "warnings": [],
+          "chain_id": "mainnet",
+          "signer_id": "wallet.near",
+          "nonce": 42,
+          "created_at": "2026-11-03T12:34:56.123456789Z",
+          "timeout_secs": 300,
+          "pay_for_gas": false,
+          "internal": [],
+          "external": [
+            {
+              "receiver_id": "app.near",
+              "refund_to": "",
+              "actions": [
+                {
+                  "action": "deterministic_state_init",
+                  "yocto_near": "0",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": [
+                    {
+                      "code_hash": "11111111111111111111111111111111",
+                      "code_account_id": "",
+                      "data": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "digest": "883c59500e413601673c3acbc84b0dd52fb01e77be02398074fe189c4f34fccc",
+      "proof": "secp256k1:CwLsuoetSozBXYZQiZQ6mpBZv5w6AEEsom5g9CcXsQYMMZAAECJLecZnGttNJEC6D8cDgVQgxjF3gDJ56AjiRc3r8"
+    },
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "external": [
+            {
+              "receiver_id": "app.near",
+              "actions": [
+                {
+                  "action": "function_call",
+                  "payload": {
+                    "function_name": "submit",
+                    "args": "eyJwYWRkaW5nIjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEifQ=="
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "address": "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+      "typed_data": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            }
+          ],
+          "ExecuteRequest": [
+            {
+              "name": "warnings",
+              "type": "string[]"
+            },
+            {
+              "name": "chain_id",
+              "type": "string"
+            },
+            {
+              "name": "signer_id",
+              "type": "string"
+            },
+            {
+              "name": "nonce",
+              "type": "uint32"
+            },
+            {
+              "name": "created_at",
+              "type": "string"
+            },
+            {
+              "name": "timeout_secs",
+              "type": "uint32"
+            },
+            {
+              "name": "pay_for_gas",
+              "type": "bool"
+            },
+            {
+              "name": "internal",
+              "type": "Operation[]"
+            },
+            {
+              "name": "external",
+              "type": "Promise[]"
+            }
+          ],
+          "Operation": [
+            {
+              "name": "op",
+              "type": "string"
+            },
+            {
+              "name": "account_id",
+              "type": "string"
+            },
+            {
+              "name": "signature_mode",
+              "type": "string"
+            }
+          ],
+          "Promise": [
+            {
+              "name": "receiver_id",
+              "type": "string"
+            },
+            {
+              "name": "refund_to",
+              "type": "string"
+            },
+            {
+              "name": "actions",
+              "type": "Action[]"
+            }
+          ],
+          "Action": [
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "yocto_near",
+              "type": "uint128"
+            },
+            {
+              "name": "function_name",
+              "type": "string"
+            },
+            {
+              "name": "args",
+              "type": "string"
+            },
+            {
+              "name": "gas",
+              "type": "uint64"
+            },
+            {
+              "name": "gas_weight",
+              "type": "uint64"
+            },
+            {
+              "name": "state_init",
+              "type": "StateInit[]"
+            }
+          ],
+          "StateInit": [
+            {
+              "name": "code_hash",
+              "type": "string"
+            },
+            {
+              "name": "code_account_id",
+              "type": "string"
+            },
+            {
+              "name": "data",
+              "type": "StateEntry[]"
+            }
+          ],
+          "StateEntry": [
+            {
+              "name": "key",
+              "type": "bytes"
+            },
+            {
+              "name": "value",
+              "type": "bytes"
+            }
+          ]
+        },
+        "primaryType": "ExecuteRequest",
+        "domain": {
+          "name": "NEAR Wallet Contract",
+          "version": "1"
+        },
+        "message": {
+          "warnings": [],
+          "chain_id": "mainnet",
+          "signer_id": "wallet.near",
+          "nonce": 42,
+          "created_at": "2026-11-03T12:34:56.123456789Z",
+          "timeout_secs": 300,
+          "pay_for_gas": false,
+          "internal": [],
+          "external": [
+            {
+              "receiver_id": "app.near",
+              "refund_to": "",
+              "actions": [
+                {
+                  "action": "function_call",
+                  "yocto_near": "0",
+                  "function_name": "submit",
+                  "args": "{\"padding\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+                  "gas": "0",
+                  "gas_weight": "1",
+                  "state_init": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "digest": "86274fa2d036df564bc8e6e1b64792f8850b3b4d2d42c6852ee2022ea2bc8da9",
+      "proof": "secp256k1:2ymuvk6DoYBmYXjJ6efW6ZGoxDH2MTD8YkGjf7jMfJwQCw2CRpE74wDK5iXmkswDy5jVQzAsq6oeutcJcXWZe8emm"
+    },
+    {
+      "kind": "request",
+      "msg": {
+        "chain_id": "mainnet",
+        "signer_id": "wallet.near",
+        "nonce": 42,
+        "created_at": "2026-11-03T12:34:56.123456789Z",
+        "timeout_secs": 300,
+        "pay_for_gas": false,
+        "request": {
+          "external": [
+            {
+              "receiver_id": "app.near",
+              "actions": [
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                },
+                {
+                  "action": "transfer",
+                  "payload": {
+                    "amount": "1"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "address": "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+      "typed_data": {
+        "types": {
+          "EIP712Domain": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "version",
+              "type": "string"
+            }
+          ],
+          "ExecuteRequest": [
+            {
+              "name": "warnings",
+              "type": "string[]"
+            },
+            {
+              "name": "chain_id",
+              "type": "string"
+            },
+            {
+              "name": "signer_id",
+              "type": "string"
+            },
+            {
+              "name": "nonce",
+              "type": "uint32"
+            },
+            {
+              "name": "created_at",
+              "type": "string"
+            },
+            {
+              "name": "timeout_secs",
+              "type": "uint32"
+            },
+            {
+              "name": "pay_for_gas",
+              "type": "bool"
+            },
+            {
+              "name": "internal",
+              "type": "Operation[]"
+            },
+            {
+              "name": "external",
+              "type": "Promise[]"
+            }
+          ],
+          "Operation": [
+            {
+              "name": "op",
+              "type": "string"
+            },
+            {
+              "name": "account_id",
+              "type": "string"
+            },
+            {
+              "name": "signature_mode",
+              "type": "string"
+            }
+          ],
+          "Promise": [
+            {
+              "name": "receiver_id",
+              "type": "string"
+            },
+            {
+              "name": "refund_to",
+              "type": "string"
+            },
+            {
+              "name": "actions",
+              "type": "Action[]"
+            }
+          ],
+          "Action": [
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "yocto_near",
+              "type": "uint128"
+            },
+            {
+              "name": "function_name",
+              "type": "string"
+            },
+            {
+              "name": "args",
+              "type": "string"
+            },
+            {
+              "name": "gas",
+              "type": "uint64"
+            },
+            {
+              "name": "gas_weight",
+              "type": "uint64"
+            },
+            {
+              "name": "state_init",
+              "type": "StateInit[]"
+            }
+          ],
+          "StateInit": [
+            {
+              "name": "code_hash",
+              "type": "string"
+            },
+            {
+              "name": "code_account_id",
+              "type": "string"
+            },
+            {
+              "name": "data",
+              "type": "StateEntry[]"
+            }
+          ],
+          "StateEntry": [
+            {
+              "name": "key",
+              "type": "bytes"
+            },
+            {
+              "name": "value",
+              "type": "bytes"
+            }
+          ]
+        },
+        "primaryType": "ExecuteRequest",
+        "domain": {
+          "name": "NEAR Wallet Contract",
+          "version": "1"
+        },
+        "message": {
+          "warnings": [],
+          "chain_id": "mainnet",
+          "signer_id": "wallet.near",
+          "nonce": 42,
+          "created_at": "2026-11-03T12:34:56.123456789Z",
+          "timeout_secs": 300,
+          "pay_for_gas": false,
+          "internal": [],
+          "external": [
+            {
+              "receiver_id": "app.near",
+              "refund_to": "",
+              "actions": [
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                },
+                {
+                  "action": "transfer",
+                  "yocto_near": "1",
+                  "function_name": "",
+                  "args": "",
+                  "gas": "0",
+                  "gas_weight": "0",
+                  "state_init": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "digest": "79e9ae6790b7ed8a20dcfaf495abb8415b6ee458849372adc6fe1054907fa07b",
+      "proof": "secp256k1:DTGRjLwuiZSSrfBnEaCMqhJr6xBUZAvRq72jV6LxvPf9vSzMouUy66uekhc2YFiz5fdWv6ZapoebJdfhL3Bbk3QzU"
+    }
+  ]
+}
