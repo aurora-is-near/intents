@@ -51,6 +51,11 @@ Each `request` contains:
 
 ### Signing Standards
 
+The [Sui variants](signatures/sui/README.md) sign the full
+[readable text](signatures/readable/README.md) of an execution or NEP-641
+message as a native Sui personal message, rather than an opaque digest. There
+is one contract per signature scheme: Ed25519, secp256k1 and P-256.
+
 A single wallet-contract variant supports only a single signing standard, which
 is fixed at the time of a deployment. Each variant is deployed as a
 **separate** global contract.

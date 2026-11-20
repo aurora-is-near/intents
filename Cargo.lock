@@ -1924,6 +1924,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "defuse-wallet-readable"
+version = "0.1.0"
+dependencies = [
+ "defuse-wallet",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "defuse-wallet-sdk"
 version = "0.1.0"
 dependencies = [
@@ -1952,6 +1962,64 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "trait-variant",
+]
+
+[[package]]
+name = "defuse-wallet-sui"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "blake2",
+ "borsh",
+ "defuse-crypto",
+ "defuse-digest",
+ "defuse-nep641",
+ "defuse-wallet",
+ "defuse-wallet-readable",
+ "defuse-wallet-sdk",
+ "defuse-wallet-sui",
+ "hex",
+ "impl-tools 0.12.0",
+ "near-kit",
+ "near-kit-sandbox",
+ "near-sdk",
+ "rand 0.10.3",
+ "schemars 0.8.22",
+ "serde_json",
+ "serde_with",
+ "sha2 0.11.1",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
+name = "defuse-wallet-sui-ed25519"
+version = "0.1.0"
+dependencies = [
+ "defuse-wallet",
+ "defuse-wallet-sui",
+ "defuse-wallet-sui-ed25519",
+ "near-sdk",
+]
+
+[[package]]
+name = "defuse-wallet-sui-p256"
+version = "0.1.0"
+dependencies = [
+ "defuse-wallet",
+ "defuse-wallet-sui",
+ "defuse-wallet-sui-p256",
+ "near-sdk",
+]
+
+[[package]]
+name = "defuse-wallet-sui-secp256k1"
+version = "0.1.0"
+dependencies = [
+ "defuse-wallet",
+ "defuse-wallet-sui",
+ "defuse-wallet-sui-secp256k1",
+ "near-sdk",
 ]
 
 [[package]]
@@ -2730,9 +2798,9 @@ dependencies = [
 
 [[package]]
 name = "heapless"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25ba4bd83f9415b58b4ed8dc5714c76e626a105be4646c02630ad730ad3b5aa4"
+checksum = "411fdef4df93751117bd9ef8caa0e7f99c65dafec5bd84313eb8e2fdd75e32f2"
 dependencies = [
  "hash32",
  "stable_deref_trait",
