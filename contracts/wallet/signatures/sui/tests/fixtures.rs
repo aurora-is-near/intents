@@ -411,3 +411,58 @@ fn derived_accounts_match_known_answers() {
         (1, 3600, "0sd2628ffa3454bc15cfefa17c7b6c98c949ec5fee"),
     ]);
 }
+
+#[test]
+fn nested_extension_keeps_the_v1_size_boundary() {
+    fn check<C: FixtureScheme>(bytes: usize, digest: &str) {
+        use defuse_wallet::{AccountId, Gas, NearPromise, Request, actions::FunctionCall};
+        use sha2::{Digest, Sha256};
+
+        let vectors = scheme::<C>();
+        let vector = &vectors[0];
+        let key = key::<C>(vector);
+        let base: RequestMessage = serde_json::from_value(vector["msg"].clone()).unwrap();
+        let render = |padding| {
+            let inner = NearPromise::new("bob.near".parse::<AccountId>().unwrap()).function_call(
+                FunctionCall::name("f")
+                    .gas(Gas::from_gas(0))
+                    .args_json("x".repeat(padding)),
+            );
+            let outer = NearPromise::new("ext.near".parse::<AccountId>().unwrap()).function_call(
+                FunctionCall::name("w_execute_extension")
+                    .gas(Gas::from_gas(0))
+                    .args_json(json!({ "request": Request::from(inner) })),
+            );
+            let msg = RequestMessage {
+                request: outer.into(),
+                ..base.clone()
+            };
+
+            request_signing_message(&key, &msg)
+        };
+
+        // Base64 inside the nested request is longer than the text shown to the signer.
+        let message = render(12_074).unwrap();
+
+        assert_eq!(message.len(), bytes);
+        assert_eq!(hex::encode(Sha256::digest(message.as_bytes())), digest);
+        assert!(render(12_088).is_ok());
+        assert!(matches!(
+            render(12_089),
+            Err(defuse_wallet_readable::MessageError::TooLarge)
+        ));
+    }
+
+    check::<Ed25519>(
+        13700,
+        "569b274129c6a06aaabeeea7e1a2e0e3f28dad1d115dd449eaec15b2bec6e20e",
+    );
+    check::<Secp256k1>(
+        13704,
+        "a92fcc84c08c520c153e8f63af928a609178ad25f0d43fa4dadb911808eef94f",
+    );
+    check::<P256>(
+        13704,
+        "9bfce7e82b849893aaad3527d843eb094348c3b626f5966fce223423ac58a1dc",
+    );
+}
