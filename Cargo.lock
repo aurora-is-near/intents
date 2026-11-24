@@ -1979,7 +1979,7 @@ dependencies = [
  "defuse-wallet-sdk",
  "defuse-wallet-sui",
  "hex",
- "impl-tools 0.12.0",
+ "impl-tools 0.13.0",
  "near-kit",
  "near-kit-sandbox",
  "near-sdk",

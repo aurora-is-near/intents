@@ -129,12 +129,6 @@ impl<C: SuiScheme> SuiPublicKey<C> {
             return false;
         }
 
-        // Keep the contract diagnostic without including the Rust source location.
-        #[cfg(near)]
-        let message =
-            message().unwrap_or_else(|error| near_sdk::env::panic_str(&error.to_string()));
-
-        #[cfg(not(near))]
         let Ok(message) = message() else {
             return false;
         };
