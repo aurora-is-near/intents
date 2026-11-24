@@ -1,20 +1,36 @@
 #![doc = include_str!("../README.md")]
 
-use std::fmt::Write;
+use std::{
+    borrow::Borrow,
+    io::{self, ErrorKind},
+    mem,
+};
 
 use defuse_wallet::{
-    AccountId, NearPromise, NearToken, Request, RequestMessage, StateInit, StateInitV1, WalletOp,
+    AccountId, NearPromise, NearToken, Request, RequestMessage, StateInit, StateInitV1, Timestamp,
+    WalletOp,
     actions::{DeterministicStateInit, FunctionCall, NearAction, Transfer},
     offchain::OffchainMessage,
 };
-use serde_json::{Map, Value, json};
+use serde::{Serialize, Serializer, ser};
+use serde_json::{Value, json, ser::Formatter};
 
 /// Maximum UTF-8 message size accepted by this schema (16 KiB).
 pub const MAX_SIGNING_MESSAGE_BYTES: usize = 16 * 1024;
 /// Domain and purpose separator for execution requests.
-pub const REQUEST_PREFIX: &str = "NEAR Wallet Contract: execute request (v1)\nThis signature authorizes NEAR wallet operations, not a login.\nNEAR amounts and deposits are in yoctoNEAR; FT amounts are in token base units.\nGas is in gas units.\nFunction arguments and deployment state may be opaque: verify them before signing.\n\n";
+pub const REQUEST_PREFIX: &str = r"NEAR Wallet Contract: execute request (v1)
+This signature authorizes NEAR wallet operations, not a login.
+NEAR amounts and deposits are in yoctoNEAR; FT amounts are in token base units.
+Gas is in gas units.
+Function arguments and deployment state may be opaque: verify them before signing.
+
+";
 /// Domain and purpose separator for NEP-641 authorizations.
-pub const OFFCHAIN_PREFIX: &str = "NEAR Wallet Contract: offchain authorization (v1)\nThis signature authorizes the exact payload below, not a NEAR transaction.\nThe consuming application defines expiration and one-time-use requirements.\n\n";
+pub const OFFCHAIN_PREFIX: &str = r"NEAR Wallet Contract: offchain authorization (v1)
+This signature authorizes the exact payload below, not a NEAR transaction.
+The consuming application defines expiration and one-time-use requirements.
+
+";
 
 /// A message cannot be represented by this schema.
 #[derive(Debug, thiserror::Error)]
@@ -76,27 +92,30 @@ pub fn request_signing_message(
     }
 
     // Before parsing any arguments, so oversized requests are rejected cheaply.
-    if input_bytes(request) > MAX_SIGNING_MESSAGE_BYTES {
+    let input_bytes = input_bytes(request);
+
+    if input_bytes > MAX_SIGNING_MESSAGE_BYTES {
         return Err(MessageError::TooLarge);
     }
 
     let mut warnings = Vec::new();
-    let request = request_value(request, signer_id, "this wallet", &mut warnings)?;
+    let request = Shown::new(request, signer_id, "this wallet", &mut warnings)?;
 
     render(
         REQUEST_PREFIX,
         &warnings,
+        input_bytes,
         identity,
         [
-            ("chain_id", json!(chain_id)),
-            ("signer_id", json!(signer_id)),
+            ("chain_id", Field::Text(chain_id)),
+            ("signer_id", Field::Text(signer_id.as_str())),
         ],
         [
-            ("nonce", json!(nonce)),
-            ("created_at", json!(created_at)),
-            ("timeout_secs", json!(timeout_secs)),
-            ("pay_for_gas", json!(pay_for_gas)),
-            ("request", request),
+            ("nonce", Field::Number(*nonce)),
+            ("created_at", Field::Time(created_at)),
+            ("timeout_secs", Field::Number(timeout_secs)),
+            ("pay_for_gas", Field::Flag(*pay_for_gas)),
+            ("request", Field::Request(&request)),
         ],
     )
 }
@@ -129,15 +148,16 @@ pub fn offchain_signing_message(
     render(
         OFFCHAIN_PREFIX,
         &[],
+        shown,
         identity,
         [
-            ("chain_id", json!(chain_id)),
-            ("signer_id", json!(signer_id)),
+            ("chain_id", Field::Text(chain_id)),
+            ("signer_id", Field::Text(signer_id.as_str())),
         ],
         [
-            ("path", json!(path)),
-            ("timestamp", json!(timestamp)),
-            ("payload", json!(payload)),
+            ("path", Field::Path(path)),
+            ("timestamp", Field::Time(timestamp)),
+            ("payload", Field::Text(payload)),
         ],
     )
 }
@@ -145,16 +165,24 @@ pub fn offchain_signing_message(
 /// Each operation, promise and action renders to more bytes than this.
 const MIN_ITEM_BYTES: usize = 64;
 
-/// Size checked before rendering: raw function-call arguments, state-init data,
-/// and [`MIN_ITEM_BYTES`] per operation, promise and action. It is
-/// at most the rendered size, except that a nested request counts with its
-/// base64 encoding, so some nested requests that would fit are rejected.
+/// The v1 input budget includes raw arguments, state data and a charge per item.
+/// Nested arguments contain base64 that may render shorter. Bound method names
+/// separately since adding them to that budget would reject valid v1 messages.
 fn input_bytes(request: &Request) -> usize {
-    let actions = request.external.iter().flat_map(|promise| &promise.actions);
-    let items = request.internal.len() + request.external.len() + actions.clone().count();
-    actions
-        .map(|action| match action {
-            NearAction::FunctionCall(FunctionCall { args, .. }) => args.len(),
+    let items = request.internal.len() + request.external.len();
+    let mut input = items.saturating_mul(MIN_ITEM_BYTES);
+    let mut names = 0usize;
+
+    for action in request.external.iter().flat_map(|promise| &promise.actions) {
+        let data_bytes = match action {
+            NearAction::FunctionCall(FunctionCall {
+                function_name,
+                args,
+                ..
+            }) => {
+                names = names.saturating_add(function_name.len());
+                args.len()
+            }
             NearAction::DeterministicStateInit(DeterministicStateInit {
                 state_init: StateInit::V1(StateInitV1 { data, .. }),
                 ..
@@ -163,8 +191,14 @@ fn input_bytes(request: &Request) -> usize {
                 .map(|(key, value)| key.len() + value.len())
                 .sum(),
             _ => 0,
-        })
-        .fold(items.saturating_mul(MIN_ITEM_BYTES), usize::saturating_add)
+        };
+
+        input = input
+            .saturating_add(MIN_ITEM_BYTES)
+            .saturating_add(data_bytes);
+    }
+
+    input.max(names)
 }
 
 /// Method through which this wallet acts as an extension of another wallet.
@@ -178,46 +212,130 @@ struct ExtensionArgs {
     request: Request,
 }
 
-/// The request in `w_execute_extension()` arguments, which must be exactly its
-/// serde serialization, so the message determines the argument bytes.
+/// The request in `w_execute_extension()` arguments, which must be portable
+/// JSON and match the compact serde form of `ExtensionArgs` byte for byte.
 fn extension_request(args: &[u8]) -> Result<Request, MessageError> {
     let extension: ExtensionArgs =
-        serde_json::from_value(args_value(args)?).map_err(|_| MessageError::FunctionArgs)?;
+        serde_json::from_value(portable_args(args)?).map_err(|_| MessageError::FunctionArgs)?;
 
-    if serde_json::to_vec(&extension)? != args {
+    if !is_compact_json(&extension, args)? {
         return Err(MessageError::FunctionArgs);
     }
 
     Ok(extension.request)
 }
 
-/// Wallet operations first, then external promises. `wallet` is the account
-/// that executes `request`, and `name` refers to it in warnings.
-fn request_value(
-    request: &Request,
-    wallet: &AccountId,
-    name: &str,
-    warnings: &mut Vec<String>,
-) -> Result<Value, MessageError> {
-    let Request { internal, external } = request;
+/// Whether the compact JSON of `value` is exactly `bytes`.
+fn is_compact_json(value: &impl Serialize, bytes: &[u8]) -> Result<bool, MessageError> {
+    // Equal JSON has this size, so it is allocated once.
+    let mut json = Vec::with_capacity(bytes.len());
 
-    for op in internal {
-        if let WalletOp::AddExtension { account_id } = op {
-            warnings.push(format!(
-                "WARNING: add_extension gives {account_id} full control of {name}."
-            ));
+    serde_json::to_writer(&mut json, value)?;
+    Ok(json == bytes)
+}
+
+/// A request and what its actions show in place of their bytes. `R` borrows
+/// the signed request, or owns one parsed from `w_execute_extension()`
+/// arguments.
+///
+/// It is serialized straight into the message, without an intermediate JSON
+/// tree: only function arguments and state init are kept as [`Value`]s.
+struct Shown<R> {
+    request: R,
+    /// For each promise, for each of its actions.
+    actions: Vec<Vec<Parsed>>,
+}
+
+/// What an action shows in place of its bytes.
+#[derive(Serialize)]
+#[serde(untagged)]
+enum Parsed {
+    /// A transfer has nothing but its amount.
+    Nothing,
+    /// Function arguments, or state init with sorted keys.
+    Json(Value),
+    /// `w_execute_extension()` arguments.
+    Extension { request: Shown<Request> },
+}
+
+impl<R: Borrow<Request>> Shown<R> {
+    /// Checks the request and collects its warnings: wallet operations first,
+    /// then external promises. `wallet` is the account that executes
+    /// `request`, and `name` refers to it in warnings.
+    fn new(
+        request: R,
+        wallet: &AccountId,
+        name: &str,
+        warnings: &mut Vec<String>,
+    ) -> Result<Self, MessageError> {
+        let Request { internal, external } = request.borrow();
+
+        for op in internal {
+            if let WalletOp::AddExtension { account_id } = op {
+                warnings.push(format!(
+                    "WARNING: add_extension gives {account_id} full control of {name}."
+                ));
+            }
         }
+
+        let actions = external
+            .iter()
+            .map(|promise| parse_promise(promise, (wallet, name), warnings))
+            .collect::<Result<_, _>>()?;
+
+        Ok(Self { request, actions })
     }
+}
 
-    let external = external
-        .iter()
-        .map(|promise| promise_value(promise, (wallet, name), warnings))
-        .collect::<Result<_, _>>()?;
+impl<R: Borrow<Request>> Serialize for Shown<R> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[derive(Serialize)]
+        struct RequestView<'a, P> {
+            internal: &'a [WalletOp],
+            external: P,
+        }
 
-    Ok(Value::Object(object([
-        ("internal", json!(internal)),
-        ("external", Value::Array(external)),
-    ])))
+        #[derive(Serialize)]
+        struct PromiseView<'a, A> {
+            receiver_id: &'a AccountId,
+            refund_to: &'a Option<AccountId>,
+            actions: A,
+        }
+
+        let Request { internal, external } = self.request.borrow();
+        let promises = external.iter().zip(&self.actions).map(|(promise, parsed)| {
+            let NearPromise {
+                receiver_id,
+                refund_to,
+                actions,
+            } = promise;
+            let actions = actions
+                .iter()
+                .zip(parsed)
+                .map(|(action, parsed)| ShownAction { action, parsed });
+
+            PromiseView {
+                receiver_id,
+                refund_to,
+                actions: Sequence(actions),
+            }
+        });
+
+        RequestView {
+            internal,
+            external: Sequence(promises),
+        }
+        .serialize(serializer)
+    }
+}
+
+/// Items of an iterator as a JSON array.
+struct Sequence<I>(I);
+
+impl<I: Iterator<Item: Serialize> + Clone> Serialize for Sequence<I> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_seq(self.0.clone())
+    }
 }
 
 /// NEP-141 methods and their parameters: other arguments, which the token would
@@ -232,11 +350,11 @@ const FT_TRANSFER_METHODS: [(&str, &[&str]); 2] = [
 
 /// `wallet` executes the promise; `refund_to` (`null` means `wallet`) receives
 /// its failed and unused deposits, e.g. the unused part of a state-init budget.
-fn promise_value(
+fn parse_promise(
     promise: &NearPromise,
     (wallet, name): (&AccountId, &str),
     warnings: &mut Vec<String>,
-) -> Result<Value, MessageError> {
+) -> Result<Vec<Parsed>, MessageError> {
     let NearPromise {
         receiver_id,
         refund_to,
@@ -254,38 +372,32 @@ fn promise_value(
         }
     }
 
-    let actions = actions
+    actions
         .iter()
-        .map(|action| action_value(action, receiver_id, warnings))
-        .collect::<Result<_, _>>()?;
-
-    Ok(Value::Object(object([
-        ("receiver_id", json!(receiver_id)),
-        ("refund_to", json!(refund_to)),
-        ("actions", Value::Array(actions)),
-    ])))
+        .map(|action| parse_action(action, receiver_id, warnings))
+        .collect()
 }
 
-fn action_value(
+fn parse_action(
     action: &NearAction,
     receiver_id: &AccountId,
     warnings: &mut Vec<String>,
-) -> Result<Value, MessageError> {
-    Ok(Value::Object(match action {
-        NearAction::Transfer(Transfer { amount }) => {
-            object([("action", json!("transfer")), ("amount", near(*amount))])
-        }
+) -> Result<Parsed, MessageError> {
+    Ok(match action {
+        NearAction::Transfer(_) => Parsed::Nothing,
         NearAction::FunctionCall(FunctionCall {
             function_name,
             args,
             deposit,
-            gas,
-            gas_weight,
+            ..
         }) => {
-            let args = if function_name == EXECUTE_EXTENSION {
+            if function_name == EXECUTE_EXTENSION {
                 let request = extension_request(args)?;
                 let name = format!("wallet {receiver_id}");
-                json!({ "request": request_value(&request, receiver_id, &name, warnings)? })
+
+                Parsed::Extension {
+                    request: Shown::new(request, receiver_id, &name, warnings)?,
+                }
             } else if let Some((_, keys)) = FT_TRANSFER_METHODS
                 .iter()
                 .find(|(method, _)| method == function_name)
@@ -294,30 +406,85 @@ fn action_value(
                 if deposit.as_yoctonear() != 1 {
                     return Err(MessageError::TokenDeposit);
                 }
-                token_args(args, keys)?
-            } else {
-                args_value(args)?
-            };
 
-            object([
-                ("action", json!("function_call")),
-                ("function_name", json!(function_name)),
-                ("deposit", near(*deposit)),
-                ("gas", json!(gas.as_gas().to_string())),
-                ("gas_weight", json!(gas_weight.to_string())),
-                ("args", args),
-            ])
+                Parsed::Json(token_args(args, keys)?)
+            } else {
+                Parsed::Json(args_value(args)?)
+            }
         }
-        NearAction::DeterministicStateInit(DeterministicStateInit {
-            state_init,
-            deposit,
-        }) => object([
-            ("action", json!("deterministic_state_init")),
-            ("deposit", near(*deposit)),
-            ("state_init", sorted(json!(state_init))),
-        ]),
+        NearAction::DeterministicStateInit(DeterministicStateInit { state_init, .. }) => {
+            Parsed::Json(sorted(json!(state_init)))
+        }
         _ => return Err(MessageError::UnsupportedAction),
-    }))
+    })
+}
+
+/// An action with `parsed` in place of its arguments or state.
+struct ShownAction<'a> {
+    action: &'a NearAction,
+    parsed: &'a Parsed,
+}
+
+impl Serialize for ShownAction<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[derive(Serialize)]
+        #[serde(tag = "action", rename_all = "snake_case")]
+        enum ActionView<'a> {
+            Transfer {
+                amount: &'a NearToken,
+            },
+            FunctionCall {
+                function_name: &'a str,
+                deposit: &'a NearToken,
+                gas: Decimal,
+                gas_weight: Decimal,
+                args: &'a Parsed,
+            },
+            DeterministicStateInit {
+                deposit: &'a NearToken,
+                state_init: &'a Parsed,
+            },
+        }
+
+        let parsed = self.parsed;
+
+        // No `..`, as in `request_signing_message()`.
+        match self.action {
+            NearAction::Transfer(Transfer { amount }) => ActionView::Transfer { amount },
+            NearAction::FunctionCall(FunctionCall {
+                function_name,
+                args: _,
+                deposit,
+                gas,
+                gas_weight,
+            }) => ActionView::FunctionCall {
+                function_name,
+                deposit,
+                gas: Decimal(gas.as_gas()),
+                gas_weight: Decimal(*gas_weight),
+                args: parsed,
+            },
+            NearAction::DeterministicStateInit(DeterministicStateInit {
+                state_init: _,
+                deposit,
+            }) => ActionView::DeterministicStateInit {
+                deposit,
+                state_init: parsed,
+            },
+            // `parse_action()` has already rejected it.
+            _ => return Err(ser::Error::custom(MessageError::UnsupportedAction)),
+        }
+        .serialize(serializer)
+    }
+}
+
+/// Integer shown as a decimal string.
+struct Decimal(u64);
+
+impl Serialize for Decimal {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(&self.0)
+    }
 }
 
 /// Function arguments are shown as JSON in their original key order.
@@ -328,9 +495,21 @@ fn action_value(
 /// empty and binary arguments, is rejected, as is JSON that JavaScript would
 /// serialize differently (see [`portable`]).
 fn args_value(args: &[u8]) -> Result<Value, MessageError> {
-    let value: Value = serde_json::from_slice(args).map_err(|_| MessageError::FunctionArgs)?;
+    let value = portable_args(args)?;
 
-    if !portable(&value) || serde_json::to_vec(&value)? != args {
+    if !is_compact_json(&value, args)? {
+        return Err(MessageError::FunctionArgs);
+    }
+
+    Ok(value)
+}
+
+/// Arguments parsed as JSON that JavaScript serializes in the same way (see
+/// [`portable`]).
+fn portable_args(args: &[u8]) -> Result<Value, MessageError> {
+    let value = serde_json::from_slice(args).map_err(|_| MessageError::FunctionArgs)?;
+
+    if !portable(&value) {
         return Err(MessageError::FunctionArgs);
     }
 
@@ -352,8 +531,7 @@ fn token_args(args: &[u8], keys: &[&str]) -> Result<Value, MessageError> {
     if object
         .get("receiver_id")
         .and_then(Value::as_str)
-        .and_then(|id| id.parse::<AccountId>().ok())
-        .is_none()
+        .is_none_or(|id| AccountId::validate(id).is_err())
         || (keys.contains(&"msg") && !object.get("msg").is_some_and(Value::is_string))
         || object
             .get("memo")
@@ -364,16 +542,16 @@ fn token_args(args: &[u8], keys: &[&str]) -> Result<Value, MessageError> {
 
     let amount = object.get("amount").ok_or(MessageError::TokenAmount)?;
 
-    amount
-        .as_str()
-        .and_then(|text| {
-            text.parse::<u128>()
-                .ok()
-                .filter(|units| units.to_string() == text)
-        })
-        .ok_or(MessageError::TokenAmount)?;
+    if !amount.as_str().is_some_and(canonical_u128) {
+        return Err(MessageError::TokenAmount);
+    }
 
     Ok(value)
+}
+
+/// Decimal `u128` as Rust prints it: no sign and no leading zeros.
+fn canonical_u128(text: &str) -> bool {
+    matches!(text.as_bytes(), [b'0'] | [b'1'..=b'9', ..]) && text.parse::<u128>().is_ok()
 }
 
 /// Exact smallest-unit integer with an explicit unit for refund warnings.
@@ -406,132 +584,282 @@ fn portable(value: &Value) -> bool {
 
 /// JavaScript array index: a canonical decimal below 2^32 - 1.
 fn array_index(key: &str) -> Option<u32> {
-    key.parse()
-        .ok()
-        .filter(|index: &u32| *index != u32::MAX && index.to_string() == key)
-}
-
-fn near(amount: NearToken) -> Value {
-    json!(amount.as_yoctonear().to_string())
-}
-
-/// Message object with fields in the given order.
-fn object<const N: usize>(fields: [(&str, Value); N]) -> Map<String, Value> {
-    fields
-        .into_iter()
-        .map(|(name, value)| (name.to_owned(), value))
-        .collect()
+    match key.as_bytes() {
+        [b'0'] => Some(0),
+        [b'1'..=b'9', ..] => key.parse::<u32>().ok().filter(|&index| index != u32::MAX),
+        _ => None,
+    }
 }
 
 /// State init with the keys of every object in the order of a JavaScript
 /// object built from them: array-index keys first, in ascending order, then
 /// the other keys sorted as strings. `JSON.stringify` gives the same order.
-fn sorted(value: Value) -> Value {
+fn sorted(mut value: Value) -> Value {
+    sort(&mut value);
+    value
+}
+
+fn sort(value: &mut Value) {
+    // `array_index` is never `u32::MAX`, so the other keys come last.
+    fn order(key: &String) -> (u32, &String) {
+        (array_index(key).unwrap_or(u32::MAX), key)
+    }
+
     match value {
-        Value::Array(items) => Value::Array(items.into_iter().map(sorted).collect()),
+        Value::Array(items) => items.iter_mut().for_each(sort),
         Value::Object(object) => {
-            let mut entries: Vec<_> = object
-                .into_iter()
-                .map(|(key, value)| (array_index(&key).unwrap_or(u32::MAX), key, sorted(value)))
-                .collect();
+            object.values_mut().for_each(sort);
 
-            // `array_index` is never `u32::MAX`, so the other keys come last.
-            entries.sort_by(|(a_index, a, _), (b_index, b, _)| (a_index, a).cmp(&(b_index, b)));
+            // Serde already gives this order, unless a key is an array index.
+            if !object.keys().is_sorted_by_key(order) {
+                let mut entries: Vec<_> = mem::take(object).into_iter().collect();
 
-            Value::Object(
-                entries
-                    .into_iter()
-                    .map(|(_, key, value)| (key, value))
-                    .collect(),
-            )
-        }
-        scalar => scalar,
-    }
-}
-
-/// Pretty JSON, stopping as soon as it cannot fit the message (escaping only
-/// makes it longer), so deeply indented input costs at most the limit.
-fn pretty(fields: &Map<String, Value>) -> Result<String, MessageError> {
-    struct Capped(Vec<u8>);
-
-    impl std::io::Write for Capped {
-        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
-            if self.0.len() + bytes.len() > MAX_SIGNING_MESSAGE_BYTES {
-                return Err(std::io::Error::other("signing message exceeds 16 KiB"));
+                entries.sort_unstable_by(|(a, _), (b, _)| order(a).cmp(&order(b)));
+                *object = entries.into_iter().collect();
             }
-            self.0.extend_from_slice(bytes);
-            Ok(bytes.len())
         }
-
-        fn flush(&mut self) -> std::io::Result<()> {
-            Ok(())
-        }
+        _ => {}
     }
-
-    let mut json = Capped(Vec::new());
-
-    serde_json::to_writer_pretty(&mut json, fields).map_err(|error| {
-        if error.is_io() {
-            MessageError::TooLarge
-        } else {
-            error.into()
-        }
-    })?;
-
-    Ok(String::from_utf8(json.0).expect("JSON is UTF-8"))
 }
 
-/// `prefix`, warning lines, then the JSON of `head`, `identity` and `tail` fields.
+/// JSON of the message: two spaces of indentation and `": "` after keys, in
+/// ASCII. DEL and all non-ASCII characters, including bidi controls and line
+/// separators, are escaped as lowercase `\uXXXX` UTF-16 code units, which makes
+/// the exact format reproducible in browser JavaScript.
+#[derive(Default)]
+struct AsciiPretty {
+    /// Number of open arrays and objects.
+    depth: usize,
+    /// Whether the innermost of them has a value, so it closes on a new line.
+    has_value: bool,
+}
+
+impl AsciiPretty {
+    /// A comma after a previous value, then a new indented line.
+    fn new_line<W: ?Sized + io::Write>(&self, writer: &mut W, comma: bool) -> io::Result<()> {
+        const SPACES: &[u8] = &[b' '; 64];
+
+        writer.write_all(if comma { b",\n" } else { b"\n" })?;
+
+        // One write, unless function arguments are deeply nested.
+        let mut indent = 2 * self.depth;
+
+        while indent > 0 {
+            let spaces = &SPACES[..indent.min(SPACES.len())];
+
+            writer.write_all(spaces)?;
+            indent -= spaces.len();
+        }
+
+        Ok(())
+    }
+
+    fn open<W: ?Sized + io::Write>(&mut self, writer: &mut W, bracket: &[u8]) -> io::Result<()> {
+        self.depth += 1;
+        self.has_value = false;
+        writer.write_all(bracket)
+    }
+
+    fn close<W: ?Sized + io::Write>(&mut self, writer: &mut W, bracket: &[u8]) -> io::Result<()> {
+        self.depth -= 1;
+
+        if self.has_value {
+            self.new_line(writer, false)?;
+        }
+
+        writer.write_all(bracket)
+    }
+}
+
+impl Formatter for AsciiPretty {
+    /// The part of a string between the characters that JSON itself escapes.
+    fn write_string_fragment<W: ?Sized + io::Write>(
+        &mut self,
+        writer: &mut W,
+        fragment: &str,
+    ) -> io::Result<()> {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+
+        let mut rest = fragment;
+
+        // A byte above `~` is DEL or starts a non-ASCII character: the bytes
+        // that continue a character follow its first byte.
+        while let Some(at) = rest.bytes().position(|byte| byte > b'~') {
+            let (ascii, tail) = rest.split_at(at);
+            let mut chars = tail.chars();
+            let Some(char) = chars.next() else { break };
+
+            writer.write_all(ascii.as_bytes())?;
+
+            for unit in char.encode_utf16(&mut [0; 2]) {
+                let hex = |shift: u8| HEX[usize::from(*unit >> shift & 0xf)];
+
+                writer.write_all(&[b'\\', b'u', hex(12), hex(8), hex(4), hex(0)])?;
+            }
+
+            rest = chars.as_str();
+        }
+
+        writer.write_all(rest.as_bytes())
+    }
+
+    fn begin_array<W: ?Sized + io::Write>(&mut self, writer: &mut W) -> io::Result<()> {
+        self.open(writer, b"[")
+    }
+
+    fn end_array<W: ?Sized + io::Write>(&mut self, writer: &mut W) -> io::Result<()> {
+        self.close(writer, b"]")
+    }
+
+    fn begin_array_value<W: ?Sized + io::Write>(
+        &mut self,
+        writer: &mut W,
+        first: bool,
+    ) -> io::Result<()> {
+        self.new_line(writer, !first)
+    }
+
+    fn end_array_value<W: ?Sized + io::Write>(&mut self, _writer: &mut W) -> io::Result<()> {
+        self.has_value = true;
+        Ok(())
+    }
+
+    fn begin_object<W: ?Sized + io::Write>(&mut self, writer: &mut W) -> io::Result<()> {
+        self.open(writer, b"{")
+    }
+
+    fn end_object<W: ?Sized + io::Write>(&mut self, writer: &mut W) -> io::Result<()> {
+        self.close(writer, b"}")
+    }
+
+    fn begin_object_key<W: ?Sized + io::Write>(
+        &mut self,
+        writer: &mut W,
+        first: bool,
+    ) -> io::Result<()> {
+        self.new_line(writer, !first)
+    }
+
+    fn begin_object_value<W: ?Sized + io::Write>(&mut self, writer: &mut W) -> io::Result<()> {
+        writer.write_all(b": ")
+    }
+
+    fn end_object_value<W: ?Sized + io::Write>(&mut self, _writer: &mut W) -> io::Result<()> {
+        self.has_value = true;
+        Ok(())
+    }
+}
+
+/// Value of a top-level message field.
+#[derive(Clone, Copy, Serialize)]
+#[serde(untagged)]
+enum Field<'a> {
+    Text(&'a str),
+    Number(u32),
+    Flag(bool),
+    Time(&'a Timestamp),
+    Path(&'a [AccountId]),
+    Request(&'a Shown<&'a Request>),
+}
+
+/// Writer of the JSON into the message, up to the size that it has room for.
+struct Capped<'a> {
+    message: &'a mut Vec<u8>,
+    room: usize,
+}
+
+impl io::Write for Capped<'_> {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.write_all(bytes)?;
+        Ok(bytes.len())
+    }
+
+    // The JSON is written in many small pieces: no loop for each of them.
+    fn write_all(&mut self, bytes: &[u8]) -> io::Result<()> {
+        self.room = self
+            .room
+            .checked_sub(bytes.len())
+            .ok_or(ErrorKind::WriteZero)?;
+        self.message.extend_from_slice(bytes);
+        Ok(())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+/// Usual size of the JSON for the size checked before rendering: indentation,
+/// field names and base64 make it two to four times longer, on top of the
+/// fixed fields. It only sizes the buffer of a message, which grows if needed.
+const fn usual_json_bytes(input_bytes: usize) -> usize {
+    input_bytes.saturating_mul(4).saturating_add(512)
+}
+
+/// `prefix`, warning lines, then the JSON of `head`, `identity` and `tail`
+/// fields. `input_bytes` is the size checked before rendering.
 fn render<const H: usize, const T: usize>(
     prefix: &str,
     warnings: &[String],
+    input_bytes: usize,
     identity: SigningIdentity<'_>,
-    head: [(&str, Value); H],
-    tail: [(&str, Value); T],
+    head: [(&str, Field<'_>); H],
+    tail: [(&str, Field<'_>); T],
 ) -> Result<String, MessageError> {
-    let mut fields = object(head);
-    let identity = identity.iter().map(|&(name, value)| (name, json!(value)));
+    let identity = identity
+        .iter()
+        .map(|&(name, value)| (name, Field::Text(value)));
+    let fields = head.into_iter().chain(identity).chain(tail);
+    let mut names = fields.clone().map(|(name, _)| name);
 
-    for (name, value) in identity.chain(tail) {
-        if fields.insert(name.to_owned(), value).is_some() {
+    while let Some(name) = names.next() {
+        if names.clone().any(|other| other == name) {
             return Err(MessageError::IdentityField);
         }
     }
 
-    let json = pretty(&fields)?;
-    let mut message = String::from(prefix);
+    // Reserve the final LF and the blank line after warnings before copying a
+    // header that might already exceed the whole message budget.
+    let framing = prefix.len() + 1 + usize::from(!warnings.is_empty());
+    let fixed_bytes = warnings.iter().fold(framing, |bytes, warning| {
+        bytes.saturating_add(warning.len()).saturating_add(1)
+    });
+    let room = MAX_SIGNING_MESSAGE_BYTES
+        .checked_sub(fixed_bytes)
+        .ok_or(MessageError::TooLarge)?;
+    let mut message = Vec::with_capacity(fixed_bytes + usual_json_bytes(input_bytes).min(room));
+
+    message.extend_from_slice(prefix.as_bytes());
 
     // Account IDs in warnings are ASCII.
     for warning in warnings {
-        message.push_str(warning);
-        message.push('\n');
+        message.extend_from_slice(warning.as_bytes());
+        message.push(b'\n');
     }
 
     if !warnings.is_empty() {
-        message.push('\n');
+        message.push(b'\n');
     }
 
-    // Escape DEL and all non-ASCII characters, including bidi controls and line separators.
-    // UTF-16 code units make the exact format reproducible in browser JavaScript.
-    for unit in json.encode_utf16() {
-        if message.len() >= MAX_SIGNING_MESSAGE_BYTES {
-            return Err(MessageError::TooLarge);
-        }
+    // The JSON stops as soon as it cannot fit the message with its final LF,
+    // so deeply indented input costs at most the limit.
+    let json = Capped {
+        message: &mut message,
+        room,
+    };
 
-        if unit <= 0x7e {
-            message.push(char::from(u8::try_from(unit).expect("ASCII unit")));
-        } else {
-            write!(message, "\\u{unit:04x}").expect("String write");
-        }
-    }
+    serde_json::Serializer::with_formatter(json, AsciiPretty::default())
+        .collect_map(fields)
+        .map_err(|error| {
+            if error.io_error_kind() == Some(ErrorKind::WriteZero) {
+                MessageError::TooLarge
+            } else {
+                error.into()
+            }
+        })?;
+    message.push(b'\n');
 
-    message.push('\n');
-
-    if message.len() > MAX_SIGNING_MESSAGE_BYTES {
-        return Err(MessageError::TooLarge);
-    }
-
-    Ok(message)
+    Ok(String::from_utf8(message).expect("message is ASCII"))
 }
 
 #[cfg(test)]
@@ -539,7 +867,7 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
-    use defuse_wallet::Timestamp;
+    use defuse_wallet::{NearToken, Timestamp};
 
     const IDENTITY: SigningIdentity<'static> = &[("test_public_key", "key")];
 
@@ -597,45 +925,44 @@ mod tests {
             .internal
             .push(WalletOp::set_signature_mode(false));
         let message = request_signing_message(IDENTITY, &msg).unwrap();
-        let expected = concat!(
-            "{\n",
-            "  \"chain_id\": \"mainnet\",\n",
-            "  \"signer_id\": \"alice.near\",\n",
-            "  \"test_public_key\": \"key\",\n",
-            "  \"nonce\": 1,\n",
-            "  \"created_at\": \"1970-01-01T00:00:00Z\",\n",
-            "  \"timeout_secs\": 60,\n",
-            "  \"pay_for_gas\": false,\n",
-            "  \"request\": {\n",
-            "    \"internal\": [\n",
-            "      {\n",
-            "        \"op\": \"set_signature_mode\",\n",
-            "        \"payload\": {\n",
-            "          \"enable\": false\n",
-            "        }\n",
-            "      }\n",
-            "    ],\n",
-            "    \"external\": [\n",
-            "      {\n",
-            "        \"receiver_id\": \"token.near\",\n",
-            "        \"refund_to\": null,\n",
-            "        \"actions\": [\n",
-            "          {\n",
-            "            \"action\": \"function_call\",\n",
-            "            \"function_name\": \"submit\",\n",
-            "            \"deposit\": \"0\",\n",
-            "            \"gas\": \"50000000000000\",\n",
-            "            \"gas_weight\": \"1\",\n",
-            "            \"args\": {\n",
-            "              \"z\": 1\n",
-            "            }\n",
-            "          }\n",
-            "        ]\n",
-            "      }\n",
-            "    ]\n",
-            "  }\n",
-            "}\n",
-        );
+        let expected = r#"{
+  "chain_id": "mainnet",
+  "signer_id": "alice.near",
+  "test_public_key": "key",
+  "nonce": 1,
+  "created_at": "1970-01-01T00:00:00Z",
+  "timeout_secs": 60,
+  "pay_for_gas": false,
+  "request": {
+    "internal": [
+      {
+        "op": "set_signature_mode",
+        "payload": {
+          "enable": false
+        }
+      }
+    ],
+    "external": [
+      {
+        "receiver_id": "token.near",
+        "refund_to": null,
+        "actions": [
+          {
+            "action": "function_call",
+            "function_name": "submit",
+            "deposit": "0",
+            "gas": "50000000000000",
+            "gas_weight": "1",
+            "args": {
+              "z": 1
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+"#;
         assert_eq!(message, format!("{REQUEST_PREFIX}{expected}"));
     }
 
@@ -710,6 +1037,45 @@ mod tests {
             );
             assert!(matches!(
                 request_signing_message(IDENTITY, &msg),
+                Err(MessageError::FunctionArgs)
+            ));
+        }
+    }
+
+    #[test]
+    fn nested_extensions_check_arguments_at_each_level() {
+        let render_nested = |args: &[u8]| {
+            let mut inner = request(Vec::new(), EXECUTE_EXTENSION, args);
+            inner.request.external[0].receiver_id = "inner.near".parse().unwrap();
+            request_signing_message(IDENTITY, &extension_call(&inner.request))
+        };
+
+        let leaf_args = br#"{"z":1,"a":2}"#;
+        let mut leaf = call(leaf_args);
+        leaf.request.internal.push(WalletOp::add_extension(
+            "operator.near".parse::<AccountId>().unwrap(),
+        ));
+        let args = serde_json::to_vec(&json!({ "request": leaf.request })).unwrap();
+        let message = render_nested(&args).unwrap();
+        assert!(message.contains(
+            "\nWARNING: add_extension gives operator.near full control of wallet inner.near.\n"
+        ));
+        let doc = document(&message);
+        let outer = &doc["request"]["external"][0]["actions"][0]["args"]["request"];
+        let inner = &outer["external"][0]["actions"][0]["args"]["request"];
+        let shown_args = &inner["external"][0]["actions"][0]["args"];
+        assert_eq!(serde_json::to_vec(shown_args).unwrap(), leaf_args);
+
+        let leaf = call(br#"{"z":1,"0":2}"#);
+        let nonportable_leaf = serde_json::to_vec(&json!({ "request": leaf.request })).unwrap();
+        for malformed in [
+            &br#"{"request": {}}"#[..],
+            br#"{"request":{},"request":{}}"#,
+            br#"{"request":{"external":[]}}"#,
+            &nonportable_leaf,
+        ] {
+            assert!(matches!(
+                render_nested(malformed),
                 Err(MessageError::FunctionArgs)
             ));
         }
@@ -949,6 +1315,41 @@ mod tests {
     }
 
     #[test]
+    fn warnings_and_final_lf_count_toward_the_limit() {
+        let render = |padding| {
+            let mut msg = call(&serde_json::to_vec(&"x".repeat(padding)).unwrap());
+            msg.request.internal = vec![WalletOp::add_extension(
+                "app.near".parse::<AccountId>().unwrap(),
+            )];
+
+            request_signing_message(IDENTITY, &msg)
+        };
+        let padding = MAX_SIGNING_MESSAGE_BYTES - render(0).unwrap().len();
+
+        let exact = render(padding).unwrap();
+
+        assert_eq!(exact.len(), MAX_SIGNING_MESSAGE_BYTES);
+        assert!(exact.ends_with('\n'));
+        assert!(matches!(render(padding + 1), Err(MessageError::TooLarge)));
+    }
+
+    #[test]
+    fn total_method_name_size_is_checked_before_parsing_args() {
+        let render = |name: &str| {
+            let mut msg = request(Vec::new(), name, b"!");
+            msg.request.external[0].actions.extend_from_within(..);
+
+            request_signing_message(IDENTITY, &msg)
+        };
+
+        assert!(matches!(render("f"), Err(MessageError::FunctionArgs)));
+        assert!(matches!(
+            render(&"f".repeat(MAX_SIGNING_MESSAGE_BYTES / 2 + 1)),
+            Err(MessageError::TooLarge)
+        ));
+    }
+
+    #[test]
     fn oversized_inputs_are_rejected_before_parsing() {
         // Invalid JSON: rejected as too large, without being parsed.
         let args = vec![b'x'; MAX_SIGNING_MESSAGE_BYTES + 1];
@@ -996,19 +1397,20 @@ mod tests {
     fn args_are_shown_once_in_original_order_and_determine_the_bytes() {
         let args = r#"{"receiver_id":"intents.near","amount":"1500000","msg":"{\"memo\":\"Оплата\"}","items":[{"z":null,"a":true}]}"#;
         let message = request_signing_message(IDENTITY, &call(args.as_bytes())).unwrap();
-        assert!(message.contains(concat!(
-            "            \"args\": {\n",
-            "              \"receiver_id\": \"intents.near\",\n",
-            "              \"amount\": \"1500000\",\n",
-            "              \"msg\": \"{\\\"memo\\\":\\\"\\u041e\\u043f\\u043b\\u0430\\u0442\\u0430\\\"}\",\n",
-            "              \"items\": [\n",
-            "                {\n",
-            "                  \"z\": null,\n",
-            "                  \"a\": true\n",
-            "                }\n",
-            "              ]\n",
-            "            }\n",
-        )));
+        assert!(message.contains(
+            r#""args": {
+              "receiver_id": "intents.near",
+              "amount": "1500000",
+              "msg": "{\"memo\":\"\u041e\u043f\u043b\u0430\u0442\u0430\"}",
+              "items": [
+                {
+                  "z": null,
+                  "a": true
+                }
+              ]
+            }
+        "#
+        ));
         assert!(!message.contains("args_"));
         let shown = &document(&message)["request"]["external"][0]["actions"][0]["args"];
         assert_eq!(serde_json::to_string(shown).unwrap(), args);

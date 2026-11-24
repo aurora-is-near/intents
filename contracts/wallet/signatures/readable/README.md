@@ -100,9 +100,11 @@ Function calls:
   warnings. The arguments must be exactly the serde form of that request (the
   contract's field order, defaults omitted).
 
-Before rendering, raw function-call arguments (a nested request counts with
-its base64 encoding), state data and 64 bytes per operation, promise and
-action must fit 16 KiB. JSON arguments nest at most 127 levels.
+Before rendering, raw function-call arguments (including base64 inside a
+nested request), state data and 64 bytes per operation, promise and action
+must fit 16 KiB in total. The combined UTF-8 length of the outer request's
+method names is checked separately against 16 KiB. The final limit includes
+the prefix, warnings and trailing LF. JSON arguments nest at most 127 levels.
 
 Limits of the text:
 
