@@ -51,6 +51,12 @@ Each `request` contains:
 
 ### Signing Standards
 
+The EVM variants sign the full message rather than an opaque digest:
+[EIP-191](signatures/evm/eip-191/README.md) signs the
+[readable text](signatures/readable/README.md) with `personal_sign`, and
+[EIP-712](signatures/evm/eip-712/README.md) signs typed data derived by the
+contract with `eth_signTypedData_v4`.
+
 A single wallet-contract variant supports only a single signing standard, which
 is fixed at the time of a deployment. Each variant is deployed as a
 **separate** global contract.

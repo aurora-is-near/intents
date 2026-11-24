@@ -1,0 +1,46 @@
+# EVM wallet contract: EIP-191
+
+NEAR wallet contract controlled by an **Ethereum (secp256k1) account**. The
+account signs the
+[readable signing format](../../readable/README.md#format-v1) with
+`personal_sign` ([ERC-191](https://eips.ethereum.org/EIPS/eip-191) version
+`0x45`), which wallets such as `MetaMask` show as text. The
+[EIP-712 variant](../eip-712/README.md) is a separate contract that reuses
+this crate's address and proof types.
+
+## Identity and proof
+
+- The wallet state stores the 20-byte Ethereum address; `w_public_key()`
+  returns it as lowercase `0x` hex.
+- The signed text has one identity field after `signer_id`: `evm_address`,
+  the same lowercase `0x` hex.
+- The wallet signs
+  `keccak256("\x19Ethereum Signed Message:\n" || len || text)` with the
+  decimal byte length. Pass the text to `personal_sign` as `0x` hex of its
+  UTF-8 bytes, so the wallet signs these bytes and shows them as text.
+- The proof is `secp256k1:<base58 of r || s || v>`: 65 bytes, low-S, `v` is
+  `0` or `1` (subtract `27` from wallet signatures).
+- The contract recovers the key from the proof and compares its address with
+  the stored one. Proofs of execution requests, of NEP-641 authorizations and
+  of the EIP-712 variant are not interchangeable.
+
+Only an address whose secp256k1 key signs can control the wallet. A contract
+account (Safe, ERC-4337) or a watch-only address cannot: ERC-1271 is not
+supported, and funds sent to a wallet derived from such an address may be
+unrecoverable. Before showing the derived account as a deposit destination,
+[verify control](../../readable/README.md#verify-control-before-funding) of
+the address.
+
+## Clear signing
+
+The user reads in the wallet prompt the same text that the contract rebuilds
+and verifies. The limits of that text are listed with the
+[format](../../readable/README.md#format-v1). `personal_sign` is also used for
+logins by other applications; the text says that it is not one, and the
+contract accepts it only for the network and wallet account it names.
+
+## Build
+
+```sh
+make defuse-wallet-evm-eip191
+```
