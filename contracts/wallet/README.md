@@ -51,6 +51,11 @@ Each `request` contains:
 
 ### Signing Standards
 
+The [Stellar variant](signatures/stellar/README.md) signs the full
+[readable text](signatures/readable/README.md) of an execution or NEP-641
+message, wrapped into one JSON document, with SEP-53 `signMessage`, rather
+than an opaque digest.
+
 A single wallet-contract variant supports only a single signing standard, which
 is fixed at the time of a deployment. Each variant is deployed as a
 **separate** global contract.
