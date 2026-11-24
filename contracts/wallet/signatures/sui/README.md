@@ -44,8 +44,8 @@ key.
   signatures. A rejected proof is never retried under another scheme.
 - Ed25519 verification uses the NEAR host function, not ZIP-215 rules, so
   exceptional encodings that Sui accepts may be rejected.
-- On-chain, a well-formed proof for a message that cannot be rendered fails
-  with the rendering error, not with `invalid signature`.
+- On-chain verification reports `invalid signature` when the message cannot be
+  rendered. The signing-message builders return the specific rendering error.
 
 The two text prefixes separate execution requests from NEP-641 authorizations,
 and the `PersonalMessage` intent separates both from Sui transactions.

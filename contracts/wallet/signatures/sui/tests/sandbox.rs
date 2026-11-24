@@ -5,7 +5,7 @@ mod entrypoints;
 
 use std::{env, fs, path::Path, time::Duration};
 
-use defuse_nep641::resolver::RpcResolver;
+use defuse_nep641::resolver::{ContractError, ResolveErrorKind, RpcResolver};
 use defuse_wallet::{
     AccountId, Gas, NearPromise, NearToken, Request, RequestMessage, SignatureSchema, StateInit,
     StateInitV1, Timestamp, WalletAuthorization, WalletOp, actions::FunctionCall,
@@ -597,8 +597,7 @@ async fn check_lockout_and_rotation<C: SuiScheme>(
     );
 }
 
-/// Rendering errors are diagnostic only after the proof envelope passes its checks.
-async fn check_offchain_render_errors<C: SuiScheme, S: WalletSigner<WalletSui<C>>>(
+async fn check_oversized_offchain_rejection<C: SuiScheme, S: WalletSigner<WalletSui<C>>>(
     near: &Near,
     wallet: &Wallet<WalletSui<C>>,
     signer: &S,
@@ -632,14 +631,7 @@ async fn check_offchain_render_errors<C: SuiScheme, S: WalletSigner<WalletSui<C>
         Err(MessageError::TooLarge)
     ));
 
-    for (proof, expected) in [
-        ("invalid".to_owned(), "invalid signature"),
-        (
-            key.encode_signature(&[0; 64]),
-            "signing message exceeds 16 KiB",
-        ),
-    ] {
-        // An intact envelope need not contain a valid signature to reach rendering.
+    for proof in ["invalid".to_owned(), key.encode_signature(&[0; 64])] {
         let authorization = String::from(WalletAuthorization::Signature {
             msg: oversized.clone(),
             proof,
@@ -648,16 +640,19 @@ async fn check_offchain_render_errors<C: SuiScheme, S: WalletSigner<WalletSui<C>
             .resolve_auth(wallet.account_id(), &authorization)
             .await
             .expect_err("oversized offchain authorization must reject");
-        let error = format!("{error:?}");
-
-        assert!(error.contains(expected), "expected {expected}: {error}");
-        assert!(!error.contains("panicked at"), "{error}");
-        assert!(!error.contains("src/"), "{error}");
+        assert!(
+            matches!(
+                &error.kind,
+                ResolveErrorKind::Contract(ContractError::Panic(message))
+                    if message == "invalid signature"
+            ),
+            "{error:?}"
+        );
     }
 }
 
 /// Both failure paths must leave nonce storage untouched.
-async fn check_request_render_errors<C: SuiScheme>(
+async fn check_oversized_request_rejection<C: SuiScheme>(
     near: &Near,
     wallet: &Wallet<WalletSui<C>>,
     oversized: &RequestMessage,
@@ -665,26 +660,22 @@ async fn check_request_render_errors<C: SuiScheme>(
     let contract = near.contract::<WalletContract>(wallet.account_id());
     let key = wallet.public_key();
 
-    // A malformed envelope must reject before the oversized message is rendered.
+    let before = near
+        .account(wallet.account_id())
+        .await
+        .unwrap()
+        .storage_usage;
+
     let error = contract
         .w_execute_signed((oversized, "invalid").into())
         .gas(Gas::from_tgas(80))
         .await
         .unwrap()
         .result()
-        .expect_err("malformed proof must reject before rendering");
+        .expect_err("malformed proof must reject");
 
     assert!(error.to_string().contains("invalid signature"), "{error:?}");
-    assert!(
-        !error.to_string().contains("signing message exceeds"),
-        "{error:?}"
-    );
 
-    let before = near
-        .account(wallet.account_id())
-        .await
-        .unwrap()
-        .storage_usage;
     let invalid = key.encode_signature(&[0; 64]);
     let failed = contract
         .w_execute_signed((oversized, invalid.as_str()).into())
@@ -694,11 +685,7 @@ async fn check_request_render_errors<C: SuiScheme>(
 
     let error = failed.result().expect_err("oversized display must reject");
 
-    // On-chain, a well-formed proof reports why the message cannot be rendered.
-    assert!(
-        error.to_string().contains("signing message exceeds 16 KiB"),
-        "{error:?}"
-    );
+    assert!(error.to_string().contains("invalid signature"), "{error:?}");
     assert!(!error.to_string().contains("panicked at"), "{error:?}");
     assert!(!error.to_string().contains("src/"), "{error:?}");
 
@@ -761,11 +748,11 @@ async fn check_resources_and_context<C: SuiScheme, S: WalletSigner<WalletSui<C>>
         Err(MessageError::TooLarge)
     ));
 
-    check_offchain_render_errors(near, wallet, signer).await;
+    check_oversized_offchain_rejection(near, wallet, signer).await;
 
-    let (before, failed) = check_request_render_errors(near, wallet, &oversized).await;
+    let (before, failed) = check_oversized_request_rejection(near, wallet, &oversized).await;
 
-    // The failing render committed this same nonce first; receipt rollback must free it.
+    // The failed request committed this same nonce first; receipt rollback must free it.
     assert_eq!(msg.nonce, oversized.nonce);
     assert_eq!(msg.created_at, oversized.created_at);
 
