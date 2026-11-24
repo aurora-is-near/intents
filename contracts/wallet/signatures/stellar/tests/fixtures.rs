@@ -727,3 +727,48 @@ fn derived_accounts_match_known_answers() {
         assert_eq!(account.as_str(), expected);
     }
 }
+
+#[test]
+fn nested_extension_keeps_the_v1_size_boundary() {
+    use defuse_wallet::{AccountId, Gas, NearPromise, Request, actions::FunctionCall};
+    use sha2::{Digest, Sha256};
+
+    let vectors = vectors();
+    let vector = &vectors[0];
+    let key = key(vector);
+    let base: RequestMessage = serde_json::from_value(vector["msg"].clone()).unwrap();
+    let render = |padding| {
+        let inner = NearPromise::new("bob.near".parse::<AccountId>().unwrap()).function_call(
+            FunctionCall::name("f")
+                .gas(Gas::from_gas(0))
+                .args_json("x".repeat(padding)),
+        );
+        let outer = NearPromise::new("ext.near".parse::<AccountId>().unwrap()).function_call(
+            FunctionCall::name("w_execute_extension")
+                .gas(Gas::from_gas(0))
+                .args_json(json!({ "request": Request::from(inner) })),
+        );
+        let msg = RequestMessage {
+            request: outer.into(),
+            ..base.clone()
+        };
+
+        request_signing_message(&key, &msg)
+    };
+
+    // Base64 inside the nested request is longer than the text shown to the signer.
+    let message = render(12_074).unwrap();
+
+    assert_eq!(message.len(), 13695);
+    assert_eq!(
+        hex(&Sha256::digest(message.as_bytes())),
+        "6d2bcc680e10b97074924cf848b70a8c233befb5e436475d10f6d9e702fce35f"
+    );
+    assert!(render(12_088).is_ok());
+    assert!(matches!(
+        render(12_089),
+        Err(MessageError::Readable(
+            readable_message::MessageError::TooLarge
+        ))
+    ));
+}
